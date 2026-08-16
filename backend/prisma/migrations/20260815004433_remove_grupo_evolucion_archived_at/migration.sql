@@ -5,13 +5,13 @@
 
 */
 -- DropForeignKey
-ALTER TABLE `grupoevolucion` DROP FOREIGN KEY `GrupoEvolucion_consultorioId_fkey`;
+ALTER TABLE `GrupoEvolucion` DROP FOREIGN KEY `GrupoEvolucion_consultorioId_fkey`;
 
 -- DropIndex
-DROP INDEX `GrupoEvolucion_consultorioId_pacienteId_archivedAt_idx` ON `grupoevolucion`;
+DROP INDEX `GrupoEvolucion_consultorioId_pacienteId_archivedAt_idx` ON `GrupoEvolucion`;
 
 -- AlterTable
-ALTER TABLE `grupoevolucion` DROP COLUMN `archivedAt`;
+ALTER TABLE `GrupoEvolucion` DROP COLUMN `archivedAt`;
 
 -- CreateIndex
 CREATE INDEX `GrupoEvolucion_consultorioId_pacienteId_idx` ON `GrupoEvolucion`(`consultorioId`, `pacienteId`);

@@ -1,19 +1,19 @@
 -- DropForeignKey
-ALTER TABLE `especialidad` DROP FOREIGN KEY `Especialidad_consultorioId_fkey`;
+ALTER TABLE `Especialidad` DROP FOREIGN KEY `Especialidad_consultorioId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `obrasocial` DROP FOREIGN KEY `ObraSocial_consultorioId_fkey`;
+ALTER TABLE `ObraSocial` DROP FOREIGN KEY `ObraSocial_consultorioId_fkey`;
 
 -- AlterTable
-ALTER TABLE `especialidad` ADD COLUMN `esSistema` BOOLEAN NOT NULL DEFAULT false,
+ALTER TABLE `Especialidad` ADD COLUMN `esSistema` BOOLEAN NOT NULL DEFAULT false,
     MODIFY `consultorioId` INTEGER NULL;
 
 -- AlterTable
-ALTER TABLE `obrasocial` ADD COLUMN `esSistema` BOOLEAN NOT NULL DEFAULT false,
+ALTER TABLE `ObraSocial` ADD COLUMN `esSistema` BOOLEAN NOT NULL DEFAULT false,
     MODIFY `consultorioId` INTEGER NULL;
 
 -- AlterTable
-ALTER TABLE `profesional` ADD COLUMN `deletedAt` DATETIME(3) NULL;
+ALTER TABLE `Profesional` ADD COLUMN `deletedAt` DATETIME(3) NULL;
 
 -- CreateTable
 CREATE TABLE `ConsultorioEspecialidadOculta` (

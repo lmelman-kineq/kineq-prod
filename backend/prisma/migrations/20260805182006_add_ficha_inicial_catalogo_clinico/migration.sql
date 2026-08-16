@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `fichainicial` DROP COLUMN `alergiasDetalle`,
+ALTER TABLE `FichaInicial` DROP COLUMN `alergiasDetalle`,
     DROP COLUMN `medicacionDetalle`,
     ADD COLUMN `abortos` INTEGER NULL,
     ADD COLUMN `alcoholEstado` ENUM('SI', 'NO', 'NO_INFORMA') NULL,

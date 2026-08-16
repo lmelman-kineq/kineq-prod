@@ -50,8 +50,8 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.$Enums = exports.Prisma = void 0;
-const Prisma = __importStar(require("./internal/prismaNamespaceBrowser.ts"));
+const Prisma = __importStar(require("./internal/prismaNamespaceBrowser.js"));
 exports.Prisma = Prisma;
-exports.$Enums = __importStar(require("./enums.ts"));
-__exportStar(require("./enums.ts"), exports);
+exports.$Enums = __importStar(require("./enums.js"));
+__exportStar(require("./enums.js"), exports);
 //# sourceMappingURL=browser.js.map

@@ -47,11 +47,11 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Prisma = exports.PrismaClient = exports.$Enums = void 0;
-const $Class = __importStar(require("./internal/class.ts"));
-const Prisma = __importStar(require("./internal/prismaNamespace.ts"));
+const $Class = __importStar(require("./internal/class.js"));
+const Prisma = __importStar(require("./internal/prismaNamespace.js"));
 exports.Prisma = Prisma;
-exports.$Enums = __importStar(require("./enums.ts"));
-__exportStar(require("./enums.ts"), exports);
+exports.$Enums = __importStar(require("./enums.js"));
+__exportStar(require("./enums.js"), exports);
 /**
  * ## Prisma Client
  *

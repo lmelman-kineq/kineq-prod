@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `evolucion` ADD COLUMN `contenidoHtml` TEXT NULL;
+ALTER TABLE `Evolucion` ADD COLUMN `contenidoHtml` TEXT NULL;

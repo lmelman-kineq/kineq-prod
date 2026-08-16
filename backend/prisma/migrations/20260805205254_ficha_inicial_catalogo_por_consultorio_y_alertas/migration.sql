@@ -1,15 +1,15 @@
 -- DropIndex
-DROP INDEX `CatalogoClinicoItem_categoria_codigo_key` ON `catalogoclinicoitem`;
+DROP INDEX `CatalogoClinicoItem_categoria_codigo_key` ON `CatalogoClinicoItem`;
 
 -- AlterTable
-ALTER TABLE `catalogoclinicoitem` ADD COLUMN `consultorioId` INTEGER NULL,
+ALTER TABLE `CatalogoClinicoItem` ADD COLUMN `consultorioId` INTEGER NULL,
     ADD COLUMN `esSistema` BOOLEAN NOT NULL DEFAULT true;
 
 -- AlterTable
-ALTER TABLE `fichaantecedente` ADD COLUMN `esAlertaClinica` BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE `FichaAntecedente` ADD COLUMN `esAlertaClinica` BOOLEAN NOT NULL DEFAULT false;
 
 -- AlterTable
-ALTER TABLE `fichamedicacion` ADD COLUMN `esAlertaClinica` BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE `FichaMedicacion` ADD COLUMN `esAlertaClinica` BOOLEAN NOT NULL DEFAULT false;
 
 -- CreateIndex
 CREATE INDEX `CatalogoClinicoItem_consultorioId_idx` ON `CatalogoClinicoItem`(`consultorioId`);

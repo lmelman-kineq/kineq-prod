@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `evolucion` ADD COLUMN `grupoId` INTEGER NULL;
+ALTER TABLE `Evolucion` ADD COLUMN `grupoId` INTEGER NULL;
 
 -- CreateTable
 CREATE TABLE `GrupoEvolucion` (

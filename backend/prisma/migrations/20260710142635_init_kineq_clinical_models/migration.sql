@@ -5,7 +5,7 @@
 
 */
 -- DropTable
-DROP TABLE `patient`;
+DROP TABLE `Patient`;
 
 -- CreateTable
 CREATE TABLE `Consultorio` (
