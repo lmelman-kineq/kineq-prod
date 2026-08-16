@@ -7,7 +7,7 @@ generator client {
   provider            = "prisma-client"
   output              = "../src/generated/prisma"
   moduleFormat        = "cjs"
-  importFileExtension = "js"
+  importFileExtension = ""
 }
 
 datasource db {
