@@ -1,0 +1,2007 @@
+import {
+  useMemo,
+  useCallback,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ComponentType,
+  type SVGProps,
+} from 'react'
+import './App.css'
+import TurnoFormFields, {
+  type SpecialtyOption,
+  type TurnoFormValue,
+  type TurnoStatus,
+} from './components/FormFields'
+import TurnosPage, { type TurnosPageItem } from './components/TurnosPage'
+import PatientsPage from './components/PatientsPage'
+import PatientDetailPage from './components/PatientDetailPage'
+import AttentionPage from './components/AttentionPage'
+import ConfiguracionPage from './components/ConfiguracionPage'
+import EstadisticasPage from './components/EstadisticasPage'
+import * as api from './services/api'
+import type { Turno as ApiTurno, Paciente, Profesional, Especialidad, ObraSocial, EstadoTurno } from './types/domain'
+import { useAuth } from './auth/AuthContext'
+import LoginPage from './auth/LoginPage'
+import RegisterPage from './auth/RegisterPage'
+import KineqIsologo from './assets/branding/KineqIsologo'
+import KineqIsologotipo from './assets/branding/KineqIsologotipo'
+import BootScreen from './components/BootScreen'
+import { useBootPhase } from './components/useBootPhase'
+import { WAITING_ALERT_MINUTES, formatMinutesAgo, getElapsedMinutes } from './utils/turnoTimers'
+import { mapEstadoToStatus, statusClass } from './utils/turnoStatus'
+import { getSpecialtyColor } from './utils/specialtyColors'
+import { layoutTurnos } from './utils/turnoLayout'
+import { professionalName } from './utils/professional'
+import { utcIsoToZonedParts } from './utils/timezone'
+
+export type Turno = TurnosPageItem & {
+  socialWorkId?: number | null
+  notes?: string
+}
+
+type AppPage = 'home' | 'turnos' | 'pacientes' | 'paciente-detalle' | 'atencion' | 'estadisticas' | 'configuracion'
+
+type Theme = 'light' | 'dark'
+
+export type TurnoQuickAction = {
+  key: string
+  label: string
+  tone: 'primary' | 'warning' | 'danger'
+  onClick: () => void
+}
+
+// Copy compacto para la fila de acciones rápidas de "Editar turno" en mobile
+// (ver .turno-quick-actions más abajo) — el `label` completo de arriba sigue
+// usándose tal cual en los menús contextuales de Inicio/Turnos, que no
+// necesitan acortarse.
+const COMPACT_QUICK_ACTION_LABELS: Record<string, string> = {
+  'en-espera': 'En espera',
+  ausente: 'Ausente',
+  cancelar: 'Cancelar',
+  iniciar: 'Iniciar',
+  continuar: 'Continuar',
+  finalizar: 'Finalizar',
+}
+
+export type ConfirmDialogOptions = {
+  title: string
+  description: string
+  confirmLabel: string
+  cancelLabel: string
+  destructive: boolean
+  onConfirm: () => void
+}
+
+type ConfirmDialogState = ConfirmDialogOptions | null
+
+const THEME_STORAGE_KEY = 'kineq-theme'
+
+function getInitialTheme(): Theme {
+  if (typeof window === 'undefined') return 'light'
+
+  try {
+    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
+    if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme
+  } catch {
+    // Si localStorage no está disponible, usamos la preferencia del sistema.
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+function ThemeIcon({ theme }: { theme: Theme }) {
+  if (theme === 'dark') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+    </svg>
+  )
+}
+
+type MenuIconProps = SVGProps<SVGSVGElement>
+type MenuIconComponent = ComponentType<MenuIconProps>
+
+function HomeIcon(props: MenuIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <path d="M3.5 10.5 12 3.5l8.5 7" />
+      <path d="M5.5 9.5V20h13V9.5" />
+      <path d="M9.5 20v-6h5v6" />
+    </svg>
+  )
+}
+
+function CalendarIcon(props: MenuIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
+      <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
+      <path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" />
+    </svg>
+  )
+}
+
+function PatientIcon(props: MenuIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c.8-4.1 3.2-6.2 7-6.2s6.2 2.1 7 6.2" />
+    </svg>
+  )
+}
+
+function StatisticsIcon(props: MenuIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <path d="M4 19.5V5M4 19.5h16" />
+      <path d="m7 15 4-4 3 2 5-6" />
+      <circle cx="7" cy="15" r="1" />
+      <circle cx="11" cy="11" r="1" />
+      <circle cx="14" cy="13" r="1" />
+      <circle cx="19" cy="7" r="1" />
+    </svg>
+  )
+}
+
+function SettingsIcon(props: MenuIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h2M10 17h10" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="12" r="2" />
+      <circle cx="8" cy="17" r="2" />
+    </svg>
+  )
+}
+
+const menuItems: Array<{ label: string; Icon: MenuIconComponent; page?: AppPage }> = [
+  { label: 'Inicio', Icon: HomeIcon, page: 'home' },
+  { label: 'Turnos', Icon: CalendarIcon, page: 'turnos' },
+  { label: 'Pacientes', Icon: PatientIcon, page: 'pacientes' },
+  { label: 'Estadísticas', Icon: StatisticsIcon, page: 'estadisticas' },
+  { label: 'Configuración', Icon: SettingsIcon, page: 'configuracion' },
+]
+
+// Los datos se cargan desde la API.
+
+function pad(n: number) { return n.toString().padStart(2, '0') }
+function formatDate(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+function addMinutesToTime(time: string, minutesToAdd: number) {
+  const [h, m] = time.split(':').map(Number)
+  const date = new Date()
+  date.setHours(h, m + minutesToAdd, 0, 0)
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function TurnoCardTimer({ turno, now }: { turno: Turno; now: number }) {
+  if (turno.status === 'En Espera') {
+    const minutes = getElapsedMinutes(turno.updatedAt, now)
+    if (minutes === null) return null
+    const isLong = minutes >= WAITING_ALERT_MINUTES
+    return (
+      <span className={`turno-card-timer ${isLong ? 'turno-card-timer--alert' : ''}`}>
+        Esperando {formatMinutesAgo(minutes)}
+      </span>
+    )
+  }
+
+  if (turno.status === 'Atendiendo') {
+    const minutes = getElapsedMinutes(turno.startAttention, now)
+    if (minutes === null) return null
+    const isOverDuration = minutes > turno.duration
+    return (
+      <span className={`turno-card-timer ${isOverDuration ? 'turno-card-timer--alert' : ''}`}>
+        Atendiendo {formatMinutesAgo(minutes)}
+      </span>
+    )
+  }
+
+  return null
+}
+
+function formatDateLabel(value: string) {
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  const weekdayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+  const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  return `${weekdayNames[date.getDay()]} ${day} de ${monthNames[month - 1]} de ${year}`
+}
+
+const CALENDAR_START_HOUR = 8
+const CALENDAR_END_HOUR = 21
+const CALENDAR_TOTAL_MINUTES = (CALENDAR_END_HOUR - CALENDAR_START_HOUR) * 60
+const CALENDAR_SLOT_SNAP_MINUTES = 15
+const hourLabels = Array.from(
+  { length: CALENDAR_END_HOUR - CALENDAR_START_HOUR },
+  (_, index) => CALENDAR_START_HOUR + index,
+)
+
+function getMonthDays(date: Date) {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const firstDay = new Date(year, month, 1)
+  const totalDays = new Date(year, month + 1, 0).getDate()
+  const startWeekday = firstDay.getDay()
+  const days: Array<number | null> = []
+
+  for (let i = 0; i < startWeekday; i += 1) {
+    days.push(null)
+  }
+
+  for (let day = 1; day <= totalDays; day += 1) {
+    days.push(day)
+  }
+
+  return days
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) return error.message
+  return fallback
+}
+
+function mapUiStatusToApi(status: TurnoStatus): EstadoTurno {
+  const statusMap: Record<TurnoStatus, EstadoTurno> = {
+    Asignado: 'ASIGNADO',
+    'En Espera': 'EN_ESPERA',
+    Atendiendo: 'ATENDIENDO',
+    Finalizado: 'FINALIZADO',
+    Ausente: 'AUSENTE',
+    Cancelado: 'CANCELADO',
+  }
+
+  return statusMap[status]
+}
+
+const ROL_LABELS: Record<string, string> = {
+  ADMINISTRADOR: 'Administrador',
+  PROFESIONAL: 'Profesional',
+  RECEPCION: 'Recepción',
+  SUPERVISOR: 'Supervisor',
+}
+
+function Dashboard() {
+  const { user, logout } = useAuth()
+  const [activePage, setActivePage] = useState<AppPage>('home')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [profilePhotoInfoOpen, setProfilePhotoInfoOpen] = useState(false)
+  const avatarWrapperRef = useRef<HTMLDivElement | null>(null)
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
+  const [specialtiesState, setSpecialtiesState] = useState<SpecialtyOption[]>([])
+  const [patientSocialWorkById, setPatientSocialWorkById] = useState<Record<number, string | null>>({})
+  const [turnosPageRefreshKey, setTurnosPageRefreshKey] = useState(0)
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null)
+  const [attentionTurno, setAttentionTurno] = useState<Turno | null>(null)
+  // A dónde volver desde Atención: la pantalla real desde la que se entró
+  // (Inicio o Turnos, hoy los dos únicos orígenes posibles), en vez de
+  // asumir 'home' — evitaba que "Volver" desde una atención iniciada en
+  // Turnos devolviera a Inicio en lugar de a Turnos.
+  const [attentionReturnPage, setAttentionReturnPage] = useState<AppPage>('home')
+  const [selectedTurnoId, setSelectedTurnoId] = useState<number>(0)
+  const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date())
+  const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()))
+  const [turnosState, setTurnosState] = useState<Turno[]>([])
+  const [pacientesState, setPacientesState] = useState<{id:number;displayName:string}[]>([])
+  const [profesionalesState, setProfesionalesState] = useState<{id:number;displayName:string}[]>([])
+  const [obrasSocialesState, setObrasSocialesState] = useState<string[]>([])
+  const [filters, setFilters] = useState({
+    specialtyIds: [] as number[],
+    socialWorks: [] as string[],
+    professionals: [] as string[],
+    statuses: [] as string[],
+  })
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [showNewTurno, setShowNewTurno] = useState(false)
+  // Placeholder visual del turno que se está por crear al clickear una
+  // franja vacía del calendario diario. Puramente de frontend: no se
+  // persiste, no afecta filtros ni contadores, y sigue la misma fecha/hora/
+  // duración que el formulario (newTurnoForm) mientras el modal está abierto.
+  const [showDraftPreview, setShowDraftPreview] = useState(false)
+
+  // Única fuente de verdad para ocultar el placeholder del calendario.
+  // Debe correr en cada salida del modal de nuevo turno: cancelar, cerrar
+  // con X, Escape, click en el backdrop y guardado exitoso (todos abajo),
+  // más el cambio de página (ver el chequeo atado a `activePage` cerca del
+  // return de este componente).
+  const clearDraftAppointmentPreview = useCallback(() => {
+    setShowDraftPreview(false)
+  }, [])
+
+  const closeNewTurnoModal = useCallback(() => {
+    setShowNewTurno(false)
+    clearDraftAppointmentPreview()
+  }, [clearDraftAppointmentPreview])
+
+  const [newTurnoForm, setNewTurnoForm] = useState<TurnoFormValue>({
+    date: selectedDate,
+    time: '09:00',
+    patientId: null,
+    professionalId: null,
+    specialtyId: 0,
+    sessionNumber: 1,
+    status: 'Asignado',
+    duration: 60,
+  })
+  const [showViewTurno, setShowViewTurno] = useState(false)
+  const [isEditingTurno, setIsEditingTurno] = useState(false)
+  const [editingTurnoId, setEditingTurnoId] = useState<number | null>(null)
+  const [editingTurnoForm, setEditingTurnoForm] = useState<TurnoFormValue | null>(null)
+  const [catalogsLoading, setCatalogsLoading] = useState(true)
+  const [turnosLoading, setTurnosLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [contextMenu, setContextMenu] = useState<{ turnoId: number; x: number; y: number } | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>(null)
+
+  const contextMenuRef = useRef<HTMLDivElement | null>(null)
+  const confirmDialogRef = useRef<HTMLDivElement | null>(null)
+  const newModalRef = useRef<HTMLDivElement | null>(null)
+  const viewModalRef = useRef<HTMLDivElement | null>(null)
+  const filtersRef = useRef<HTMLDivElement | null>(null)
+  const resizingRef = useRef<{
+    id: number
+    startY: number
+    originalDuration: number
+    currentDuration: number
+  } | null>(null)
+  const draggingRef = useRef<{
+    id: number
+    startY: number
+    startTop: number
+    originalTime: string
+    currentTime: string
+    duration: number
+  } | null>(null)
+  const isDraggingRef = useRef(false)
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.style.colorScheme = theme
+
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+    } catch {
+      // El modo visual sigue funcionando aunque el navegador bloquee localStorage.
+    }
+  }, [theme])
+
+  const mapApiTurnoToUi = useCallback((t: ApiTurno): Turno => {
+    // Igual que al guardar (services/api.ts toInicio): el turno se muestra
+    // en la zona horaria del consultorio, no en la del navegador.
+    const { date, time } = utcIsoToZonedParts(t.inicio, api.getConsultorioTimeZone())
+    return {
+      id: t.id,
+      date,
+      time,
+      duration: t.duracionMinutos,
+      patientDisplay: `${t.paciente.nombre} ${t.paciente.apellido}`,
+      patientId: t.paciente.id,
+      professionalDisplay: professionalName(t.profesional),
+      professionalId: t.profesional.id,
+      specialtyId: t.especialidad.id,
+      specialtyName: t.especialidad.nombre,
+      socialWorkId: t.obraSocial?.id ?? null,
+      socialWorkDisplay: t.paciente.obraSocial?.nombre ?? patientSocialWorkById[t.paciente.id] ?? t.obraSocial?.nombre ?? null,
+      sessionNumber: t.numeroSesion ?? undefined,
+      notes: t.notas ?? undefined,
+      status: mapEstadoToStatus(t.estado),
+      startAttention: t.inicioAtencion ?? null,
+      color: t.especialidad.color || 'var(--color-primary)',
+      updatedAt: t.updatedAt,
+    }
+  }, [patientSocialWorkById])
+
+  function mapTurnoToFormValue(turno: Turno): TurnoFormValue {
+    return {
+      date: turno.date,
+      time: turno.time,
+      patientId: turno.patientId,
+      professionalId: turno.professionalId ?? null,
+      specialtyId: turno.specialtyId ?? 0,
+      sessionNumber: turno.sessionNumber ?? 1,
+      status: turno.status,
+      duration: turno.duration,
+    }
+  }
+
+  // Carga de catálogos. Se ejecuta al iniciar y al reintentar.
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadCatalogs() {
+      setCatalogsLoading(true)
+      setLoadError(null)
+
+      try {
+        const [pacientes, profesionales, especialidades, obras, consultorio] = await Promise.all([
+          api.getPacientes(),
+          api.getProfesionales(),
+          api.getEspecialidades(),
+          api.getObrasSociales(),
+          api.getConsultorio(),
+        ])
+
+        if (cancelled) return
+
+        // La fecha/hora de los turnos se interpreta en la zona horaria del
+        // consultorio, nunca en la del navegador — ver services/api.ts.
+        api.setConsultorioTimeZone(consultorio.zonaHoraria)
+
+        setPacientesState(
+          pacientes.map((paciente: Paciente) => ({
+            id: paciente.id,
+            displayName: `${paciente.nombre} ${paciente.apellido}`,
+          })),
+        )
+        setProfesionalesState(
+          profesionales.map((profesional: Profesional) => ({
+            id: profesional.id,
+            displayName: `${profesional.titulo ? `${profesional.titulo} ` : ''}${profesional.nombre} ${profesional.apellido}`,
+          })),
+        )
+        setSpecialtiesState(
+          especialidades.map((especialidad: Especialidad, index: number) => ({
+            id: especialidad.id,
+            name: especialidad.nombre,
+            color: especialidad.color || getSpecialtyColor(index),
+          })),
+        )
+        const socialWorkNameById = new Map(
+          obras.map((obraSocial: ObraSocial) => [obraSocial.id, obraSocial.nombre]),
+        )
+        setObrasSocialesState(obras.map((obraSocial: ObraSocial) => obraSocial.nombre).sort())
+        setPatientSocialWorkById(
+          Object.fromEntries(
+            pacientes.map((paciente: Paciente) => [
+              paciente.id,
+              paciente.obraSocialId
+                ? (socialWorkNameById.get(paciente.obraSocialId) ?? null)
+                : null,
+            ]),
+          ),
+        )
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(getErrorMessage(error, 'No se pudieron cargar los datos del consultorio.'))
+        }
+      } finally {
+        if (!cancelled) setCatalogsLoading(false)
+      }
+    }
+
+    void loadCatalogs()
+    return () => {
+      cancelled = true
+    }
+  }, [reloadKey])
+
+  // Carga los turnos cada vez que cambia el día seleccionado.
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadTurnos() {
+      setTurnosLoading(true)
+      setLoadError(null)
+
+      try {
+        const turnos = await api.getTurnos({
+          from: selectedDate,
+          to: selectedDate,
+        })
+
+        if (cancelled) return
+
+        const mappedTurnos = turnos.map(mapApiTurnoToUi)
+        setTurnosState(mappedTurnos)
+        setSelectedTurnoId((currentId) =>
+          mappedTurnos.some((turno) => turno.id === currentId)
+            ? currentId
+            : (mappedTurnos[0]?.id ?? 0),
+        )
+      } catch (error) {
+        if (!cancelled) {
+          setTurnosState([])
+          setSelectedTurnoId(0)
+          setLoadError(getErrorMessage(error, 'No se pudieron cargar los turnos.'))
+        }
+      } finally {
+        if (!cancelled) setTurnosLoading(false)
+      }
+    }
+
+    void loadTurnos()
+    return () => {
+      cancelled = true
+    }
+  }, [mapApiTurnoToUi, selectedDate, reloadKey])
+
+  const toggleTheme = () => {
+    setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+
+      // El diálogo de confirmación es la capa más alta: si está abierto, un click
+      // afuera solo lo cierra a él, sin cascadear al modal que pueda haber debajo.
+      if (confirmDialog) {
+        if (confirmDialogRef.current && !confirmDialogRef.current.contains(target)) {
+          setConfirmDialog(null)
+        }
+        return
+      }
+
+      if (filtersOpen && filtersRef.current && !filtersRef.current.contains(target)) {
+        setFiltersOpen(false)
+      }
+
+      if (showNewTurno && newModalRef.current && !newModalRef.current.contains(target)) {
+        closeNewTurnoModal()
+      }
+
+      if (showViewTurno && viewModalRef.current && !viewModalRef.current.contains(target)) {
+        setShowViewTurno(false)
+        setIsEditingTurno(false)
+        setEditingTurnoForm(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [confirmDialog, filtersOpen, showNewTurno, showViewTurno, closeNewTurnoModal])
+
+  // Cierra el popover de "Foto de perfil" al hacer click afuera o presionar Escape.
+  useEffect(() => {
+    if (!profilePhotoInfoOpen) return undefined
+
+    const handleOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (avatarWrapperRef.current && !avatarWrapperRef.current.contains(target)) {
+        setProfilePhotoInfoOpen(false)
+      }
+    }
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfilePhotoInfoOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [profilePhotoInfoOpen])
+
+  // Cierra el menú contextual del turno al hacer click afuera, scrollear o presionar Escape.
+  useEffect(() => {
+    if (!contextMenu) return undefined
+
+    const handleOutside = (event: MouseEvent) => {
+      // Un right-click (que dispara su propio contextmenu con la nueva
+      // ubicación) no debe contar como "click afuera" y cerrar el menú
+      // que ese mismo evento está por abrir/reposicionar.
+      if (event.button !== 0) return
+
+      const target = event.target as Node
+      if (contextMenuRef.current && !contextMenuRef.current.contains(target)) {
+        setContextMenu(null)
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setContextMenu(null)
+    }
+
+    const handleScroll = () => setContextMenu(null)
+
+    document.addEventListener('mousedown', handleOutside)
+    document.addEventListener('keydown', handleEscape)
+    document.addEventListener('scroll', handleScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', handleOutside)
+      document.removeEventListener('keydown', handleEscape)
+      document.removeEventListener('scroll', handleScroll, true)
+    }
+  }, [contextMenu])
+
+  const onDragStart = (event: React.MouseEvent, turnoId: number, top: number, duration: number) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+
+    const turno = turnosState.find((item) => item.id === turnoId)
+    if (!turno) return
+
+    draggingRef.current = {
+      id: turnoId,
+      startY: event.clientY,
+      startTop: top,
+      originalTime: turno.time,
+      currentTime: turno.time,
+      duration,
+    }
+    isDraggingRef.current = false
+
+    const onMove = (moveEvent: MouseEvent) => {
+      const dragging = draggingRef.current
+      if (!dragging) return
+
+      const deltaY = moveEvent.clientY - dragging.startY
+      if (Math.abs(deltaY) > 3) isDraggingRef.current = true
+
+      const newTop = Math.max(0, Math.min(CALENDAR_TOTAL_MINUTES - dragging.duration, dragging.startTop + deltaY))
+      const minutesFromEight = Math.round(newTop / 5) * 5
+      const hour = CALENDAR_START_HOUR + Math.floor(minutesFromEight / 60)
+      const minute = minutesFromEight % 60
+      const newTime = `${pad(hour)}:${pad(minute)}`
+
+      dragging.currentTime = newTime
+      setTurnosState((currentTurnos) =>
+        currentTurnos.map((item) => (item.id === dragging.id ? { ...item, time: newTime } : item)),
+      )
+    }
+
+    const onUp = async () => {
+      const dragging = draggingRef.current
+      draggingRef.current = null
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+
+      if (!dragging || dragging.currentTime === dragging.originalTime) return
+
+      const currentTurno = turnosState.find((item) => item.id === dragging.id)
+      const date = currentTurno?.date ?? selectedDate
+
+      try {
+        const updated = await api.patchTurno(dragging.id, {
+          date,
+          time: dragging.currentTime,
+        })
+        const mapped = mapApiTurnoToUi(updated)
+        setTurnosState((currentTurnos) =>
+          currentTurnos.map((item) => (item.id === mapped.id ? mapped : item)),
+        )
+        setTurnosPageRefreshKey((key) => key + 1)
+      } catch (error) {
+        setTurnosState((currentTurnos) =>
+          currentTurnos.map((item) =>
+            item.id === dragging.id ? { ...item, time: dragging.originalTime } : item,
+          ),
+        )
+        setLoadError(getErrorMessage(error, 'No se pudo guardar el nuevo horario del turno.'))
+      }
+    }
+
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  const openNewTurnoModal = (prefillDate?: string, prefillTime?: string, prefillPatientId?: number) => {
+    setShowNewTurno(true)
+    setNewTurnoForm({
+      date: prefillDate ?? (activePage === 'turnos' ? formatDate(new Date()) : selectedDate),
+      time: prefillTime ?? '09:00',
+      patientId: prefillPatientId ?? null,
+      professionalId: user?.rol === 'PROFESIONAL' ? user.profesionalId ?? null : null,
+      specialtyId: specialtiesState[0]?.id ?? 0,
+      sessionNumber: 1,
+      status: 'Asignado',
+      duration: 60,
+    })
+  }
+
+  const openPatientDetail = (patientId: number) => {
+    setSelectedPatientId(patientId)
+    setActivePage('paciente-detalle')
+  }
+
+  const closePatientDetail = () => {
+    setSelectedPatientId(null)
+    setActivePage('pacientes')
+  }
+
+  const closeAttentionScreen = () => {
+    setAttentionTurno(null)
+    setActivePage(attentionReturnPage)
+  }
+
+  const createSpecialty = async (rawName: string) => {
+    const name = rawName.trim()
+    const existingSpecialty = specialtiesState.find((s) => s.name.toLowerCase() === name.toLowerCase())
+    if (existingSpecialty) return existingSpecialty
+    const color = getSpecialtyColor(specialtiesState.length)
+    const created = await api.createEspecialidad(name, color)
+    const next = { id: created.id, name: created.nombre, color: created.color }
+    setSpecialtiesState((s) => [...s, next])
+    return next
+  }
+
+  const saveNewTurno = async () => {
+    if (!newTurnoForm.patientId || !newTurnoForm.professionalId || newTurnoForm.specialtyId === 0) return
+    try {
+      const created = await api.createTurno({
+        pacienteId: newTurnoForm.patientId,
+        profesionalId: newTurnoForm.professionalId,
+        especialidadId: newTurnoForm.specialtyId,
+        date: newTurnoForm.date,
+        time: newTurnoForm.time,
+        duracionMinutos: newTurnoForm.duration,
+        numeroSesion: newTurnoForm.sessionNumber,
+        estado: mapUiStatusToApi(newTurnoForm.status),
+      })
+      const mapped = mapApiTurnoToUi(created)
+      setTurnosState((currentTurnos) => [...currentTurnos, mapped])
+      setSelectedTurnoId(mapped.id)
+      closeNewTurnoModal()
+      setTurnosPageRefreshKey((key) => key + 1)
+      setLoadError(null)
+    } catch (error) {
+      setLoadError(getErrorMessage(error, 'No se pudo crear el turno.'))
+    }
+  }
+
+  const openTurnoDetails = (turno: Turno) => {
+  setEditingTurnoId(turno.id)
+  setEditingTurnoForm(mapTurnoToFormValue(turno))
+  setIsEditingTurno(true)
+  setShowViewTurno(true)
+}
+
+  const closeTurnoDetails = () => {
+    setShowViewTurno(false)
+    setIsEditingTurno(false)
+    setEditingTurnoId(null)
+    setEditingTurnoForm(null)
+  }
+
+  // Cierra el modal de turno (nuevo o edición) o el diálogo de confirmación con Escape.
+  // El diálogo de confirmación tiene prioridad: si está abierto, Escape solo lo cierra a él.
+  useEffect(() => {
+    if (!confirmDialog && !showNewTurno && !showViewTurno) return undefined
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (confirmDialog) {
+        setConfirmDialog(null)
+        return
+      }
+      if (showNewTurno) closeNewTurnoModal()
+      if (showViewTurno) closeTurnoDetails()
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [confirmDialog, showNewTurno, showViewTurno, closeNewTurnoModal])
+
+  // No existe un endpoint de borrado físico: "Cancelado" ya es, en el dominio
+  // de Kineq, el estado que libera el horario.
+  const cancelTurno = async (turnoId: number) => {
+    try {
+      await api.patchTurno(turnoId, { estado: 'CANCELADO' })
+      setTurnosState((currentTurnos) => currentTurnos.filter((item) => item.id !== turnoId))
+      if (selectedTurnoId === turnoId) setSelectedTurnoId(0)
+      if (editingTurnoId === turnoId) closeTurnoDetails()
+      setTurnosPageRefreshKey((key) => key + 1)
+      setLoadError(null)
+    } catch (error) {
+      setLoadError(getErrorMessage(error, 'No se pudo cancelar el turno.'))
+    }
+  }
+
+  const handleCancelTurno = (turnoId: number) => {
+    setContextMenu(null)
+    setConfirmDialog({
+      title: 'Cancelar turno',
+      description: 'El horario quedará disponible nuevamente.',
+      confirmLabel: 'Cancelar turno',
+      cancelLabel: 'Volver',
+      destructive: true,
+      onConfirm: () => { void cancelTurno(turnoId) },
+    })
+  }
+
+  // Botón "Eliminar turno" del modal de edición: misma acción que cancelar,
+  // reutiliza cancelTurno, con su propio texto de confirmación.
+  const handleDeleteTurno = (turnoId: number) => {
+    setConfirmDialog({
+      title: 'Eliminar turno',
+      description: 'Esta acción eliminará el turno.',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Volver',
+      destructive: true,
+      onConfirm: () => { void cancelTurno(turnoId) },
+    })
+  }
+
+  // Transición genérica de estado (En Espera / Atendiendo / Finalizado / Ausente).
+  // El backend registra automáticamente el timestamp correspondiente al transicionar.
+  const updateTurnoEstado = async (turnoId: number, nextEstado: EstadoTurno) => {
+    try {
+      const updated = await api.patchTurno(turnoId, { estado: nextEstado })
+      const mapped = mapApiTurnoToUi(updated)
+      setTurnosState((currentTurnos) =>
+        currentTurnos.map((item) => (item.id === mapped.id ? mapped : item)),
+      )
+      if (editingTurnoId === mapped.id) {
+        setEditingTurnoForm(mapTurnoToFormValue(mapped))
+      }
+      setTurnosPageRefreshKey((key) => key + 1)
+      setLoadError(null)
+      return mapped
+    } catch (error) {
+      setLoadError(getErrorMessage(error, 'No se pudo actualizar el estado del turno.'))
+      return null
+    }
+  }
+
+  const marcarAusente = (turnoId: number) => {
+    setContextMenu(null)
+    setConfirmDialog({
+      title: 'Marcar paciente ausente',
+      description: 'Este turno contará como sesión consumida.',
+      confirmLabel: 'Marcar ausente',
+      cancelLabel: 'Volver',
+      destructive: true,
+      onConfirm: () => { void updateTurnoEstado(turnoId, 'AUSENTE') },
+    })
+  }
+
+  // Única función que finaliza una atención desde fuera de la propia pantalla
+  // de Atención (calendario de Inicio, menú de Turnos, acciones rápidas del
+  // modal "Editar turno" — las tres comparten getTurnoQuickActions más abajo,
+  // así que confirmar acá alcanza para las tres superficies).
+  const requestFinalizarAtencion = (turnoId: number) => {
+    setContextMenu(null)
+    setConfirmDialog({
+      title: 'Finalizar atención',
+      description: '¿Seguro que querés finalizar la atención de este paciente? El turno quedará marcado como finalizado.',
+      confirmLabel: 'Finalizar atención',
+      cancelLabel: 'Cancelar',
+      destructive: false,
+      onConfirm: () => { void updateTurnoEstado(turnoId, 'FINALIZADO') },
+    })
+  }
+
+  // "Iniciar atención" es el punto de entrada único al flujo clínico: primero
+  // confirma el cambio de estado en el backend y solo si eso funciona navega
+  // a la pantalla de atención. Si falla, no navega (el error ya quedó en loadError).
+  const iniciarAtencion = async (turnoId: number) => {
+    setContextMenu(null)
+    const returnPage = activePage
+    const updated = await updateTurnoEstado(turnoId, 'ATENDIENDO')
+    if (!updated) return
+    setAttentionTurno(updated)
+    setAttentionReturnPage(returnPage)
+    setActivePage('atencion')
+  }
+
+  // El turno ya está ATENDIENDO: solo navega, sin volver a pegarle al backend.
+  // Recibe el turno completo (no solo el id) porque quien llama a esta acción
+  // no siempre tiene el turno en `turnosState`: esa lista solo trae los
+  // turnos de `selectedDate` (la agenda del día en Inicio), mientras que
+  // TurnosPage muestra turnos de un rango de fechas más amplio. Buscar por id
+  // en `turnosState` fallaba en silencio para cualquier turno fuera del día
+  // seleccionado en Inicio.
+  const continuarAtencion = (turno: TurnosPageItem) => {
+    setContextMenu(null)
+    setAttentionTurno(turno)
+    setAttentionReturnPage(activePage)
+    setActivePage('atencion')
+  }
+
+  // Recepción/administrador operan la agenda; profesional solo su propia
+  // atención clínica (iniciar/continuar/finalizar) y solo sobre turnos
+  // propios; supervisor queda en modo lectura. El backend vuelve a validar
+  // todo esto: este filtro es únicamente para no ofrecer acciones que el
+  // servidor rechazaría.
+  //
+  // Recibe el turno completo por el mismo motivo que `continuarAtencion`:
+  // no depender de `turnosState`, que no incluye los turnos que muestra
+  // TurnosPage fuera del día seleccionado en Inicio.
+  function getTurnoQuickActions(turno: TurnosPageItem): TurnoQuickAction[] {
+    const { status, id: turnoId } = turno
+    let actions: TurnoQuickAction[] = []
+
+    if (status === 'Asignado') {
+      actions = [
+        { key: 'en-espera', label: 'Marcar en espera', tone: 'primary', onClick: () => { void updateTurnoEstado(turnoId, 'EN_ESPERA') } },
+        { key: 'ausente', label: 'Marcar ausente', tone: 'warning', onClick: () => marcarAusente(turnoId) },
+        { key: 'cancelar', label: 'Cancelar turno', tone: 'danger', onClick: () => handleCancelTurno(turnoId) },
+      ]
+    } else if (status === 'En Espera') {
+      actions = [
+        { key: 'iniciar', label: 'Iniciar atención', tone: 'primary', onClick: () => { void iniciarAtencion(turnoId) } },
+        { key: 'ausente', label: 'Marcar ausente', tone: 'warning', onClick: () => marcarAusente(turnoId) },
+        { key: 'cancelar', label: 'Cancelar turno', tone: 'danger', onClick: () => handleCancelTurno(turnoId) },
+      ]
+    } else if (status === 'Atendiendo') {
+      actions = [
+        { key: 'continuar', label: 'Continuar atención', tone: 'primary', onClick: () => continuarAtencion(turno) },
+        { key: 'finalizar', label: 'Finalizar atención', tone: 'warning', onClick: () => requestFinalizarAtencion(turnoId) },
+      ]
+    }
+
+    if (!user || user.rol === 'SUPERVISOR') return []
+    if (user.rol === 'ADMINISTRADOR') return actions
+
+    const clinicalKeys = ['iniciar', 'continuar', 'finalizar']
+    if (user.rol === 'RECEPCION') return actions.filter((action) => !clinicalKeys.includes(action.key))
+
+    // PROFESIONAL: solo acciones clínicas, y solo sobre turnos propios.
+    const esPropio = turno.professionalId != null && turno.professionalId === user.profesionalId
+    if (!esPropio) return []
+    return actions.filter((action) => clinicalKeys.includes(action.key))
+  }
+
+  const saveEditedTurno = async () => {
+    if (editingTurnoId === null || !editingTurnoForm) return
+    if (!editingTurnoForm.patientId || !editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) return
+
+    try {
+      const updated = await api.patchTurno(editingTurnoId, {
+        pacienteId: editingTurnoForm.patientId,
+        profesionalId: editingTurnoForm.professionalId,
+        especialidadId: editingTurnoForm.specialtyId,
+        date: editingTurnoForm.date,
+        time: editingTurnoForm.time,
+        duracionMinutos: editingTurnoForm.duration,
+        numeroSesion: editingTurnoForm.sessionNumber,
+        estado: mapUiStatusToApi(editingTurnoForm.status),
+      })
+
+      const mappedTurno = mapApiTurnoToUi(updated)
+      setTurnosState((currentTurnos) => {
+        const withoutUpdated = currentTurnos.filter(
+          (turno) => turno.id !== mappedTurno.id,
+        )
+        return mappedTurno.date === selectedDate
+          ? [...withoutUpdated, mappedTurno]
+          : withoutUpdated
+      })
+      setLoadError(null)
+      closeTurnoDetails()
+      setTurnosPageRefreshKey((key) => key + 1)
+    } catch (error) {
+      setLoadError(getErrorMessage(error, 'No se pudieron guardar los cambios del turno.'))
+    }
+  }
+
+  // compute month grid based on currentMonthDate
+  const monthDays = useMemo(() => getMonthDays(currentMonthDate), [currentMonthDate])
+
+  const selectedTurno =
+    turnosState.find((turno) => turno.id === selectedTurnoId) ??
+    turnosState.find((turno) => turno.date === selectedDate) ??
+    null
+
+  // Opciones de filtro: vienen del consultorio completo (profesionalesState/
+  // obrasSocialesState, ya activos y aislados por consultorio vía backend),
+  // no de los turnos del día seleccionado. Antes se derivaban de
+  // `turnosState`, que solo trae los turnos de `selectedDate`: un
+  // profesional u obra social sin turno ese día específico directamente no
+  // aparecía como opción de filtro.
+  const uniqueSocialWorks = obrasSocialesState
+  const uniqueProfessionals = profesionalesState.map((profesional) => profesional.displayName)
+
+  const dayTurnos = turnosState
+    .filter((t) => t.date === selectedDate)
+    .filter((turno) => {
+      const specialtyMatch =
+        filters.specialtyIds.length === 0 ||
+        (turno.specialtyId ? filters.specialtyIds.includes(turno.specialtyId) : false)
+      const socialWorkMatch = filters.socialWorks.length === 0 || filters.socialWorks.includes(turno.socialWorkDisplay ?? '')
+      const professionalMatch = filters.professionals.length === 0 || filters.professionals.includes(turno.professionalDisplay ?? '')
+      const statusMatch = filters.statuses.length === 0 || filters.statuses.includes(turno.status)
+
+      return specialtyMatch && socialWorkMatch && professionalMatch && statusMatch
+    })
+    .sort((a, b) => a.time.localeCompare(b.time))
+
+  const visibleDayTurnos = dayTurnos.filter((turno) => {
+    const [hour, minute] = turno.time.split(':').map(Number)
+    const minutesFromStart = (hour - CALENDAR_START_HOUR) * 60 + minute
+    return minutesFromStart >= 0 && minutesFromStart < CALENDAR_TOTAL_MINUTES
+  })
+
+  const hiddenDayTurnosCount = dayTurnos.length - visibleDayTurnos.length
+
+  // Turnos superpuestos (de distintos profesionales) comparten el ancho de
+  // la columna en vez de taparse; ver utils/turnoLayout.ts.
+  const turnoColumnLayout = layoutTurnos(
+    visibleDayTurnos.map((turno) => {
+      const [hourString, minuteString] = turno.time.split(':')
+      const startMinutes = Number(hourString) * 60 + Number(minuteString)
+      return { id: turno.id, startMinutes, endMinutes: startMinutes + turno.duration }
+    }),
+  )
+
+  // Reloj usado para refrescar los timers de En Espera/Atendiendo (panel lateral y calendario).
+  const [clockNow, setClockNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const hasLiveTimer =
+      activePage === 'home' &&
+      dayTurnos.some((turno) => turno.status === 'En Espera' || turno.status === 'Atendiendo')
+
+    if (!hasLiveTimer) return undefined
+
+    const timer = window.setInterval(() => setClockNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [activePage, dayTurnos])
+
+  const elapsedSeconds =
+    selectedTurno?.status === 'Atendiendo' && selectedTurno.startAttention
+      ? Math.max(0, Math.floor((clockNow - new Date(selectedTurno.startAttention).getTime()) / 1000))
+      : 0
+  const isSelectedAttendingOverDuration =
+    selectedTurno?.status === 'Atendiendo' && Math.floor(elapsedSeconds / 60) > selectedTurno.duration
+  const selectedWaitingMinutes =
+    selectedTurno?.status === 'En Espera' ? getElapsedMinutes(selectedTurno.updatedAt, clockNow) : null
+  const isSelectedWaitingTooLong =
+    selectedWaitingMinutes !== null && selectedWaitingMinutes >= WAITING_ALERT_MINUTES
+
+  const prevMonth = () => setCurrentMonthDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
+  const nextMonth = () => setCurrentMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
+
+  // Redimensiona visualmente durante el movimiento y persiste una sola vez al soltar.
+  const onResizeStart = (event: React.MouseEvent, turnoId: number) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+
+    const turno = turnosState.find((item) => item.id === turnoId)
+    if (!turno) return
+
+    resizingRef.current = {
+      id: turnoId,
+      startY: event.clientY,
+      originalDuration: turno.duration,
+      currentDuration: turno.duration,
+    }
+    isDraggingRef.current = false
+
+    const onMove = (moveEvent: MouseEvent) => {
+      const resizing = resizingRef.current
+      if (!resizing) return
+
+      const deltaY = Math.round(moveEvent.clientY - resizing.startY)
+      if (Math.abs(deltaY) > 3) isDraggingRef.current = true
+      const newDuration = Math.max(15, Math.round((resizing.originalDuration + deltaY) / 5) * 5)
+      resizing.currentDuration = newDuration
+
+      setTurnosState((currentTurnos) =>
+        currentTurnos.map((item) =>
+          item.id === resizing.id ? { ...item, duration: newDuration } : item,
+        ),
+      )
+    }
+
+    const onUp = async () => {
+      const resizing = resizingRef.current
+      resizingRef.current = null
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+
+      if (!resizing || resizing.currentDuration === resizing.originalDuration) return
+
+      try {
+        const updated = await api.patchTurno(resizing.id, {
+          duracionMinutos: resizing.currentDuration,
+        })
+        const mapped = mapApiTurnoToUi(updated)
+        setTurnosState((currentTurnos) =>
+          currentTurnos.map((item) => (item.id === mapped.id ? mapped : item)),
+        )
+        setTurnosPageRefreshKey((key) => key + 1)
+      } catch (error) {
+        setTurnosState((currentTurnos) =>
+          currentTurnos.map((item) =>
+            item.id === resizing.id ? { ...item, duration: resizing.originalDuration } : item,
+          ),
+        )
+        setLoadError(getErrorMessage(error, 'No se pudo guardar la duración del turno.'))
+      }
+    }
+
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  // Abre la creación rápida de turno al hacer click en un espacio vacío del calendario diario.
+  const handleCalendarBackgroundClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false
+      return
+    }
+
+    const target = event.target as HTMLElement
+    if (target.closest('.turno-card')) return
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    const offsetY = Math.max(0, Math.min(CALENDAR_TOTAL_MINUTES, event.clientY - rect.top))
+    const snappedMinutes = Math.round(offsetY / CALENDAR_SLOT_SNAP_MINUTES) * CALENDAR_SLOT_SNAP_MINUTES
+    const hour = CALENDAR_START_HOUR + Math.floor(snappedMinutes / 60)
+    const minute = snappedMinutes % 60
+
+    openNewTurnoModal(selectedDate, `${pad(hour)}:${pad(minute)}`)
+    setShowDraftPreview(true)
+  }
+
+  // El placeholder del calendario solo tiene sentido en Inicio: si se
+  // navega a otra página (Turnos, Pacientes, etc.) mientras sigue activo,
+  // se limpia acá (ajuste de estado durante el render, patrón recomendado
+  // por React en vez de un efecto, ya que se deriva de otro estado/prop).
+  if (activePage !== 'home' && showDraftPreview) {
+    setShowDraftPreview(false)
+  }
+
+  const fullName = user ? `${user.nombre} ${user.apellido}`.trim() : ''
+  const roleLabel = user ? ROL_LABELS[user.rol] ?? user.rol : ''
+  const initials = user ? `${user.nombre[0] ?? ''}${user.apellido[0] ?? ''}`.toUpperCase() : ''
+  const visibleMenuItems = menuItems.filter((item) => item.label !== 'Configuración' || user?.rol === 'ADMINISTRADOR')
+  // El profesional vinculado debe existir y estar activo: profesionalesState
+  // ya viene filtrado a solo activos (api.getProfesionales() sin incluirInactivos).
+  const profesionalVinculadoActivo = user?.profesionalId != null
+    && profesionalesState.some((p) => p.id === user.profesionalId)
+  const puedeCrearTurnos = user?.rol === 'ADMINISTRADOR' || user?.rol === 'RECEPCION' || user?.rol === 'SUPERVISOR'
+    || (user?.rol === 'PROFESIONAL' && profesionalVinculadoActivo)
+
+  return (
+    <div
+      className={`dashboard-shell ${
+        activePage !== 'home' ? 'dashboard-shell--turnos' : ''
+      }`}
+    >
+      <header className="mobile-topbar">
+        <button
+          type="button"
+          className="mobile-menu-button"
+          aria-label="Abrir menú"
+          aria-controls="main-navigation"
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16" />
+            <path d="M4 12h16" />
+            <path d="M4 18h16" />
+          </svg>
+        </button>
+
+        <strong
+          className="mobile-brand"
+          role="button"
+          tabIndex={0}
+          aria-label="Ir a Inicio"
+          onClick={() => { setActivePage('home'); setMobileMenuOpen(false) }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              setActivePage('home')
+              setMobileMenuOpen(false)
+            }
+          }}
+        >
+          <KineqIsologo aria-hidden="true" />
+          Kineq
+        </strong>
+
+        <div className="mobile-topbar-actions">
+          <button
+            type="button"
+            className="theme-toggle mobile-theme-toggle"
+            aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
+            title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+            aria-pressed={theme === 'dark'}
+            onClick={toggleTheme}
+          >
+            <ThemeIcon theme={theme} />
+          </button>
+
+          <div
+            className="mobile-profile-avatar"
+            title={fullName}
+            aria-label={`Perfil de ${fullName}`}
+          >
+            {initials}
+          </div>
+        </div>
+      </header>
+
+      {mobileMenuOpen ? (
+        <button
+          type="button"
+          className="mobile-menu-backdrop"
+          aria-label="Cerrar menú"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      ) : null}
+
+      <aside
+        id="main-navigation"
+        className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}
+      >
+        <div
+          className="sidebar-logo"
+          role="button"
+          tabIndex={0}
+          aria-label="Ir a Inicio"
+          onClick={() => setActivePage('home')}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              setActivePage('home')
+            }
+          }}
+        >
+          <KineqIsologotipo />
+        </div>
+
+        <div className="sidebar-brand">
+          <div className="avatar-wrapper" ref={avatarWrapperRef}>
+            <div className="avatar">{initials}</div>
+            <button
+              type="button"
+              className="avatar-edit-button"
+              aria-label="Foto de perfil"
+              title="Foto de perfil"
+              onClick={() => setProfilePhotoInfoOpen(true)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+            {profilePhotoInfoOpen ? (
+              <div className="avatar-edit-popover" role="dialog" aria-label="Foto de perfil">
+                <p className="avatar-edit-popover-title">Foto de perfil</p>
+                <p>La carga de imágenes estará disponible próximamente.</p>
+                <button type="button" className="secondary-button" onClick={() => setProfilePhotoInfoOpen(false)}>Entendido</button>
+              </div>
+            ) : null}
+          </div>
+          <div>
+            <p className="user-role">{roleLabel}</p>
+            <strong>{fullName}</strong>
+          </div>
+          <button
+            type="button"
+            className="mobile-menu-close"
+            aria-label="Cerrar menú"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            &times;
+          </button>
+        </div>
+        <nav className="sidebar-nav">
+          {visibleMenuItems.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className={`nav-item ${
+                item.page === activePage ||
+                (item.page === 'pacientes' && activePage === 'paciente-detalle')
+                  ? 'active'
+                  : ''
+              }`}
+              onClick={() => {
+                if (item.page) setActivePage(item.page)
+                setMobileMenuOpen(false)
+              }}
+            >
+              <span className="nav-icon" aria-hidden="true">
+                <item.Icon focusable="false" />
+              </span>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <button
+          type="button"
+          className="theme-toggle sidebar-theme-toggle"
+          aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
+          aria-pressed={theme === 'dark'}
+          onClick={toggleTheme}
+        >
+          <span className="theme-toggle-icon">
+            <ThemeIcon theme={theme} />
+          </span>
+          <span>{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>
+        </button>
+
+        <button type="button" className="secondary-button sidebar-logout" onClick={() => { void logout() }}>
+          Cerrar sesión
+        </button>
+      </aside>
+
+      <main
+        className={`main-area ${
+          activePage !== 'home' ? 'turnos-main-area' : ''
+        }`}
+      >
+        {activePage === 'home' ? (
+          <>
+        <header className="main-header">
+          <div>
+            <p className="breadcrumb">Home / Inicio</p>
+            <h1>Turnos del día</h1>
+          </div>
+          <div className="header-actions">
+            {puedeCrearTurnos ? (
+              <button type="button" className="new-turn-button" onClick={() => openNewTurnoModal()}>
+                Nuevo turno
+              </button>
+            ) : null}
+          </div>
+        </header>
+
+        {loadError ? (
+          <section className="schedule-panel" role="alert">
+            <h2>No se pudieron cargar los datos</h2>
+            <p>{loadError}</p>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => setReloadKey((currentKey) => currentKey + 1)}
+            >
+              Reintentar
+            </button>
+          </section>
+        ) : null}
+
+        <section className="schedule-panel">
+            <div className="schedule-header">
+              <div>
+                <h2>Calendario del día</h2>
+                <p>{formatDateLabel(selectedDate)}</p>
+              </div>
+              <div className="schedule-filters-wrapper" ref={filtersRef}>
+                <button className="filter-button" type="button" onClick={() => setFiltersOpen(!filtersOpen)}>
+                  <span>Filtro</span>
+                  <span className="filter-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 4H21L14 11V18L10 20V11L3 4Z" />
+                    </svg>
+                  </span>
+                </button>
+                {filtersOpen ? (
+                  <div className="filters-panel">
+                    <div className="filter-group">
+                      <strong>Especialidad</strong>
+                      {specialtiesState.map((spec) => (
+                        <label key={spec.id}>
+                          <input
+                            type="checkbox"
+                            checked={filters.specialtyIds.includes(spec.id)}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...filters.specialtyIds, spec.id]
+                                : filters.specialtyIds.filter((id) => id !== spec.id)
+                              setFilters({ ...filters, specialtyIds: next })
+                            }}
+                          />
+                          {spec.name}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="filter-group">
+                      <strong>Obra social</strong>
+                      {uniqueSocialWorks.map((socialWork) => (
+                        <label key={socialWork}>
+                          <input
+                            type="checkbox"
+                            checked={filters.socialWorks.includes(socialWork)}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...filters.socialWorks, socialWork]
+                                : filters.socialWorks.filter((item) => item !== socialWork)
+                              setFilters({ ...filters, socialWorks: next })
+                            }}
+                          />
+                          {socialWork}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="filter-group">
+                      <strong>Profesional</strong>
+                      {uniqueProfessionals.map((professional) => (
+                        <label key={professional}>
+                          <input
+                            type="checkbox"
+                            checked={filters.professionals.includes(professional)}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...filters.professionals, professional]
+                                : filters.professionals.filter((item) => item !== professional)
+                              setFilters({ ...filters, professionals: next })
+                            }}
+                          />
+                          {professional}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="filter-group">
+                      <strong>Estado</strong>
+                      {['Asignado', 'En Espera', 'Atendiendo', 'Finalizado', 'Ausente', 'Cancelado'].map((status) => (
+                        <label key={status}>
+                          <input
+                            type="checkbox"
+                            checked={filters.statuses.includes(status)}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...filters.statuses, status]
+                                : filters.statuses.filter((item) => item !== status)
+                              setFilters({ ...filters, statuses: next })
+                            }}
+                          />
+                          {status}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+          {turnosLoading ? (
+            <p>Cargando turnos...</p>
+          ) : dayTurnos.length === 0 ? (
+            <p className="empty-day-message">
+              No hay turnos para este día.
+            </p>
+          ) : null}
+
+          {hiddenDayTurnosCount > 0 ? (
+            <p className="calendar-range-warning">
+              {hiddenDayTurnosCount === 1 ? 'Hay 1 turno' : `Hay ${hiddenDayTurnosCount} turnos`} fuera del horario visible ({CALENDAR_START_HOUR}:00 a {CALENDAR_END_HOUR}:00).
+            </p>
+          ) : null}
+
+          <div className="day-grid">
+            <div className="hours-column">
+              {hourLabels.map((hour) => (
+                <div key={hour} className="hour-label">
+                  {hour}:00
+                </div>
+              ))}
+            </div>
+            <div className="calendar-column" onClick={handleCalendarBackgroundClick}>
+              <div className="timeline-lines">
+                {hourLabels.map((hour) => (
+                  <div key={hour} className="timeline-row" />
+                ))}
+              </div>
+
+              {visibleDayTurnos.map((turno) => {
+                const [hourString, minuteString] = turno.time.split(':')
+                const top = ((Number(hourString) + Number(minuteString) / 60 - CALENDAR_START_HOUR) * 60)
+                const specialty = specialtiesState.find(s => s.id === turno.specialtyId)
+                const bgColor = specialty?.color ?? turno.color
+
+                const endTime = addMinutesToTime(turno.time, turno.duration)
+
+                const layout = turnoColumnLayout.get(turno.id)
+                const columns = layout?.columns ?? 1
+                const column = layout?.column ?? 0
+                const columnGapPx = 6
+                const left = `calc(16px + (100% - 32px) * ${column / columns})`
+                const width = columns > 1
+                  ? `calc((100% - 32px) * ${1 / columns} - ${columnGapPx}px)`
+                  : 'calc(100% - 32px)'
+                // Separación visual mínima entre turnos contiguos (el de
+                // arriba termina exactamente cuando empieza el siguiente):
+                // se achica un poco la altura renderizada, nunca el `top`
+                // (la hora real no cambia), con un piso para no comerse
+                // turnos muy cortos (15 min = 15px).
+                const renderedHeight = Math.max(turno.duration - 3, 12)
+
+                return (
+                  <button
+                    key={turno.id}
+                    type="button"
+                    className={`turno-card ${turno.id === selectedTurnoId ? 'selected' : ''} ${turno.duration < 60 ? 'short-turno' : ''} ${columns > 1 ? 'turno-card--narrow' : ''}`}
+                    style={{
+                      top: `${top}px`,
+                      height: `${renderedHeight}px`,
+                      left,
+                      width,
+                      backgroundColor: bgColor,
+                      alignItems: 'flex-start'
+                    }}
+                    onMouseDown={(e) => onDragStart(e, turno.id, top, turno.duration)}
+                    onClick={(e) => {
+                      if (e.button !== 0) return
+                      if (isDraggingRef.current) {
+                        e.preventDefault()
+                        isDraggingRef.current = false
+                        return
+                      }
+                      setSelectedTurnoId(turno.id)
+                      openTurnoDetails(turno)
+                    }}
+                    onContextMenu={(e) => {
+                      // El menú nativo del navegador nunca debe aparecer sobre un turno,
+                      // sin importar si hay acciones disponibles para su estado actual.
+                      e.preventDefault()
+                      e.stopPropagation()
+
+                      const actions = getTurnoQuickActions(turno)
+                      if (actions.length === 0) {
+                        setContextMenu(null)
+                        return
+                      }
+
+                      const menuWidth = 190
+                      const menuHeight = actions.length * 40 + 12
+                      setContextMenu({
+                        turnoId: turno.id,
+                        x: Math.max(8, Math.min(e.clientX, window.innerWidth - menuWidth - 8)),
+                        y: Math.max(8, Math.min(e.clientY, window.innerHeight - menuHeight - 8)),
+                      })
+                    }}
+                  >
+                    <span
+                      className={`turno-card-status-dot turno-card-status-dot--${statusClass(turno.status)}`}
+                      aria-hidden="true"
+                      title={turno.status}
+                    />
+                    <strong>{turno.patientDisplay}</strong>
+                    <span>{turno.time} - {endTime}</span>
+                    {turno.duration >= 90 ? <TurnoCardTimer turno={turno} now={clockNow} /> : null}
+                    <div className="resize-handle" onMouseDown={(e) => { e.stopPropagation(); onResizeStart(e, turno.id) }} />
+                  </button>
+                )
+                })}
+
+              {showDraftPreview && showNewTurno && newTurnoForm.date === selectedDate ? (() => {
+                const [draftHourString, draftMinuteString] = newTurnoForm.time.split(':')
+                const draftTop = (Number(draftHourString) + Number(draftMinuteString) / 60 - CALENDAR_START_HOUR) * 60
+                const draftEndTime = addMinutesToTime(newTurnoForm.time, newTurnoForm.duration)
+
+                return (
+                  <div
+                    className="turno-card turno-card--draft"
+                    style={{ top: `${draftTop}px`, height: `${newTurnoForm.duration}px` }}
+                    aria-hidden="true"
+                  >
+                    <strong>Nuevo turno</strong>
+                    <span>{newTurnoForm.time} - {draftEndTime}</span>
+                  </div>
+                )
+              })() : null}
+            </div>
+          </div>
+        </section>
+          </>
+        ) : activePage === 'turnos' ? (
+          <TurnosPage
+            refreshKey={turnosPageRefreshKey}
+            patientSocialWorkById={patientSocialWorkById}
+            onNewTurno={puedeCrearTurnos ? () => openNewTurnoModal() : undefined}
+            onOpenTurno={(turno) => continuarAtencion(turno)}
+            onEditTurno={(turno) => openTurnoDetails(turno as Turno)}
+            getQuickActions={getTurnoQuickActions}
+          />
+        ) : activePage === 'paciente-detalle' && selectedPatientId !== null ? (
+          <PatientDetailPage
+            patientId={selectedPatientId}
+            patientSocialWorkById={patientSocialWorkById}
+            refreshKey={turnosPageRefreshKey}
+            onBack={closePatientDetail}
+            onNewTurno={(patientId) => openNewTurnoModal(undefined, undefined, patientId)}
+            onRequestConfirm={setConfirmDialog}
+          />
+        ) : activePage === 'atencion' && attentionTurno !== null ? (
+          <AttentionPage
+            turno={attentionTurno}
+            refreshKey={turnosPageRefreshKey}
+            onBack={closeAttentionScreen}
+            onUpdateEstado={updateTurnoEstado}
+            onRequestConfirm={setConfirmDialog}
+          />
+        ) : activePage === 'estadisticas' ? (
+          <EstadisticasPage />
+        ) : activePage === 'configuracion' ? (
+          <ConfiguracionPage onRequestConfirm={setConfirmDialog} />
+        ) : (
+          <PatientsPage
+            refreshKey={turnosPageRefreshKey}
+            patientSocialWorkById={patientSocialWorkById}
+            onOpenPatient={openPatientDetail}
+          />
+        )}
+
+        {showNewTurno && (
+          <div className="modal-overlay">
+            <div className="modal-card" ref={newModalRef}>
+              <div className="modal-header">
+                <div className="modal-header-title">
+                  <span className="modal-header-icon" aria-hidden="true">
+                    <CalendarIcon />
+                  </span>
+                  <div>
+                    <h3>Nuevo turno</h3>
+                    <p>Completá los datos para agendar el turno.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="close-button"
+                  aria-label="Cerrar nuevo turno"
+                  onClick={closeNewTurnoModal}
+                >
+                  &times;
+                </button>
+              </div>
+
+              <TurnoFormFields
+                value={newTurnoForm}
+                onChange={setNewTurnoForm}
+                patients={pacientesState}
+                professionals={profesionalesState}
+                specialties={specialtiesState}
+                onCreateSpecialty={user?.rol === 'ADMINISTRADOR' ? createSpecialty : undefined}
+                hideProfessionalField={user?.rol === 'PROFESIONAL'}
+              />
+
+              {user?.rol === 'PROFESIONAL' && !profesionalVinculadoActivo ? (
+                <p className="evolution-form-error">
+                  Tu usuario no está vinculado a un profesional activo. Un administrador debe completar el vínculo para que puedas crear turnos.
+                </p>
+              ) : null}
+
+              <div className="modal-actions">
+                <button type="button" className="secondary-button" onClick={closeNewTurnoModal}>
+                  Cancelar
+                </button>
+                <button type="button" className="primary-button" onClick={saveNewTurno}>
+                  Guardar turno
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showViewTurno && editingTurnoForm && (
+          <div className="modal-overlay">
+            <div className="modal-card" ref={viewModalRef}>
+              <div className="modal-header">
+                <div className="modal-header-title">
+                  <span className="modal-header-icon" aria-hidden="true">
+                    <CalendarIcon />
+                  </span>
+                  <div>
+                    <h3>Editar turno</h3>
+                    <p>{isEditingTurno ? 'Modificá los datos del turno.' : 'Revisá los datos del turno.'}</p>
+                  </div>
+                </div>
+
+                <div className="modal-header-actions">
+                  {!isEditingTurno && (() => {
+                    const esPropio = user?.rol !== 'PROFESIONAL'
+                      || (editingTurnoForm.professionalId != null && editingTurnoForm.professionalId === user.profesionalId)
+                    return (
+                      <button
+                        type="button"
+                        className="modal-icon-button edit-turno-button"
+                        aria-label="Editar turno"
+                        title={esPropio ? 'Editar turno' : 'Solo podés editar tus propios turnos'}
+                        disabled={!esPropio}
+                        onClick={() => setIsEditingTurno(true)}
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                        </svg>
+                      </button>
+                    )
+                  })()}
+
+                  <button
+                    type="button"
+                    className="close-button"
+                    aria-label="Cerrar datos del turno"
+                    onClick={closeTurnoDetails}
+                  >
+                    &times;
+                  </button>
+                </div>
+              </div>
+
+              {editingTurnoId !== null ? (() => {
+                const liveTurno = turnosState.find((item) => item.id === editingTurnoId)
+                const actions = liveTurno ? getTurnoQuickActions(liveTurno) : []
+                if (actions.length === 0) return null
+
+                return (
+                  <div className="turno-quick-actions">
+                    {actions.map((action) => (
+                      <button
+                        key={action.key}
+                        type="button"
+                        className={`turno-quick-action turno-quick-action--${action.tone}`}
+                        onClick={action.onClick}
+                      >
+                        <span className="label-full">{action.label}</span>
+                        <span className="label-compact">{COMPACT_QUICK_ACTION_LABELS[action.key] ?? action.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )
+              })() : null}
+
+              <TurnoFormFields
+                value={editingTurnoForm}
+                onChange={setEditingTurnoForm}
+                disabled={!isEditingTurno}
+                patients={pacientesState}
+                professionals={profesionalesState}
+                specialties={specialtiesState}
+                onCreateSpecialty={user?.rol === 'ADMINISTRADOR' ? createSpecialty : undefined}
+                hideProfessionalField={user?.rol === 'PROFESIONAL'}
+              />
+
+              <div className="modal-actions">
+                {editingTurnoId !== null ? (
+                  <button
+                    type="button"
+                    className="modal-delete-button"
+                    onClick={() => handleDeleteTurno(editingTurnoId)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M4 7h16" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
+                      <path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" />
+                    </svg>
+                    Eliminar turno
+                  </button>
+                ) : null}
+
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={closeTurnoDetails}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={saveEditedTurno}
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {contextMenu ? (() => {
+          const menuTurno = turnosState.find((item) => item.id === contextMenu.turnoId)
+          const actions = menuTurno ? getTurnoQuickActions(menuTurno) : []
+
+          return (
+            <div
+              className="context-menu"
+              ref={contextMenuRef}
+              style={{ top: contextMenu.y, left: contextMenu.x }}
+            >
+              {actions.map((action) => (
+                <button
+                  key={action.key}
+                  type="button"
+                  className={`context-menu-item context-menu-item--${action.tone}`}
+                  onClick={action.onClick}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          )
+        })() : null}
+
+        {confirmDialog ? (
+          <div className="modal-overlay confirm-dialog-overlay">
+            <div className="confirm-dialog" ref={confirmDialogRef}>
+              <h3>{confirmDialog.title}</h3>
+              <p>{confirmDialog.description}</p>
+              <div className="confirm-dialog-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setConfirmDialog(null)}
+                >
+                  {confirmDialog.cancelLabel}
+                </button>
+                <button
+                  type="button"
+                  className={`primary-button ${confirmDialog.destructive ? 'primary-button--danger' : ''}`}
+                  onClick={() => {
+                    confirmDialog.onConfirm()
+                    setConfirmDialog(null)
+                  }}
+                >
+                  {confirmDialog.confirmLabel}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </main>
+
+      {activePage === 'home' ? (
+      <aside className="side-panel">
+        <div className="month-card">
+          <div className="month-header">
+              <button className="small-button" onClick={prevMonth}>&#9664;</button>
+              <div>
+                <strong>{currentMonthDate.toLocaleString('es-AR', { month: 'long', year: 'numeric' })}</strong>
+                <p>Calendario mensual</p>
+              </div>
+              <button className="small-button" onClick={nextMonth}>&#9654;</button>
+          </div>
+          <div className="weekdays-row">
+            {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day) => (
+              <div key={day} className="weekday-cell">
+                {day}
+              </div>
+            ))}
+          </div>
+          <div className="month-grid">
+            {monthDays.map((day, index) => {
+              const isToday =
+                day === new Date().getDate() &&
+                currentMonthDate.getMonth() === new Date().getMonth() &&
+                currentMonthDate.getFullYear() === new Date().getFullYear()
+              const dayStr = day ? formatDate(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), day)) : null
+              const selectedClass = dayStr === selectedDate ? 'selected' : ''
+              return (
+                <div
+                  key={`${day ?? 'empty'}-${index}`}
+                  className={`month-cell ${isToday ? 'today' : ''} ${day ? '' : 'empty'} ${selectedClass}`}
+                  onClick={() => dayStr && setSelectedDate(dayStr)}
+                >
+                  {day || ''}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="details-card">
+          {catalogsLoading || turnosLoading ? (
+            <p>Cargando datos del turno...</p>
+          ) : selectedTurno ? (
+            <>
+              <div className="details-header">
+                <h2>Datos del turno</h2>
+                <span>{selectedTurno.time}</span>
+              </div>
+              <div className="details-body">
+                <div>
+                  <p className="details-label">Paciente</p>
+                  <strong>{selectedTurno.patientDisplay}</strong>
+                </div>
+                <div>
+                  <p className="details-label">Profesional</p>
+                  <p>{selectedTurno.professionalDisplay ?? '-'}</p>
+                </div>
+
+                <div>
+                  <p className="details-label">Especialidad</p>
+                  <p>
+                    <span
+                      className="spec-dot"
+                      style={{
+                        backgroundColor: specialtiesState.find(
+                          (specialty) => specialty.id === selectedTurno.specialtyId,
+                        )?.color,
+                      }}
+                    />
+                    {specialtiesState.find(
+                      (specialty) => specialty.id === selectedTurno.specialtyId,
+                    )?.name ?? '-'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="details-label">Nro. de Sesión</p>
+                  <p>{selectedTurno.sessionNumber ?? '-'}</p>
+                </div>
+
+                <div>
+                  <p className="details-label">Estado</p>
+                  <p>{selectedTurno.status}</p>
+                </div>
+                <div>
+                  <p className="details-label">Duración</p>
+                  <p>{selectedTurno.duration} min</p>
+                </div>
+
+                {selectedTurno.status === 'En Espera' && selectedWaitingMinutes !== null ? (
+                  <div>
+                    <p className="details-label">Tiempo esperando</p>
+                    <p className={isSelectedWaitingTooLong ? 'details-alert details-alert--warning' : ''}>
+                      {formatMinutesAgo(selectedWaitingMinutes)}
+                    </p>
+                  </div>
+                ) : null}
+
+                {selectedTurno.status === 'Atendiendo' && selectedTurno.startAttention ? (
+                  <div>
+                    <p className="details-label">Tiempo atendiendo</p>
+                    <p className={isSelectedAttendingOverDuration ? 'details-alert details-alert--danger' : ''}>
+                      {new Date(elapsedSeconds * 1000).toISOString().slice(11, 19)}
+                      <span className="details-duration-hint"> / reservado {selectedTurno.duration} min</span>
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                className="details-button"
+                onClick={() => openTurnoDetails(selectedTurno)}
+              >
+                Ver más
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="details-header">
+                <h2>Datos del turno</h2>
+              </div>
+              <p>No hay ningún turno seleccionado para este día.</p>
+            </>
+          )}
+        </div>
+      </aside>
+      ) : null}
+    </div>
+  )
+}
+
+function App() {
+  const { user, loading, loginBootTrigger } = useAuth()
+  const [authView, setAuthView] = useState<'login' | 'registro'>('login')
+  const bootPhase = useBootPhase(loading, loginBootTrigger)
+
+  if (bootPhase !== 'hidden') {
+    return <BootScreen fading={bootPhase === 'fading'} />
+  }
+
+  if (!user) {
+    return authView === 'login' ? (
+      <LoginPage onSwitchToRegister={() => setAuthView('registro')} />
+    ) : (
+      <RegisterPage onSwitchToLogin={() => setAuthView('login')} />
+    )
+  }
+
+  return <Dashboard />
+}
+
+export default App

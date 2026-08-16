@@ -1,0 +1,174 @@
+.boot-screen {
+  /* Fondo de arranque fijo: intencionalmente no sigue el tema claro/oscuro
+     de la app (ver docs/ui/loading-animation-reference.md). Tokens propios
+     de este componente, no globales, porque nada más los necesita. */
+  --kineq-loading-background: #09090f;
+  --kineq-loading-text: #f7f5ff;
+  --kineq-loading-glow: rgba(96, 45, 230, 0.42);
+
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background:
+    radial-gradient(circle at center, var(--kineq-loading-glow) 0%, rgba(9, 9, 15, 0) 45%),
+    var(--kineq-loading-background);
+  opacity: 1;
+  transition: opacity 400ms ease;
+}
+
+.boot-screen--fading {
+  opacity: 0;
+}
+
+.boot-screen__composition {
+  position: relative;
+  width: clamp(180px, 28vw, 360px);
+  aspect-ratio: 1 / 1;
+}
+
+/*
+ * Las cuatro capas (anillos + logo) comparten la misma técnica de
+ * centrado: `inset: 0` + `margin: auto` sobre una caja de tamaño
+ * explícito. A diferencia de combinar `inset: X%` con un `width`/`height`
+ * heredado de 100%, esto nunca queda sobre-restringido (no hay que elegir
+ * entre honrar el tamaño o la posición) y no depende de ningún
+ * `transform`, así que la rotación/pulso de cada capa puede animar su
+ * propio `transform` sin pisar el centrado.
+ */
+.boot-screen__ring,
+.boot-screen__logo {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  overflow: visible;
+  transform-origin: center;
+}
+
+.boot-screen__ring--outer {
+  width: 100%;
+  height: 100%;
+}
+
+.boot-screen__ring--outer circle {
+  fill: none;
+  stroke: var(--kineq-violet-400);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 4 14;
+  opacity: 0.55;
+}
+
+.boot-screen__ring--middle {
+  width: 76%;
+  height: 76%;
+}
+
+.boot-screen__ring--middle circle {
+  fill: none;
+  stroke: var(--kineq-violet-300);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 46 60;
+  opacity: 0.5;
+}
+
+.boot-screen__ring--inner {
+  width: 40%;
+  height: 40%;
+  border-radius: 50%;
+  border: 1.5px solid var(--kineq-violet-500);
+  opacity: 0.45;
+}
+
+.boot-screen__logo {
+  width: 40%;
+  height: 40%;
+  filter: drop-shadow(0 0 18px var(--kineq-loading-glow));
+}
+
+.boot-screen__text {
+  margin: 0;
+  color: var(--kineq-loading-text);
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .boot-screen__ring--outer {
+    animation: boot-rotate-cw 9s linear infinite;
+  }
+
+  .boot-screen__ring--middle {
+    animation: boot-rotate-ccw 6s linear infinite;
+  }
+
+  .boot-screen__ring--inner {
+    animation: boot-pulse 2.2s ease-in-out infinite;
+  }
+
+  .boot-screen__logo {
+    animation: boot-logo-in 900ms ease-out 200ms both;
+  }
+
+  .boot-screen__text {
+    opacity: 0;
+    animation: boot-text-in 500ms ease-out 500ms forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Sin rotación continua ni pulso: los anillos quedan estáticos y solo
+     el conjunto aparece con una transición de opacidad simple. */
+  .boot-screen__composition,
+  .boot-screen__text {
+    animation: boot-fade-simple 300ms ease-out both;
+  }
+}
+
+@keyframes boot-rotate-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes boot-rotate-ccw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes boot-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.06); opacity: 0.7; }
+}
+
+@keyframes boot-logo-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes boot-text-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes boot-fade-simple {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 480px) {
+  .boot-screen {
+    gap: 20px;
+    padding: 0 24px;
+  }
+
+  .boot-screen__text {
+    font-size: 13px;
+  }
+}

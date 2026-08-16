@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd ../frontend && npm run build 2>&1 | tail -100)",
+      "Read(//d/Kineq/Solucion/**)",
+      "Bash(npm view *)",
+      "Bash(npm audit *)",
+      "Bash(grep -n \"^/\\\\* ====\" \"/d/Kineq/Solucion/kine-admin/frontend/src/App.css\")",
+      "Bash(curl -sf http://localhost:5183)",
+      "Bash(command -v chromium-cli)",
+      "Bash(command -v npx)",
+      "Read(//d//**)",
+      "Read(//c/Users/User/.claude/**)"
+    ]
+  }
+}

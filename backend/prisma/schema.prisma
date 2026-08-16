@@ -1,0 +1,608 @@
+// moduleFormat/importFileExtension fuerzan salida CJS con especificadores
+// .ts (en vez de .js) para que el cliente generado funcione bajo ts-node-dev
+// en modo transpile-only; con la config por defecto (ESM) el runtime de
+// Node 26 carga el archivo dos veces (una vez como CJS y otra como ESM
+// nativo por `import.meta`) y falla con "exports is not defined".
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum EstadoTurno {
+  ASIGNADO
+  EN_ESPERA
+  ATENDIENDO
+  FINALIZADO
+  AUSENTE
+  CANCELADO
+}
+
+enum RolUsuario {
+  ADMINISTRADOR
+  PROFESIONAL
+  RECEPCION
+  SUPERVISOR
+}
+
+enum EstadoFichaInicial {
+  BORRADOR
+  COMPLETA
+}
+
+enum EstadoDatoClinico {
+  SI
+  NO
+  NO_INFORMA
+}
+
+enum CategoriaCatalogoClinico {
+  ANTECEDENTE_PERSONAL
+  ANTECEDENTE_FAMILIAR
+  PROCEDIMIENTO_QUIRURGICO
+  ALERGIA
+}
+
+enum GravedadAlergia {
+  LEVE
+  MODERADA
+  GRAVE
+}
+
+enum SeccionFicha {
+  MOTIVO
+  ANTECEDENTES
+  SEGURIDAD
+  HABITOS
+  DOLOR_FUNCION
+  ESTUDIOS
+}
+
+enum EstadoRevisionSeccion {
+  PENDIENTE
+  EN_PROGRESO
+  REVISADA
+}
+
+model Consultorio {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  slug        String   @unique
+  email       String?
+  telefono    String?
+  direccion   String?
+  ciudad      String?
+  provincia   String?
+  zonaHoraria String   @default("America/Argentina/Buenos_Aires")
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pacientes                 Paciente[]
+  profesionales             Profesional[]
+  especialidades            Especialidad[]
+  obrasSociales             ObraSocial[]
+  turnos                    Turno[]
+  evoluciones               Evolucion[]
+  profesionalEspecialidades ProfesionalEspecialidad[]
+  usuarios                  Usuario[]
+  fichasIniciales           FichaInicial[]
+  fichaAntecedentes         FichaAntecedente[]
+  fichaAlergias             FichaAlergia[]
+  fichaMedicaciones         FichaMedicacion[]
+  fichaEstudios             FichaEstudioComplementario[]
+  fichaSeccionesEstado      FichaSeccionEstado[]
+  catalogoClinicoItems      CatalogoClinicoItem[]
+  especialidadesOcultas     ConsultorioEspecialidadOculta[]
+  obrasSocialesOcultas      ConsultorioObraSocialOculta[]
+  fichaAlertasCampo         FichaAlertaCampo[]
+  gruposEvolucion           GrupoEvolucion[]
+
+  @@index([activo])
+}
+
+model Usuario {
+  id            Int        @id @default(autoincrement())
+  consultorioId Int
+  nombre        String
+  apellido      String
+  email         String     @unique
+  passwordHash  String
+  rol           RolUsuario
+  activo        Boolean    @default(true)
+  profesionalId Int?       @unique
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  consultorio Consultorio  @relation(fields: [consultorioId], references: [id])
+  profesional Profesional? @relation(fields: [profesionalId], references: [id])
+
+  @@index([consultorioId])
+}
+
+model Paciente {
+  id              Int       @id @default(autoincrement())
+  consultorioId   Int
+  nombre          String
+  apellido        String
+  documento       String?
+  fechaNacimiento DateTime?
+  email           String?
+  telefono        String?
+  direccion       String?
+  obraSocialId    Int?
+  numeroAfiliado  String?
+  observaciones   String?
+  activo          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  consultorio     Consultorio      @relation(fields: [consultorioId], references: [id])
+  obraSocial      ObraSocial?      @relation(fields: [obraSocialId], references: [id])
+  turnos          Turno[]
+  evoluciones     Evolucion[]
+  fichaInicial    FichaInicial?
+  gruposEvolucion GrupoEvolucion[]
+
+  @@index([consultorioId, activo])
+  @@index([consultorioId, apellido, nombre])
+  @@index([consultorioId, documento])
+  @@index([obraSocialId])
+}
+
+model Profesional {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  nombre        String
+  apellido      String
+  titulo        String?
+  matricula     String?
+  email         String?
+  telefono      String?
+  activo        Boolean   @default(true)
+  // Baja lógica/archivo — distinto de `activo`: un profesional inactivo
+  // (`activo:false`, `deletedAt:null`) sigue siendo administrable y
+  // reactivable; uno archivado (`deletedAt` seteado, que además siempre
+  // implica `activo:false`) queda fuera de los listados normales de
+  // Configuración. Nunca se borra físicamente si tiene historial (turnos o
+  // evoluciones) — ver DELETE /api/profesionales/:id.
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  consultorio       Consultorio               @relation(fields: [consultorioId], references: [id])
+  especialidades    ProfesionalEspecialidad[]
+  turnos            Turno[]
+  evoluciones       Evolucion[]
+  usuario           Usuario?
+  fichasResponsable FichaInicial[]
+  estudios          FichaEstudioComplementario[]
+
+  @@index([consultorioId, activo])
+  @@index([consultorioId, apellido, nombre])
+  @@index([consultorioId, matricula])
+}
+
+// Catálogo global/custom, mismo patrón que CatalogoClinicoItem: filas de
+// sistema (esSistema=true, consultorioId=null) administradas por Kineq, +
+// filas custom por consultorio (esSistema=false, consultorioId siempre
+// presente). El índice único es (consultorioId, nombre): para las filas de
+// sistema (consultorioId NULL) MySQL no dedupe NULLs, así que esa unicidad
+// depende de que solo el seed las cree (controlado, sin duplicados por
+// diseño); para las filas custom, consultorioId nunca es NULL y el índice
+// sí protege de verdad.
+model Especialidad {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int?
+  esSistema     Boolean  @default(false)
+  nombre        String
+  color         String
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Cascade explícito, mismo motivo que CatalogoClinicoItem.consultorio: si
+  // un consultorio se borra, sus especialidades custom se van con él, nunca
+  // deben "flotar" a consultorioId NULL y volverse globales.
+  consultorio   Consultorio?                    @relation(fields: [consultorioId], references: [id], onDelete: Cascade)
+  profesionales ProfesionalEspecialidad[]
+  turnos        Turno[]
+  ocultaPara    ConsultorioEspecialidadOculta[]
+
+  @@unique([consultorioId, nombre])
+  @@index([consultorioId, activo])
+  @@index([esSistema, activo])
+}
+
+// Ocultamiento de una especialidad global (esSistema=true) para un
+// consultorio puntual: no la borra ni la desactiva globalmente, solo la
+// saca de los listados/selects de ese consultorio — el resto de los
+// consultorios la sigue viendo sin cambios.
+model ConsultorioEspecialidadOculta {
+  consultorioId  Int
+  especialidadId Int
+  createdAt      DateTime @default(now())
+
+  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id], onDelete: Cascade)
+  especialidad Especialidad @relation(fields: [especialidadId], references: [id], onDelete: Cascade)
+
+  @@id([consultorioId, especialidadId])
+  @@index([especialidadId])
+}
+
+model ProfesionalEspecialidad {
+  consultorioId  Int
+  profesionalId  Int
+  especialidadId Int
+  createdAt      DateTime @default(now())
+
+  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
+  profesional  Profesional  @relation(fields: [profesionalId], references: [id])
+  especialidad Especialidad @relation(fields: [especialidadId], references: [id])
+
+  @@id([profesionalId, especialidadId])
+  @@index([consultorioId])
+  @@index([especialidadId])
+}
+
+// Catálogo global/custom — mismo patrón y mismas notas que Especialidad.
+model ObraSocial {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int?
+  esSistema     Boolean  @default(false)
+  nombre        String
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  consultorio Consultorio?                  @relation(fields: [consultorioId], references: [id], onDelete: Cascade)
+  pacientes   Paciente[]
+  turnos      Turno[]
+  ocultaPara  ConsultorioObraSocialOculta[]
+
+  @@unique([consultorioId, nombre])
+  @@index([consultorioId, activo])
+  @@index([esSistema, activo])
+}
+
+model ConsultorioObraSocialOculta {
+  consultorioId Int
+  obraSocialId  Int
+  createdAt     DateTime @default(now())
+
+  consultorio Consultorio @relation(fields: [consultorioId], references: [id], onDelete: Cascade)
+  obraSocial  ObraSocial  @relation(fields: [obraSocialId], references: [id], onDelete: Cascade)
+
+  @@id([consultorioId, obraSocialId])
+  @@index([obraSocialId])
+}
+
+model Turno {
+  id              Int         @id @default(autoincrement())
+  consultorioId   Int
+  pacienteId      Int
+  profesionalId   Int
+  especialidadId  Int
+  obraSocialId    Int?
+  inicio          DateTime
+  duracionMinutos Int         @default(60)
+  numeroSesion    Int?
+  notas           String?
+  estado          EstadoTurno @default(ASIGNADO)
+  inicioAtencion  DateTime?
+  finAtencion     DateTime?
+  canceladoAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
+  paciente     Paciente     @relation(fields: [pacienteId], references: [id])
+  profesional  Profesional  @relation(fields: [profesionalId], references: [id])
+  especialidad Especialidad @relation(fields: [especialidadId], references: [id])
+  obraSocial   ObraSocial?  @relation(fields: [obraSocialId], references: [id])
+  evoluciones  Evolucion[]
+
+  @@index([consultorioId, inicio])
+  @@index([consultorioId, profesionalId, inicio])
+  @@index([consultorioId, pacienteId, inicio])
+  @@index([consultorioId, estado, inicio])
+  @@index([especialidadId])
+  @@index([obraSocialId])
+}
+
+model Evolucion {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  pacienteId    Int
+  profesionalId Int
+  turnoId       Int?
+  grupoId       Int?
+  contenido     String
+  // Formato básico (negrita/cursiva/subrayado) — HTML ya sanitizado contra
+  // una allowlist estricta (ver backend/src/sanitizeRichText.ts), nunca
+  // HTML crudo del cliente. Nulo para evoluciones sin formato aplicado
+  // (incluidas todas las anteriores a esta funcionalidad): en ese caso se
+  // sigue mostrando `contenido` como texto plano, comportamiento sin
+  // cambios. `@db.Text` (no el VARCHAR(191) por default) porque `contenido`
+  // ya demostró que 191 caracteres se queda corto para una nota clínica, y
+  // el HTML agrega overhead de tags sobre el mismo texto.
+  contenidoHtml String?  @db.Text
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  consultorio Consultorio     @relation(fields: [consultorioId], references: [id])
+  paciente    Paciente        @relation(fields: [pacienteId], references: [id])
+  profesional Profesional     @relation(fields: [profesionalId], references: [id])
+  turno       Turno?          @relation(fields: [turnoId], references: [id])
+  grupo       GrupoEvolucion? @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+
+  @@index([consultorioId, pacienteId, createdAt])
+  @@index([consultorioId, profesionalId, createdAt])
+  @@index([turnoId])
+  @@index([grupoId])
+}
+
+// Agrupación puramente visual/organizativa de evoluciones (ej. "Lumbalgia").
+// No es una entidad clínica formal: no tiene diagnóstico, plan ni severidad.
+// Eliminar un grupo nunca borra evoluciones: la FK grupoId de Evolucion usa
+// onDelete: SetNull, así que las evoluciones ya asignadas quedan "Sin grupo"
+// automáticamente y conservan todo su contenido.
+model GrupoEvolucion {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  pacienteId    Int
+  nombre        String
+  color         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  consultorio Consultorio @relation(fields: [consultorioId], references: [id])
+  paciente    Paciente    @relation(fields: [pacienteId], references: [id])
+  evoluciones Evolucion[]
+
+  @@unique([pacienteId, nombre])
+  @@index([consultorioId, pacienteId])
+}
+
+// Ficha clínica inicial del paciente. 1:1 con Paciente, editable y guardable
+// parcialmente (estado BORRADOR); no bloquea el resto del flujo de atención.
+model FichaInicial {
+  id                       Int                @id @default(autoincrement())
+  consultorioId            Int
+  pacienteId               Int                @unique
+  profesionalResponsableId Int?
+  motivoConsulta           String?
+  fechaInicioProblema      DateTime?
+  diagnosticoDerivacion    String?
+  objetivoPaciente         String?
+  antecedentesPersonales   String?
+  antecedentesFamiliares   String?
+  cirugias                 String?
+  traumatismosAccidentes   String?
+  tratamientosPrevios      String?
+  alergiasEstado           EstadoDatoClinico?
+  medicacionEstado         EstadoDatoClinico?
+  enfermedadesActuales     String?
+  actividadFisica          String?
+  deportes                 String?
+  ocupacion                String?
+  limitacionesFuncionales  String?
+  estudiosComplementarios  String?
+  dolorSintomas            String?
+  hallazgosIniciales       String?
+  observacionesClinicas    String?
+
+  // Hábitos: columnas escalares directas (no ameritan tabla propia, son
+  // 1:1 con la ficha, sin semántica de lista/historial).
+  tabaquismoEstado    EstadoDatoClinico?
+  aniosFumador        Int?
+  cigarrillosDiarios  Int?
+  alcoholEstado       EstadoDatoClinico?
+  sedentarismoEstado  EstadoDatoClinico?
+  ejercicioMinutosDia Int?
+
+  // Contexto gineco-obstétrico: opcional, nunca obligatorio, presentado en
+  // la UI como sección colapsable (no restringido por sexo/género en los datos).
+  menarcaEstado       EstadoDatoClinico?
+  edadMenarca         Int?
+  menopausiaEstado    EstadoDatoClinico?
+  edadMenopausia      Int?
+  gestas              Int?
+  partos              Int?
+  abortos             Int?
+  observacionesGineco String?
+
+  estado    EstadoFichaInicial @default(BORRADOR)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  consultorio            Consultorio  @relation(fields: [consultorioId], references: [id])
+  paciente               Paciente     @relation(fields: [pacienteId], references: [id])
+  profesionalResponsable Profesional? @relation(fields: [profesionalResponsableId], references: [id])
+
+  antecedentes    FichaAntecedente[]
+  alergias        FichaAlergia[]
+  medicaciones    FichaMedicacion[]
+  estudios        FichaEstudioComplementario[]
+  seccionesEstado FichaSeccionEstado[]
+  alertasCampo    FichaAlertaCampo[]
+
+  @@index([consultorioId])
+  @@index([profesionalResponsableId])
+}
+
+// Alerta clínica manual sobre un campo de texto libre de la Ficha Inicial
+// (Motivo, Traumatismos, Tratamientos previos, Dolor y función, etc.) — a
+// diferencia de Antecedentes/Medicación, esos campos son columnas escalares
+// sueltas en FichaInicial, no filas de catálogo, así que no hay una columna
+// booleana natural donde colgar el flag. La existencia de la fila ES la
+// alerta: marcar = crear, desmarcar = borrar, sin columna `activa`. `campo`
+// se valida contra una whitelist fija en el backend (ELIGIBLE_ALERT_FIELDS).
+model FichaAlertaCampo {
+  id             Int      @id @default(autoincrement())
+  consultorioId  Int
+  fichaInicialId Int
+  campo          String
+  createdAt      DateTime @default(now())
+
+  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
+  fichaInicial FichaInicial @relation(fields: [fichaInicialId], references: [id], onDelete: Cascade)
+
+  @@unique([fichaInicialId, campo])
+  @@index([consultorioId])
+}
+
+// Catálogo clínico extensible: ítems de sistema (esSistema=true,
+// consultorioId=null, sembrados por seed.ts) + ítems personalizados por
+// consultorio (esSistema=false, consultorioId siempre presente).
+// El índice único es (consultorioId, categoria, codigo): para las filas de
+// sistema (consultorioId NULL) MySQL no deduplica entre NULLs, así que esa
+// unicidad depende de que solo el seed las cree (controlado, sin duplicados
+// por diseño); para las filas personalizadas consultorioId nunca es NULL,
+// así que ahí el índice sí protege de verdad — dos consultorios distintos
+// pueden tener cada uno su propio ítem personalizado con el mismo nombre
+// sin chocar entre sí.
+model CatalogoClinicoItem {
+  id            Int                      @id @default(autoincrement())
+  categoria     CategoriaCatalogoClinico
+  codigo        String
+  nombre        String
+  descripcion   String?
+  esSistema     Boolean                  @default(true)
+  consultorioId Int?
+  activo        Boolean                  @default(true)
+  orden         Int                      @default(0)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  // Cascade explícito: si un consultorio se borra, sus ítems de catálogo
+  // personalizados se van con él — nunca deben "flotar" a consultorioId
+  // NULL y volverse visibles globalmente (eso fue un bug real: la FK sin
+  // onDelete explícito quedó en SET NULL por default, y los ítems de
+  // catálogo de un consultorio de prueba borrado terminaron viéndose desde
+  // cualquier otro consultorio).
+  consultorio  Consultorio?         @relation(fields: [consultorioId], references: [id], onDelete: Cascade)
+  antecedentes FichaAntecedente[]
+  alergias     FichaAlergia[]
+
+  @@unique([consultorioId, categoria, codigo])
+  @@index([categoria, activo])
+  @@index([consultorioId])
+}
+
+// Antecedentes personales, familiares y quirúrgicos: una sola tabla,
+// discriminada por `catalogoItem.categoria`. `NO_INFORMA` nunca se persiste
+// como fila explícita — es el estado implícito por ausencia de respuesta.
+model FichaAntecedente {
+  id              Int               @id @default(autoincrement())
+  consultorioId   Int
+  fichaInicialId  Int
+  catalogoItemId  Int
+  estado          EstadoDatoClinico
+  detalle         String?
+  fechaAproximada DateTime?
+  edadAproximada  Int?
+  parentesco      String?
+  esAlertaClinica Boolean           @default(false)
+  activo          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  consultorio  Consultorio          @relation(fields: [consultorioId], references: [id])
+  fichaInicial FichaInicial         @relation(fields: [fichaInicialId], references: [id])
+  catalogoItem CatalogoClinicoItem  @relation(fields: [catalogoItemId], references: [id])
+
+  @@unique([fichaInicialId, catalogoItemId])
+  @@index([consultorioId])
+}
+
+model FichaAlergia {
+  id             Int              @id @default(autoincrement())
+  consultorioId  Int
+  fichaInicialId Int
+  catalogoItemId Int?
+  nombreLibre    String?
+  reaccion       String?
+  gravedad       GravedadAlergia?
+  observaciones  String?
+  activa         Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  consultorio  Consultorio          @relation(fields: [consultorioId], references: [id])
+  fichaInicial FichaInicial         @relation(fields: [fichaInicialId], references: [id])
+  catalogoItem CatalogoClinicoItem? @relation(fields: [catalogoItemId], references: [id])
+
+  @@index([consultorioId])
+  @@index([fichaInicialId])
+}
+
+// Sin catálogo farmacológico: `nombre` es texto libre a propósito.
+model FichaMedicacion {
+  id             Int      @id @default(autoincrement())
+  consultorioId  Int
+  fichaInicialId Int
+  nombre         String
+  dosis          String?
+  unidad         String?
+  frecuencia     String?
+  via            String?
+  motivo         String?
+  observaciones  String?
+  esAlertaClinica Boolean @default(false)
+  activa         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
+  fichaInicial FichaInicial @relation(fields: [fichaInicialId], references: [id])
+
+  @@index([consultorioId])
+  @@index([fichaInicialId])
+}
+
+// Entradas individuales de estudios complementarios. El campo de texto libre
+// `estudiosComplementarios` en FichaInicial se mantiene como nota general;
+// esto es para registros puntuales con fecha. Sin `documentoId` todavía —
+// la carga real de archivos está fuera de alcance.
+model FichaEstudioComplementario {
+  id             Int       @id @default(autoincrement())
+  consultorioId  Int
+  fichaInicialId Int
+  profesionalId  Int?
+  tipo           String
+  fecha          DateTime?
+  resumen        String?
+  observaciones  String?
+  activo         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
+  fichaInicial FichaInicial @relation(fields: [fichaInicialId], references: [id])
+  profesional  Profesional? @relation(fields: [profesionalId], references: [id])
+
+  @@index([consultorioId])
+  @@index([fichaInicialId])
+}
+
+model FichaSeccionEstado {
+  id             Int                    @id @default(autoincrement())
+  consultorioId  Int
+  fichaInicialId Int
+  seccion        SeccionFicha
+  estado         EstadoRevisionSeccion  @default(PENDIENTE)
+  updatedAt      DateTime               @updatedAt
+
+  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
+  fichaInicial FichaInicial @relation(fields: [fichaInicialId], references: [id])
+
+  @@unique([fichaInicialId, seccion])
+  @@index([consultorioId])
+}
