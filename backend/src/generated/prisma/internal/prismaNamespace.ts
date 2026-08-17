@@ -2011,6 +2011,7 @@ export const TurnoScalarFieldEnum = {
   inicioAtencion: 'inicioAtencion',
   finAtencion: 'finAtencion',
   canceladoAt: 'canceladoAt',
+  eliminadoAt: 'eliminadoAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

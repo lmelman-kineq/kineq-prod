@@ -7,6 +7,8 @@ import ConfigRowActions from './ConfigRowActions'
 import UsuarioFormModal from './UsuarioFormModal'
 import { formatDateOnly } from '../utils/dateFormat'
 import { useAuth } from '../auth/AuthContext'
+import { userFullName } from '../utils/usuario'
+import { professionalFullName } from '../utils/professional'
 
 const ROL_LABELS: Record<RolUsuario, string> = {
   ADMINISTRADOR: 'Administrador',
@@ -82,7 +84,7 @@ export default function ConfiguracionUsuarios({ onRequestConfirm, onProfesionale
   const visibleUsuarios = useMemo(() => {
     const term = search.trim().toLowerCase()
     return usuarios.filter((usuario) => {
-      const fullName = `${usuario.nombre} ${usuario.apellido} ${usuario.email}`.toLowerCase()
+      const fullName = `${userFullName(usuario)} ${usuario.email}`.toLowerCase()
       if (term && !fullName.includes(term)) return false
       if (rolFilter && usuario.rol !== rolFilter) return false
       if (estadoFilter === 'activo' && !usuario.activo) return false
@@ -119,8 +121,8 @@ export default function ConfiguracionUsuarios({ onRequestConfirm, onProfesionale
     onRequestConfirm({
       title: activar ? 'Activar usuario' : 'Desactivar usuario',
       description: activar
-        ? `${usuario.nombre} ${usuario.apellido} va a poder iniciar sesión de nuevo.`
-        : `${usuario.nombre} ${usuario.apellido} deja de poder iniciar sesión. Su historial se conserva.`,
+        ? `${userFullName(usuario)} va a poder iniciar sesión de nuevo.`
+        : `${userFullName(usuario)} deja de poder iniciar sesión. Su historial se conserva.`,
       confirmLabel: activar ? 'Activar' : 'Desactivar',
       cancelLabel: 'Cancelar',
       destructive: !activar,
@@ -203,10 +205,10 @@ export default function ConfiguracionUsuarios({ onRequestConfirm, onProfesionale
                     }
                   }}
                 >
-                  <td><strong>{usuario.nombre} {usuario.apellido}</strong></td>
+                  <td><strong>{userFullName(usuario)}</strong></td>
                   <td data-label="Email">{usuario.email}</td>
                   <td data-label="Rol">{ROL_LABELS[usuario.rol]}</td>
-                  <td data-label="Profesional vinculado">{usuario.profesional ? `${usuario.profesional.nombre} ${usuario.profesional.apellido}` : '—'}</td>
+                  <td data-label="Profesional vinculado">{usuario.profesional ? professionalFullName(usuario.profesional) : '—'}</td>
                   <td data-label="Alta">{usuario.createdAt ? formatDateOnly(usuario.createdAt) : '—'}</td>
                   <td data-label="Estado">
                     <span className={`turnos-status-pill ${usuario.activo ? 'turnos-status-pill--finalizado' : 'turnos-status-pill--cancelado'}`}>

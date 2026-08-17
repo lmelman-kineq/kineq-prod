@@ -822,7 +822,7 @@ app.delete('/api/obras-sociales/:obraSocialId/ocultar', (0, auth_1.requireRole)(
 app.get('/api/turnos', async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
     const { from, to, pacienteId, profesionalId, especialidadId, obraSocialId, estado } = req.query;
-    const where = { consultorioId };
+    const where = { consultorioId, eliminadoAt: null };
     if (from || to)
         where.inicio = {};
     if (from)
@@ -848,6 +848,7 @@ function overlapExists(consultorioId, profesionalId, inicio, duracionMinutos, ex
         where: {
             consultorioId,
             profesionalId,
+            eliminadoAt: null,
             NOT: excludeTurnoId ? { id: excludeTurnoId } : undefined,
             estado: { not: 'CANCELADO' },
             AND: [
@@ -939,7 +940,7 @@ app.patch('/api/turnos/:turnoId', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_R
     if (Number.isNaN(turnoId))
         return res.status(400).json({ error: 'invalid id' });
     try {
-        const turno = await prisma_1.default.turno.findFirst({ where: { id: turnoId, consultorioId } });
+        const turno = await prisma_1.default.turno.findFirst({ where: { id: turnoId, consultorioId, eliminadoAt: null } });
         if (!turno)
             return res.status(404).json({ error: 'turno not found in consultorio' });
         // Un profesional solo puede operar sus propios turnos, y no puede
@@ -1013,6 +1014,37 @@ app.patch('/api/turnos/:turnoId', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_R
         res.status(500).json({ error: 'failed to update turno' });
     }
 });
+// Baja lógica, nunca DELETE físico (ver Turno.eliminadoAt en schema.prisma):
+// evita que un turno eliminado desaparezca silenciosamente de estadísticas
+// ya cerradas, aunque la FK de Evolucion.turnoId ya sea SetNull (las
+// evoluciones sobreviven de cualquier forma). Disponible en cualquier
+// `estado` — a propósito, "eliminar" es una operación administrativa
+// distinta de las transiciones clínicas de estado. Mismo criterio de
+// permisos que PATCH: un PROFESIONAL solo elimina sus propios turnos.
+app.delete('/api/turnos/:turnoId', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES), async (req, res) => {
+    const consultorioId = req.usuario.consultorioId;
+    const turnoId = Number(req.params.turnoId);
+    if (Number.isNaN(turnoId))
+        return res.status(400).json({ error: 'invalid id' });
+    try {
+        const turno = await prisma_1.default.turno.findFirst({ where: { id: turnoId, consultorioId, eliminadoAt: null } });
+        if (!turno)
+            return res.status(404).json({ error: 'turno not found in consultorio' });
+        if (req.usuario.rol === client_1.RolUsuario.PROFESIONAL) {
+            const profesionalId = await (0, auth_1.requireProfesionalVinculado)(req, res);
+            if (profesionalId === null)
+                return;
+            if (turno.profesionalId !== profesionalId) {
+                return res.status(403).json({ error: 'No podés eliminar turnos de otro profesional' });
+            }
+        }
+        await prisma_1.default.turno.update({ where: { id: turnoId }, data: { eliminadoAt: new Date() } });
+        res.status(204).end();
+    }
+    catch (err) {
+        res.status(500).json({ error: 'failed to delete turno' });
+    }
+});
 // EVOLUCIONES
 // Contenido clínico: solo administrador y profesional. Recepción y supervisor no acceden.
 app.use('/api/evoluciones/:evolucionId/imagenes', evolucionImagenesRoutes_1.default);
@@ -1049,6 +1081,7 @@ async function sesionAutomaticaParaGrupo(consultorioId, pacienteId, grupoId, exc
             pacienteId,
             grupoId,
             estado: 'FINALIZADO',
+            eliminadoAt: null,
             NOT: excludeTurnoId ? { id: excludeTurnoId } : undefined,
         },
     });
@@ -1356,10 +1389,10 @@ app.get('/api/pacientes/:pacienteId/ficha-inicial', (0, auth_1.requireRole)(...a
 // alerta (datos puramente administrativos como email/dirección quedan afuera
 // a propósito).
 const ELIGIBLE_ALERT_FIELDS = {
-    motivoConsulta: { seccion: 'MOTIVO', label: 'Motivo de consulta' },
-    diagnosticoDerivacion: { seccion: 'MOTIVO', label: 'Diagnóstico de derivación' },
-    traumatismosAccidentes: { seccion: 'MOTIVO', label: 'Traumatismos / accidentes' },
-    tratamientosPrevios: { seccion: 'MOTIVO', label: 'Tratamientos previos' },
+    motivoConsulta: { seccion: 'ANTECEDENTES', label: 'Motivo de consulta' },
+    diagnosticoDerivacion: { seccion: 'ANTECEDENTES', label: 'Diagnóstico de derivación' },
+    traumatismosAccidentes: { seccion: 'ANTECEDENTES', label: 'Traumatismos / accidentes' },
+    tratamientosPrevios: { seccion: 'ANTECEDENTES', label: 'Tratamientos previos' },
     enfermedadesActuales: { seccion: 'SEGURIDAD', label: 'Enfermedades actuales' },
     dolorSintomas: { seccion: 'DOLOR_FUNCION', label: 'Dolor y síntomas' },
     limitacionesFuncionales: { seccion: 'DOLOR_FUNCION', label: 'Limitaciones funcionales' },
@@ -1551,10 +1584,15 @@ async function recomputeSeccionesEstado(fichaInicialId, consultorioId, autorProf
     const antecedentesCount = await prisma_1.default.fichaAntecedente.count({ where: { fichaInicialId, activo: true } });
     const alergiasCount = await prisma_1.default.fichaAlergia.count({ where: { fichaInicialId, activa: true } });
     const medicacionesCount = await prisma_1.default.fichaMedicacion.count({ where: { fichaInicialId, activa: true } });
+    // "Motivo" ya no es una sección propia: sus campos se editan desde la
+    // pestaña Antecedentes (ver InitialAssessmentPanel.tsx), así que ahora
+    // cuentan para el estado REVISADA de ANTECEDENTES. Filas preexistentes con
+    // seccion='MOTIVO' en FichaSeccionEstado quedan como historial inofensivo
+    // — ya no se vuelven a escribir acá, pero no se borran ni se migran.
     const estados = {
-        MOTIVO: Boolean(ficha.motivoConsulta?.trim() || ficha.fechaInicioProblema || ficha.diagnosticoDerivacion?.trim()
+        ANTECEDENTES: Boolean(antecedentesCount > 0
+            || ficha.motivoConsulta?.trim() || ficha.fechaInicioProblema || ficha.diagnosticoDerivacion?.trim()
             || ficha.objetivoPaciente?.trim() || ficha.tratamientosPrevios?.trim() || ficha.traumatismosAccidentes?.trim()) ? 'REVISADA' : 'PENDIENTE',
-        ANTECEDENTES: antecedentesCount > 0 ? 'REVISADA' : 'PENDIENTE',
         SEGURIDAD: Boolean(isAnswered(ficha.alergiasEstado) || isAnswered(ficha.medicacionEstado) || ficha.enfermedadesActuales?.trim()
             || alergiasCount > 0 || medicacionesCount > 0) ? 'REVISADA' : 'PENDIENTE',
         HABITOS: Boolean(isAnswered(ficha.tabaquismoEstado) || isAnswered(ficha.alcoholEstado) || isAnswered(ficha.sedentarismoEstado)

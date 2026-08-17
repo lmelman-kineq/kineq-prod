@@ -1290,3 +1290,79 @@ calendario resalta un único día; placeholder de Título actualizado; alta
 rápida de Paciente/Profesional con campos fuera del dropdown; paciente
 recién creado sigue apareciendo (con check) al reabrir; Diagnóstico visible
 para rol clínico; "Ver Historia Clínica" navega al paciente correcto.
+
+---
+
+## Sesión: Evoluciones/Ficha Inicial/Estudios/Turnos del paciente, Nombre completo en Profesional/Usuario
+
+Ronda de seis partes más una regla transversal. Una migración nueva,
+aditiva: `20260817170811_turno_eliminado_at`.
+
+**1) Diagnóstico/Archivos arriba del editor + chevron transversal**: en
+alta y edición de Evolución, la fila Diagnóstico+Archivos pasó a ir antes
+del editor (no después) — resuelve por construcción que "Subir imágenes"
+quedara pegado a "Cancelar/Guardar cambios". Chevron (`▾`) agregado a los
+cuatro combobox custom (Paciente/Profesional/Especialidad/Diagnóstico) con
+una sola regla CSS. La vista de solo lectura de una evolución
+(`EvolucionContent.tsx`) ahora también muestra Diagnóstico y Archivos.
+
+**2) "Motivo" se fusionó con "Antecedentes"**: dejó de ser subpestaña
+propia de Ficha Inicial — sus 6 campos (mismas columnas, sin migración) se
+movieron al principio de Antecedentes, que pasa a ser la primera tab de
+una ficha vacía. El contador "N de M secciones revisadas" dejó de
+hardcodear `5`, ahora deriva de `REVISABLE_SECCIONES` (4). Backend
+(`recomputeSeccionesEstado`) sumó la condición de Motivo a la de
+Antecedentes con `OR`, dejó de escribir filas `MOTIVO` nuevas (las viejas
+quedan de historial). Verificado que el header del paciente
+(sesiones/última atención/próximo turno) sigue derivando de `Turno`, no de
+este cálculo.
+
+**3) Antecedentes: header de categoría reemplaza a "Ver todos"**: se sacó
+el botón separado — el propio botón de cada categoría abre el mismo
+`CatalogoCompletoDrawer` al hacer click.
+
+**4) Turnos del paciente — click-to-edit y sin scroll horizontal**: cada
+fila de `PatientAppointmentsTable.tsx` abre el mismo modal "Editar turno"
+que Inicio/Turnos. Tabla bajó a 5 columnas, `table-layout: fixed`,
+truncado+tooltip.
+
+**5) Estudios — "upload diferido"**: se sacó "Guardá el estudio
+primero...". El alta ahora tiene su propio selector de archivo; al
+guardar, primero se crea el estudio y recién con el `id` real se sube el
+archivo — si el upload falla, el estudio queda igual guardado, con error
+explicando que se puede reintentar desde la lista.
+
+**6) Turno: eliminación real (baja lógica), en cualquier estado**: nuevo
+`Turno.eliminadoAt` + `DELETE /api/turnos/:turnoId` — nunca físico (podía
+corromper en silencio estadísticas de meses ya cerrados). El botón
+"Eliminar turno" del modal de edición **antes en realidad cancelaba**
+(`cancelTurno`) — quedó rewireado al endpoint real. El menú `⋮` de
+Inicio/Turnos/modal ahora incluye "Eliminar turno" sin importar el estado
+(antes, para `FINALIZADO`/`AUSENTE`/`CANCELADO`, la lista de acciones
+salía vacía y el botón `⋮` de `TurnosPage` directamente no se renderizaba).
+Mismo filtro por rol que las demás acciones administrativas.
+
+**Regla transversal — Nombre completo, extendida a Profesional y
+Usuario**: `ProfesionalFormModal.tsx`, `UsuarioFormModal.tsx` y
+`RegisterPage.tsx` (alta pública del primer administrador) dejaron de
+pedir Nombre/Apellido por separado — mismo criterio que Paciente. Sin
+cambio de schema (`apellido: ''`, sin parseo). `POST /auth/register` dejó
+de exigir `apellido`. Nuevos helpers `professionalFullName()`/
+`userFullName()` reemplazan concatenaciones sueltas en varios
+listados/dropdowns. **Regla de producto permanente**: cualquier
+alta/edición nueva que pida el nombre de una persona usa un único campo
+"Nombre completo" por default, salvo necesidad explícita en contrario.
+
+**Producción**: migración `20260817170811_turno_eliminado_at`, aditiva,
+no aplicada a Aiven — correr `npx prisma migrate status` y
+`npx prisma migrate deploy`.
+
+Backend 210→215 tests (+5). Frontend 93→94 (+1). `tsc -b` limpio en
+ambos paquetes en cada tanda de cambios; no se corrió `npm run lint` ni
+`npm run build` de punta a punta en esta ronda.
+
+**Sin verificación con navegador real en esta ronda** (a diferencia de
+rondas anteriores) — no se instaló Playwright ni se probaron los 6
+breakpoints pedidos (1920×1080 a 390×844) ni el click-through completo de
+ninguno de los seis puntos de arriba. Esto queda como el gap más grande
+de la ronda — ver "Known gaps" en `docs/tasks.md`.

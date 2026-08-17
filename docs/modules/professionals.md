@@ -120,6 +120,8 @@ Deben mostrarse claramente en:
 - Historia clínica.
 - Reportes futuros.
 
+**Actualización (implementado) — un solo campo "Nombre completo"**: `ProfesionalFormModal.tsx` (alta y edición en Configuración) ya no pide Nombre y Apellido por separado — pide un único campo "Nombre completo *", mismo criterio ya aplicado a Paciente (`docs/modules/patients.md`) y al alta rápida de Profesional desde Crear Turno (`docs/modules/appointments.md`). **Sin cambio de schema**: `Profesional.nombre`/`apellido` siguen existiendo como columnas separadas — el valor ingresado se guarda completo en `nombre`, `apellido` queda `''`, nunca se hace un parseo ingenuo (primera palabra = nombre, resto = apellido). Nuevo helper `professionalFullName()` (`frontend/src/utils/professional.ts`) arma el nombre "crudo" para precargar el formulario de edición (`${nombre} ${apellido}`.trim(), igual que `patientFullName()`) — distinto de `professionalName()`, que ya existía y sigue agregando título y sufijo `(Inactivo)`/`(Eliminado)` para mostrar, no para editar. Se reutilizó en los demás lugares donde antes se armaba `nombre + apellido` a mano (listado y búsqueda de `ConfiguracionProfesionales.tsx`, dropdown de "Profesional vinculado" en `UsuarioFormModal.tsx`, `displayName` del selector de Turnos en `App.tsx`), para no dejar lógica duplicada. Regla transversal, documentada también en `docs/modules/patients.md` y `docs/modules/users-and-roles.md`: cualquier alta/edición de una persona en Kineq usa un único campo "Nombre completo", salvo necesidad técnica explícita y documentada en contrario.
+
 ### Título
 
 Representa el título profesional o descripción visible del profesional.

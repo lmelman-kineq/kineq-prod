@@ -3,6 +3,8 @@ import * as api from '../services/api'
 import type { ConfirmDialogOptions } from '../App'
 import type { Especialidad, Profesional, ProfesionalInput, Usuario } from '../types/domain'
 import { useModalDismiss } from '../hooks/useModalDismiss'
+import { professionalFullName } from '../utils/professional'
+import { userFullName } from '../utils/usuario'
 
 const ROL_LABELS: Record<Usuario['rol'], string> = {
   ADMINISTRADOR: 'Administrador',
@@ -21,8 +23,7 @@ type ProfesionalFormModalProps = {
 }
 
 type FormState = {
-  nombre: string
-  apellido: string
+  nombreCompleto: string
   titulo: string
   matricula: string
   email: string
@@ -34,8 +35,7 @@ type FormState = {
 
 function formFromProfesional(profesional?: Profesional): FormState {
   return {
-    nombre: profesional?.nombre ?? '',
-    apellido: profesional?.apellido ?? '',
+    nombreCompleto: profesional ? professionalFullName(profesional) : '',
     titulo: profesional?.titulo ?? '',
     matricula: profesional?.matricula ?? '',
     email: profesional?.email ?? '',
@@ -72,8 +72,8 @@ export default function ProfesionalFormModal({ profesional, especialidades, usua
   }
 
   const submit = async () => {
-    if (!form.nombre.trim() || !form.apellido.trim()) {
-      setError('Nombre y apellido son obligatorios.')
+    if (!form.nombreCompleto.trim()) {
+      setError('El nombre completo es obligatorio.')
       return
     }
 
@@ -81,8 +81,8 @@ export default function ProfesionalFormModal({ profesional, especialidades, usua
     setError(null)
 
     const payload: ProfesionalInput = {
-      nombre: form.nombre.trim(),
-      apellido: form.apellido.trim(),
+      nombre: form.nombreCompleto.trim(),
+      apellido: '',
       titulo: form.titulo.trim() || null,
       matricula: form.matricula.trim() || null,
       email: form.email.trim() || null,
@@ -114,7 +114,7 @@ export default function ProfesionalFormModal({ profesional, especialidades, usua
             </span>
             <div>
               <h3>{isCreate ? 'Nuevo profesional' : 'Editar profesional'}</h3>
-              <p>{isCreate ? 'Alta de un profesional del consultorio' : `${profesional.nombre} ${profesional.apellido}`}</p>
+              <p>{isCreate ? 'Alta de un profesional del consultorio' : professionalFullName(profesional)}</p>
             </div>
           </div>
           <button type="button" className="close-button" aria-label="Cerrar" onClick={requestClose}>&times;</button>
@@ -122,12 +122,8 @@ export default function ProfesionalFormModal({ profesional, especialidades, usua
 
         <div className="modal-body">
           <label>
-            Nombre
-            <input type="text" value={form.nombre} onChange={(event) => update({ nombre: event.target.value })} />
-          </label>
-          <label>
-            Apellido
-            <input type="text" value={form.apellido} onChange={(event) => update({ apellido: event.target.value })} />
+            Nombre completo *
+            <input type="text" value={form.nombreCompleto} onChange={(event) => update({ nombreCompleto: event.target.value })} />
           </label>
           <label>
             Título
@@ -173,7 +169,7 @@ export default function ProfesionalFormModal({ profesional, especialidades, usua
               <option value="">Sin usuario vinculado</option>
               {usuariosDisponibles.map((usuario) => (
                 <option key={usuario.id} value={usuario.id}>
-                  {usuario.nombre} {usuario.apellido} · {usuario.email} · {ROL_LABELS[usuario.rol]}
+                  {userFullName(usuario)} · {usuario.email} · {ROL_LABELS[usuario.rol]}
                 </option>
               ))}
             </select>

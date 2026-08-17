@@ -6,6 +6,15 @@ type ProfesionalNameInput = {
   deletedAt?: string | null
 }
 
+// Nombre completo se ingresa como un solo campo (ver ProfesionalFormModal.tsx)
+// y se guarda en `nombre`, dejando `apellido` vacío — mismo criterio que
+// patientFullName() en utils/patient.ts. Sin título ni sufijos de estado:
+// es el valor "crudo" que se edita, no el que se muestra en listados.
+export function professionalFullName(profesional: { nombre: string; apellido: string } | null | undefined) {
+  if (!profesional) return ''
+  return `${profesional.nombre} ${profesional.apellido}`.replace(/\s+/g, ' ').trim()
+}
+
 /**
  * Nombre para mostrar de un profesional en vistas históricas (turnos,
  * evoluciones, ficha inicial): un profesional archivado o inactivo

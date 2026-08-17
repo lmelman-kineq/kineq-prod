@@ -48,25 +48,42 @@ const ALLOWED_ARCHIVO_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'im
 
 type Props = {
   estudios: FichaEstudioComplementario[]
-  onAdd: (data: FichaEstudioInput) => Promise<void>
+  onAdd: (data: FichaEstudioInput) => Promise<FichaEstudioComplementario>
   onUpdate: (id: number, data: Partial<FichaEstudioInput>) => Promise<void>
   onRemove: (id: number) => Promise<void>
   onUploadArchivo: (id: number, file: File) => Promise<void>
   onRemoveArchivo: (id: number) => Promise<void>
 }
 
+function validateArchivo(file: File): string | null {
+  if (!ALLOWED_ARCHIVO_TYPES.includes(file.type)) return 'Formato no permitido. Solo se aceptan PDF, JPG, PNG o WEBP.'
+  if (file.size > MAX_ARCHIVO_SIZE_BYTES) return `El archivo debe pesar como máximo ${MAX_ARCHIVO_SIZE_BYTES / (1024 * 1024)}MB.`
+  return null
+}
+
 export default function FichaEstudiosList({ estudios, onAdd, onUpdate, onRemove, onUploadArchivo, onRemoveArchivo }: Props) {
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
   const [archivoBusyId, setArchivoBusyId] = useState<number | null>(null)
   const [archivoError, setArchivoError] = useState<{ id: number; message: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [pickingForId, setPickingForId] = useState<number | null>(null)
 
+  // Archivo elegido junto con el alta de un estudio nuevo (todavía sin id):
+  // se sube recién al guardar, después de crear el estudio ("upload
+  // diferido" — ver save()). Distinto de archivoBusyId/archivoError, que son
+  // para subir/reemplazar el archivo de un estudio ya existente.
+  const [stagedFile, setStagedFile] = useState<File | null>(null)
+  const [stagedFileError, setStagedFileError] = useState<string | null>(null)
+  const stagedFileInputRef = useRef<HTMLInputElement | null>(null)
+
   const startAdd = () => {
     setEditingId(null)
     setForm(EMPTY_FORM)
+    setStagedFile(null)
+    setStagedFileError(null)
     setAdding(true)
   }
 
@@ -83,6 +100,20 @@ export default function FichaEstudiosList({ estudios, onAdd, onUpdate, onRemove,
   const cancel = () => {
     setAdding(false)
     setEditingId(null)
+    setStagedFile(null)
+    setStagedFileError(null)
+  }
+
+  const handleStagedFileSelected = (fileList: FileList | null) => {
+    const file = fileList?.[0]
+    if (!file) return
+    const validationError = validateArchivo(file)
+    if (validationError) {
+      setStagedFileError(validationError)
+      return
+    }
+    setStagedFileError(null)
+    setStagedFile(file)
   }
 
   const save = async () => {
@@ -92,9 +123,29 @@ export default function FichaEstudiosList({ estudios, onAdd, onUpdate, onRemove,
       fecha: form.fecha || undefined,
       resumen: form.resumen || undefined,
     }
-    if (editingId !== null) await onUpdate(editingId, payload)
-    else await onAdd(payload)
-    cancel()
+    setSaving(true)
+    try {
+      if (editingId !== null) {
+        await onUpdate(editingId, payload)
+      } else {
+        const created = await onAdd(payload)
+        if (stagedFile) {
+          try {
+            await onUploadArchivo(created.id, stagedFile)
+          } catch (err) {
+            // El estudio ya se guardó: no perder ese trabajo por un error de
+            // subida. El archivo se puede reintentar desde la fila de la lista.
+            setArchivoError({
+              id: created.id,
+              message: err instanceof Error && err.message.trim() ? err.message : 'El estudio se guardó, pero no se pudo subir el archivo. Podés reintentarlo desde la lista.',
+            })
+          }
+        }
+      }
+      cancel()
+    } finally {
+      setSaving(false)
+    }
   }
 
   const formOpen = adding || editingId !== null
@@ -164,14 +215,49 @@ export default function FichaEstudiosList({ estudios, onAdd, onUpdate, onRemove,
             <DateInput value={form.fecha} onChange={(fecha) => setForm((c) => ({ ...c, fecha }))} />
             <input type="text" placeholder="Resumen" value={form.resumen} onChange={(event) => setForm((c) => ({ ...c, resumen: event.target.value }))} />
           </div>
+
           {editingId !== null ? (
             <p className="ficha-field-archivo-hint">El archivo adjunto se sube desde la lista, con el estudio ya guardado.</p>
           ) : (
-            <p className="ficha-field-archivo-hint">Guardá el estudio primero; después vas a poder adjuntarle un archivo.</p>
+            <div className="ficha-estudio-staged-archivo">
+              <input
+                ref={stagedFileInputRef}
+                type="file"
+                accept="application/pdf,image/jpeg,image/png,image/webp"
+                hidden
+                onChange={(event) => {
+                  handleStagedFileSelected(event.target.files)
+                  event.target.value = ''
+                }}
+              />
+              {stagedFile ? (
+                <span className="ficha-estudio-staged-archivo-chip">
+                  <FileIcon />
+                  {stagedFile.name}
+                  <button
+                    type="button"
+                    className="config-icon-button config-icon-button--danger"
+                    aria-label="Quitar archivo"
+                    title="Quitar archivo"
+                    onClick={() => setStagedFile(null)}
+                  >
+                    <TrashIcon />
+                  </button>
+                </span>
+              ) : (
+                <button type="button" className="secondary-button evolucion-images-upload-button" onClick={() => stagedFileInputRef.current?.click()}>
+                  <UploadIcon /> Subir archivo
+                </button>
+              )}
+              {stagedFileError ? <p className="evolution-form-error">{stagedFileError}</p> : null}
+            </div>
           )}
+
           <div className="evolution-edit-actions">
-            <button type="button" className="secondary-button" onClick={cancel}>Cancelar</button>
-            <button type="button" className="primary-button" disabled={!form.tipo.trim()} onClick={() => { void save() }}>Guardar</button>
+            <button type="button" className="secondary-button" onClick={cancel} disabled={saving}>Cancelar</button>
+            <button type="button" className="primary-button" disabled={!form.tipo.trim() || saving} onClick={() => { void save() }}>
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
           </div>
         </div>
       )}

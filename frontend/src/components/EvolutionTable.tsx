@@ -184,17 +184,6 @@ export default function EvolutionTable({
                       <div className="evolution-expanded-content">
                         {isEditing ? (
                           <div className="evolution-edit-form">
-                            {onChangeEditingHtml ? (
-                              <RichTextEditor
-                                html={editingHtml}
-                                onChange={(html, plainText) => {
-                                  onChangeEditingHtml(html, plainText)
-                                  onChangeEditingText(plainText)
-                                }}
-                              />
-                            ) : (
-                              <textarea rows={4} value={editingText} onChange={(event) => onChangeEditingText(event.target.value)} />
-                            )}
                             <div className="evolution-form-fields-row">
                               {onChangeEditingGrupoId && onCreateGrupo ? (
                                 <DiagnosticoSelect
@@ -212,6 +201,17 @@ export default function EvolutionTable({
                                 error={imagesError}
                               />
                             </div>
+                            {onChangeEditingHtml ? (
+                              <RichTextEditor
+                                html={editingHtml}
+                                onChange={(html, plainText) => {
+                                  onChangeEditingHtml(html, plainText)
+                                  onChangeEditingText(plainText)
+                                }}
+                              />
+                            ) : (
+                              <textarea rows={4} value={editingText} onChange={(event) => onChangeEditingText(event.target.value)} />
+                            )}
                             {error ? <p className="evolution-form-error">{error}</p> : null}
                             <div className="evolution-edit-actions">
                               <button type="button" className="secondary-button" onClick={onCancelEdit}>

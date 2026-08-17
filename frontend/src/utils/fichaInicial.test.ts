@@ -54,23 +54,29 @@ describe('buildFichaPayload', () => {
 })
 
 describe('fichaSeccionesResumen', () => {
-  it('cuenta 0 de 5 cuando no hay secciones', () => {
-    expect(fichaSeccionesResumen(undefined)).toEqual({ revisadas: 0, total: 5 })
+  it('cuenta 0 de 4 cuando no hay secciones', () => {
+    expect(fichaSeccionesResumen(undefined)).toEqual({ revisadas: 0, total: 4 })
   })
 
   it('cuenta solo las secciones en estado REVISADA', () => {
     const secciones = [
-      { id: 1, consultorioId: 1, fichaInicialId: 1, seccion: 'MOTIVO' as const, estado: 'REVISADA' as const, updatedAt: '' },
-      { id: 2, consultorioId: 1, fichaInicialId: 1, seccion: 'ANTECEDENTES' as const, estado: 'EN_PROGRESO' as const, updatedAt: '' },
-      { id: 3, consultorioId: 1, fichaInicialId: 1, seccion: 'SEGURIDAD' as const, estado: 'REVISADA' as const, updatedAt: '' },
+      { id: 1, consultorioId: 1, fichaInicialId: 1, seccion: 'ANTECEDENTES' as const, estado: 'EN_PROGRESO' as const, updatedAt: '' },
+      { id: 2, consultorioId: 1, fichaInicialId: 1, seccion: 'SEGURIDAD' as const, estado: 'REVISADA' as const, updatedAt: '' },
     ]
-    expect(fichaSeccionesResumen(secciones)).toEqual({ revisadas: 2, total: 5 })
+    expect(fichaSeccionesResumen(secciones)).toEqual({ revisadas: 1, total: 4 })
+  })
+
+  it('no cuenta la sección MOTIVO (se fusionó con Antecedentes, ya no es una sección propia)', () => {
+    const secciones = [
+      { id: 1, consultorioId: 1, fichaInicialId: 1, seccion: 'MOTIVO' as const, estado: 'REVISADA' as const, updatedAt: '' },
+    ]
+    expect(fichaSeccionesResumen(secciones)).toEqual({ revisadas: 0, total: 4 })
   })
 
   it('no cuenta la sección ESTUDIOS (ya no forma parte de la Ficha Inicial)', () => {
     const secciones = [
       { id: 1, consultorioId: 1, fichaInicialId: 1, seccion: 'ESTUDIOS' as const, estado: 'REVISADA' as const, updatedAt: '' },
     ]
-    expect(fichaSeccionesResumen(secciones)).toEqual({ revisadas: 0, total: 5 })
+    expect(fichaSeccionesResumen(secciones)).toEqual({ revisadas: 0, total: 4 })
   })
 })

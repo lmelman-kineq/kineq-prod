@@ -9,10 +9,10 @@
 // vive en la tab "Estudios" (fuera de la Ficha Inicial propiamente dicha),
 // el resto vive dentro de Ficha Inicial, en la sección de AssessmentSectionNav indicada.
 export const ELIGIBLE_ALERT_FIELDS: Record<string, { label: string; outerTab: 'ficha' | 'estudios'; section?: string }> = {
-  motivoConsulta: { label: 'Motivo de consulta', outerTab: 'ficha', section: 'motivo' },
-  diagnosticoDerivacion: { label: 'Diagnóstico de derivación', outerTab: 'ficha', section: 'motivo' },
-  traumatismosAccidentes: { label: 'Traumatismos / accidentes', outerTab: 'ficha', section: 'motivo' },
-  tratamientosPrevios: { label: 'Tratamientos previos', outerTab: 'ficha', section: 'motivo' },
+  motivoConsulta: { label: 'Motivo de consulta', outerTab: 'ficha', section: 'antecedentes' },
+  diagnosticoDerivacion: { label: 'Diagnóstico de derivación', outerTab: 'ficha', section: 'antecedentes' },
+  traumatismosAccidentes: { label: 'Traumatismos / accidentes', outerTab: 'ficha', section: 'antecedentes' },
+  tratamientosPrevios: { label: 'Tratamientos previos', outerTab: 'ficha', section: 'antecedentes' },
   enfermedadesActuales: { label: 'Enfermedades actuales', outerTab: 'ficha', section: 'seguridad' },
   dolorSintomas: { label: 'Dolor y síntomas', outerTab: 'ficha', section: 'dolor_funcion' },
   limitacionesFuncionales: { label: 'Limitaciones funcionales', outerTab: 'ficha', section: 'dolor_funcion' },

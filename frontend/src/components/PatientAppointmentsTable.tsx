@@ -5,9 +5,10 @@ import { mapEstadoToStatus, statusClass } from '../utils/turnoStatus'
 
 type PatientAppointmentsTableProps = {
   turnos: Turno[]
+  onEditTurno?: (turno: Turno) => void
 }
 
-export default function PatientAppointmentsTable({ turnos }: PatientAppointmentsTableProps) {
+export default function PatientAppointmentsTable({ turnos, onEditTurno }: PatientAppointmentsTableProps) {
   if (turnos.length === 0) {
     return (
       <div className="turnos-table-message">
@@ -21,30 +22,43 @@ export default function PatientAppointmentsTable({ turnos }: PatientAppointments
 
   return (
     <div className="turnos-table-scroll">
-      <table className="turnos-table">
+      <table className="turnos-table patient-turnos-table">
         <thead>
           <tr>
             <th>Fecha</th>
-            <th>Hora</th>
             <th>Profesional</th>
             <th>Especialidad</th>
-            <th>Nro. de Sesión</th>
+            <th>Sesión</th>
             <th>Estado</th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((turno) => (
-            <tr key={turno.id}>
-              <td>{formatDateOnly(turno.inicio)}</td>
-              <td data-label="Hora">{formatTimeOnly(turno.inicio)}</td>
-              <td data-label="Profesional">{professionalName(turno.profesional)}</td>
-              <td data-label="Especialidad">
+            <tr
+              key={turno.id}
+              tabIndex={onEditTurno ? 0 : undefined}
+              onClick={() => onEditTurno?.(turno)}
+              onKeyDown={(event) => {
+                if (onEditTurno && (event.key === 'Enter' || event.key === ' ')) {
+                  event.preventDefault()
+                  onEditTurno(turno)
+                }
+              }}
+            >
+              <td>
+                <strong>{formatDateOnly(turno.inicio)}</strong>
+                <small>{formatTimeOnly(turno.inicio)}</small>
+              </td>
+              <td data-label="Profesional" className="patient-turnos-cell-truncate" title={professionalName(turno.profesional)}>
+                {professionalName(turno.profesional)}
+              </td>
+              <td data-label="Especialidad" className="patient-turnos-cell-truncate" title={turno.especialidad?.nombre ?? '—'}>
                 <span className="turnos-specialty-cell">
                   <span className="turnos-specialty-dot" style={{ backgroundColor: turno.especialidad?.color }} />
                   {turno.especialidad?.nombre ?? '—'}
                 </span>
               </td>
-              <td data-label="Nro. de Sesión">{turno.numeroSesion ?? '—'}</td>
+              <td data-label="Sesión">{turno.numeroSesion ?? '—'}</td>
               <td data-label="Estado">
                 <span className={`turnos-status-pill turnos-status-pill--${statusClass(mapEstadoToStatus(turno.estado))}`}>
                   {mapEstadoToStatus(turno.estado)}

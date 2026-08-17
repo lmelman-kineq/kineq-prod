@@ -173,9 +173,13 @@ export function useFichaInicial(patientId: number, canEditClinical: boolean, ref
     await refresh()
   }
 
+  // Devuelve el estudio creado (con su id) para que quien llama pueda
+  // encadenar la subida de archivo sin depender de un refresh() previo
+  // ("upload diferido": crear -> subir con el id ya conocido).
   const addEstudio = async (data: FichaEstudioInput) => {
-    await api.createFichaEstudio(patientId, data)
+    const created = await api.createFichaEstudio(patientId, data)
     await refresh()
+    return created
   }
   const updateEstudio = async (id: number, data: Partial<FichaEstudioInput>) => {
     await api.patchFichaEstudio(id, data)

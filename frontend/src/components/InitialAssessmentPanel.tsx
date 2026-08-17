@@ -106,9 +106,16 @@ const ICONS = {
   dolorFuncion: <svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 3h6v3H9z" /><path d="M9 12l2 2 4-4" /></svg>,
 }
 
+// "Motivo" ya no es una subpestaña propia — sus campos (motivoConsulta,
+// fechaInicioProblema, diagnosticoDerivacion, objetivoPaciente,
+// tratamientosPrevios, traumatismosAccidentes) se movieron dentro de
+// "Antecedentes" (ver panels.antecedentes más abajo), que pasa a ser la
+// primera sección real. Los datos/columnas de Prisma no se tocaron — sigue
+// siendo texto libre, ahora editable desde otro lugar de la UI. La cantidad
+// de secciones revisables vive en REVISABLE_SECCIONES (utils/fichaInicial.ts)
+// — si se agrega/saca una sección acá, actualizar esa lista también.
 const NAV_SECTIONS: AssessmentSection[] = [
   { key: 'resumen', label: 'Resumen' },
-  { key: 'motivo', label: 'Motivo' },
   { key: 'antecedentes', label: 'Antecedentes' },
   { key: 'seguridad', label: 'Seguridad clínica' },
   { key: 'habitos', label: 'Contexto y Hábitos' },
@@ -145,17 +152,18 @@ export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget
   const [activeKey, setActiveKey] = useState('resumen')
   const { ficha, loading, form, saving, saveError, canWrite, updateField, toggleAlertaCampo } = fichaHook
 
-  // Tab inicial: "Motivo" si la ficha está realmente vacía, "Resumen" si ya
-  // tiene algún progreso — se decide una sola vez por paciente (apenas
-  // termina de cargar), nunca en cada render, para no arrancarle la sección
-  // de las manos al profesional mientras está completando otra más adelante
-  // en la lista (Antecedentes, Seguridad, etc.).
+  // Tab inicial: "Antecedentes" (la primera sección real, ya que "Motivo"
+  // dejó de existir como subpestaña propia) si la ficha está realmente
+  // vacía, "Resumen" si ya tiene algún progreso — se decide una sola vez
+  // por paciente (apenas termina de cargar), nunca en cada render, para no
+  // arrancarle la sección de las manos al profesional mientras está
+  // completando otra más adelante en la lista (Seguridad, etc.).
   const initialTabPatientRef = useRef<number | null>(null)
   useEffect(() => {
     if (loading) return
     if (initialTabPatientRef.current === patientId) return
     initialTabPatientRef.current = patientId
-    setActiveKey(fichaEstaRealmenteVacia(ficha, form) ? 'motivo' : 'resumen')
+    setActiveKey(fichaEstaRealmenteVacia(ficha, form) ? 'antecedentes' : 'resumen')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, patientId])
 
@@ -188,7 +196,11 @@ export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget
   const panels: Record<string, ReactNode> = {
     resumen: <InitialAssessmentSummary ficha={ficha} form={form} onNavigate={setActiveKey} />,
 
-    motivo: (
+    // "Motivo" ya no es una subpestaña propia — su contenido (Motivo y
+    // contexto) pasa a vivir arriba de Antecedentes, dentro de la misma
+    // sección: mismos campos/columnas de Prisma, sin cambios de datos, solo
+    // de navegación.
+    antecedentes: (
       <>
         <FichaSection icon={ICONS.motivo} title="Motivo y contexto">
           <TextField id="ficha-field-motivoConsulta" label="Motivo de consulta" value={form.motivoConsulta} onChange={(v) => updateField('motivoConsulta', v)} alert={alertFor('motivoConsulta')} />
@@ -198,11 +210,6 @@ export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget
           <TextField id="ficha-field-tratamientosPrevios" label="Tratamientos previos" value={form.tratamientosPrevios} onChange={(v) => updateField('tratamientosPrevios', v)} alert={alertFor('tratamientosPrevios')} />
           <TextField id="ficha-field-traumatismosAccidentes" label="Traumatismos o accidentes" value={form.traumatismosAccidentes} onChange={(v) => updateField('traumatismosAccidentes', v)} alert={alertFor('traumatismosAccidentes')} />
         </FichaSection>
-      </>
-    ),
-
-    antecedentes: (
-      <>
         <div className="ficha-section-header">
           <span className="ficha-section-icon" aria-hidden="true">{ICONS.antecedentes}</span>
           <div>

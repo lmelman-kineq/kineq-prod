@@ -21,7 +21,11 @@ export type EstadisticasFiltros = {
 const ESTADOS: EstadoTurno[] = ['ASIGNADO', 'EN_ESPERA', 'ATENDIENDO', 'FINALIZADO', 'AUSENTE', 'CANCELADO']
 
 function turnoWhere(f: EstadisticasFiltros) {
-  const where: any = { consultorioId: f.consultorioId, inicio: { gte: f.desde, lte: f.hasta } }
+  // `eliminadoAt: null` acá una sola vez cubre todas las queries de este
+  // módulo (todas parten de `where`/`whereFinalizado`) — un turno eliminado
+  // (baja lógica, ver Turno.eliminadoAt en schema.prisma) no debe alterar
+  // estadísticas históricas ya cerradas.
+  const where: any = { consultorioId: f.consultorioId, inicio: { gte: f.desde, lte: f.hasta }, eliminadoAt: null }
   if (f.profesionalId) where.profesionalId = f.profesionalId
   if (f.especialidadId) where.especialidadId = f.especialidadId
   return where

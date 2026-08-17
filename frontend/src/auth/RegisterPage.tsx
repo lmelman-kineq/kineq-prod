@@ -14,8 +14,7 @@ const MIN_PASSWORD_LENGTH = 8
 export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const { register } = useAuth()
   const [nombreConsultorio, setNombreConsultorio] = useState('')
-  const [nombre, setNombre] = useState('')
-  const [apellido, setApellido] = useState('')
+  const [nombreCompleto, setNombreCompleto] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -38,7 +37,10 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
 
     setSubmitting(true)
     try {
-      await register({ nombreConsultorio, nombre, apellido, email, password, confirmPassword })
+      // Nombre completo en un solo campo (regla transversal de UI de
+      // personas) — se guarda entero en `nombre`, `apellido` queda vacío,
+      // mismo criterio que Paciente/Profesional/Usuario.
+      await register({ nombreConsultorio, nombre: nombreCompleto.trim(), apellido: '', email, password, confirmPassword })
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo conectar con el servidor.')
     } finally {
@@ -88,32 +90,17 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
             />
           </div>
 
-          <div className="login-form-row">
-            <div className="login-field">
-              <label htmlFor="register-nombre">Nombre</label>
-              <input
-                id="register-nombre"
-                className="login-input"
-                type="text"
-                required
-                value={nombre}
-                onChange={(event) => setNombre(event.target.value)}
-                disabled={submitting}
-              />
-            </div>
-
-            <div className="login-field">
-              <label htmlFor="register-apellido">Apellido</label>
-              <input
-                id="register-apellido"
-                className="login-input"
-                type="text"
-                required
-                value={apellido}
-                onChange={(event) => setApellido(event.target.value)}
-                disabled={submitting}
-              />
-            </div>
+          <div className="login-field">
+            <label htmlFor="register-nombre">Nombre completo</label>
+            <input
+              id="register-nombre"
+              className="login-input"
+              type="text"
+              required
+              value={nombreCompleto}
+              onChange={(event) => setNombreCompleto(event.target.value)}
+              disabled={submitting}
+            />
           </div>
 
           <div className="login-field">

@@ -67,7 +67,7 @@ export default function InitialAssessmentSummary({ ficha, form, onNavigate }: Pr
           </div>
 
           {form.motivoConsulta?.trim() ? (
-            <SummaryBlock title="Motivo de consulta" items={[form.motivoConsulta.trim()]} sectionKey="motivo" onNavigate={onNavigate} />
+            <SummaryBlock title="Motivo de consulta" items={[form.motivoConsulta.trim()]} sectionKey="antecedentes" onNavigate={onNavigate} />
           ) : null}
 
           <SummaryBlock title="Alergias" items={alergias} sectionKey="seguridad" onNavigate={onNavigate} emptyHint={alergias.length === 0 && form.alergiasEstado === 'SI' ? 'Marcada como "Sí" pero sin alergias cargadas.' : undefined} />

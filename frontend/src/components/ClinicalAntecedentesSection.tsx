@@ -190,24 +190,28 @@ export default function ClinicalAntecedentesSection({ antecedentes, onAdd, onUpd
 
   return (
     <div className="antecedentes-section">
-      <div className="antecedentes-toolbar">
-        <div className="antecedentes-categorias" role="tablist" aria-label="Tipo de antecedente">
-          {CATEGORIAS.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              role="tab"
-              aria-selected={categoria === c.key}
-              className={`antecedentes-categoria-button${categoria === c.key ? ' antecedentes-categoria-button--active' : ''}`}
-              onClick={() => selectCategoria(c.key)}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-        <button type="button" className="secondary-button antecedentes-catalogo-button" onClick={() => setDrawerOpen(true)}>
-          Ver todos
-        </button>
+      {/* "Ver todos" desapareció como botón separado — la categoría misma
+          (antes solo un toggle) ahora abre el catálogo completo al click,
+          un paso menos para llegar a lo mismo. Sigue seleccionando la
+          categoría (para el buscador/lista rápida de abajo), solo que
+          ahora también abre el mismo drawer que antes abría "Ver todos". */}
+      <div className="antecedentes-categorias" role="tablist" aria-label="Tipo de antecedente">
+        {CATEGORIAS.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            role="tab"
+            aria-selected={categoria === c.key}
+            className={`antecedentes-categoria-button antecedentes-categoria-button--clickable${categoria === c.key ? ' antecedentes-categoria-button--active' : ''}`}
+            onClick={() => {
+              selectCategoria(c.key)
+              setDrawerOpen(true)
+            }}
+          >
+            {c.label}
+            <span className="antecedentes-categoria-chevron" aria-hidden="true">›</span>
+          </button>
+        ))}
       </div>
 
       <div className="antecedentes-search">

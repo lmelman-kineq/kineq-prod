@@ -469,7 +469,7 @@ function Dashboard() {
         setProfesionalesState(
           profesionales.map((profesional: Profesional) => ({
             id: profesional.id,
-            displayName: `${profesional.titulo ? `${profesional.titulo} ` : ''}${profesional.nombre} ${profesional.apellido}`,
+            displayName: professionalName(profesional),
           })),
         )
         setSpecialtiesState(
@@ -829,6 +829,9 @@ function Dashboard() {
   }
 
   const canSeeDiagnostico = user?.rol === 'ADMINISTRADOR' || user?.rol === 'PROFESIONAL'
+  // Misma política que 'eliminar' en getTurnoQuickActions: administración y
+  // recepción pueden eliminar turnos; profesional y supervisor, no.
+  const canDeleteTurno = user?.rol === 'ADMINISTRADOR' || user?.rol === 'RECEPCION'
 
   // Diagnósticos del paciente del turno abierto (nuevo o edición) — se
   // recarga cada vez que cambia el paciente elegido en cualquiera de los
@@ -974,16 +977,31 @@ function Dashboard() {
     })
   }
 
-  // Botón "Eliminar turno" del modal de edición: misma acción que cancelar,
-  // reutiliza cancelTurno, con su propio texto de confirmación.
+  // Baja lógica real (Turno.eliminadoAt en el backend) — a diferencia de
+  // cancelTurno, esto saca al turno de toda lectura operativa, no solo
+  // cambia su estado. Disponible para cualquier estado (ver getTurnoQuickActions).
+  const deleteTurno = async (turnoId: number) => {
+    try {
+      await api.deleteTurno(turnoId)
+      setTurnosState((currentTurnos) => currentTurnos.filter((item) => item.id !== turnoId))
+      if (selectedTurnoId === turnoId) setSelectedTurnoId(0)
+      if (editingTurnoId === turnoId) closeTurnoDetails()
+      setTurnosPageRefreshKey((key) => key + 1)
+      setLoadError(null)
+    } catch (error) {
+      setLoadError(getErrorMessage(error, 'No se pudo eliminar el turno.'))
+    }
+  }
+
   const handleDeleteTurno = (turnoId: number) => {
+    setContextMenu(null)
     setConfirmDialog({
       title: 'Eliminar turno',
-      description: 'Esta acción eliminará el turno.',
+      description: 'Esta acción eliminará el turno de forma permanente de la agenda. Esta acción no se puede deshacer.',
       confirmLabel: 'Eliminar',
       cancelLabel: 'Volver',
       destructive: true,
-      onConfirm: () => { void cancelTurno(turnoId) },
+      onConfirm: () => { void deleteTurno(turnoId) },
     })
   }
 
@@ -1105,6 +1123,12 @@ function Dashboard() {
         { key: 'finalizar', label: 'Finalizar atención', tone: 'warning', onClick: () => requestFinalizarAtencion(turnoId) },
       ]
     }
+
+    // "Eliminar turno" (baja lógica) va siempre al final, sin importar el
+    // estado: a diferencia de las transiciones de arriba, es una operación
+    // administrativa que tiene sentido incluso sobre turnos ya finalizados,
+    // ausentes o cancelados.
+    actions = [...actions, { key: 'eliminar', label: 'Eliminar turno', tone: 'danger', onClick: () => handleDeleteTurno(turnoId) }]
 
     if (!user || user.rol === 'SUPERVISOR') return []
     if (user.rol === 'ADMINISTRADOR') return actions
@@ -1813,6 +1837,7 @@ function Dashboard() {
             refreshKey={turnosPageRefreshKey}
             onBack={closePatientDetail}
             onNewTurno={(patientId) => openNewTurnoModal(undefined, undefined, patientId)}
+            onEditTurno={(turno) => openTurnoDetails(mapApiTurnoToUi(turno))}
             onRequestConfirm={setConfirmDialog}
           />
         ) : activePage === 'atencion' && attentionTurno !== null ? (
@@ -1825,6 +1850,7 @@ function Dashboard() {
             patientSocialWorkById={patientSocialWorkById}
             refreshKey={turnosPageRefreshKey}
             onBack={closeAttentionScreen}
+            onEditTurno={(turno) => openTurnoDetails(mapApiTurnoToUi(turno))}
             onRequestConfirm={setConfirmDialog}
             activeTurno={attentionTurno}
             onUpdateEstado={updateTurnoEstado}
@@ -1946,7 +1972,10 @@ function Dashboard() {
 
               {editingTurnoId !== null ? (() => {
                 const liveTurno = turnosState.find((item) => item.id === editingTurnoId)
-                const actions = liveTurno ? getTurnoQuickActions(liveTurno) : []
+                // 'eliminar' se excluye acá: este modal ya tiene su propio
+                // botón "Eliminar turno" fijo más abajo (modal-delete-button),
+                // mostrarlo también en las acciones rápidas lo duplicaría.
+                const actions = liveTurno ? getTurnoQuickActions(liveTurno).filter((action) => action.key !== 'eliminar') : []
                 if (actions.length === 0) return null
 
                 return (
@@ -1984,7 +2013,7 @@ function Dashboard() {
               />
 
               <div className="modal-actions">
-                {editingTurnoId !== null ? (
+                {editingTurnoId !== null && canDeleteTurno ? (
                   <button
                     type="button"
                     className="modal-delete-button"

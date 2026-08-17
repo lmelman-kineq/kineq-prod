@@ -314,6 +314,13 @@ model Turno {
   inicioAtencion  DateTime?
   finAtencion     DateTime?
   canceladoAt     DateTime?
+  // Baja lógica — nunca DELETE físico. La FK Evolucion.turnoId ya es
+  // onDelete: SetNull, así que un delete físico no destruiría evoluciones,
+  // pero SÍ desaparecería silenciosamente de estadísticas históricas
+  // (sesiones realizadas/ausentismo de meses ya cerrados). Con esto, un
+  // turno "eliminado" sale de toda lectura operativa (agenda, Paciente,
+  // estadísticas) pero la fila y su `estado`/timestamps quedan intactos.
+  eliminadoAt     DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 

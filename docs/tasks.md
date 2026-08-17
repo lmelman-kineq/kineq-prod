@@ -389,6 +389,36 @@ Para Vercel (proyecto `kineq-api`), falta configurar `BLOB_READ_WRITE_TOKEN` —
 
 ---
 
+## Ajustes de Evoluciones, Ficha Inicial, Estudios y Turnos del Paciente
+
+Ronda de seis partes.
+
+**1) Diagnóstico/Archivos arriba del editor + chevron transversal**: en alta y edición de Evolución, la fila Diagnóstico+Archivos pasó de ir después del editor a ir antes — resuelve por sí solo que "Subir imágenes" quedara pegado a "Cancelar/Guardar cambios" (ahora los separa todo el alto del editor). Se agregó un chevron (`▾`) a los cuatro combobox custom de la app (Paciente/Profesional/Especialidad/Diagnóstico) con una sola regla CSS (`.dropdown-input-row::after`), no solo a Diagnóstico. La vista de solo lectura de una evolución (`EvolucionContent.tsx`) ahora también muestra Diagnóstico y Archivos, sin controles de edición, sin bloque vacío si no hay datos. Ver `docs/modules/clinical-history.md`.
+
+**2) "Motivo" se fusionó con "Antecedentes"**: dejó de ser una subpestaña propia de Ficha Inicial — sus 6 campos se mudaron (sin migración, mismas columnas) al principio de la sección Antecedentes. La primera tab de una ficha vacía pasó de "Motivo" a "Antecedentes". El contador "N de M secciones revisadas" dejó de hardcodear `5`: ahora deriva de `REVISABLE_SECCIONES` (`utils/fichaInicial.ts`, 4 secciones), que excluye `MOTIVO` además de `ESTUDIOS`. El backend (`recomputeSeccionesEstado`) sumó la condición de Motivo a la de Antecedentes con `OR`, dejó de escribir filas `MOTIVO` nuevas (las viejas quedan de historial, sin migrar). Se actualizaron en el mismo sentido `InitialAssessmentSummary.tsx` y `ELIGIBLE_ALERT_FIELDS` (frontend y backend). El header del paciente sigue derivando de `Turno`, no de este cálculo — verificado que no se tocó. Ver `docs/modules/clinical-history.md`.
+
+**3) Antecedentes: header de categoría reemplaza a "Ver todos"**: se sacó el botón separado — el propio botón de cada categoría (Personales/Familiares/Quirúrgicos) ahora también abre el mismo `CatalogoCompletoDrawer` al hacer click, sin duplicar el catálogo. Ver `docs/modules/clinical-history.md`.
+
+**4) Turnos dentro de la ficha del paciente — click-to-edit y sin scroll horizontal**: cada fila de `PatientAppointmentsTable.tsx` ahora abre el mismo modal "Editar turno" que Inicio/Turnos (nunca una pantalla separada). La tabla bajó a 5 columnas con `table-layout: fixed` y truncado+tooltip, sin necesitar scroll horizontal en desktop. Ver `docs/modules/appointments.md`.
+
+**5) Estudios: adjuntar archivo ya en el alta ("upload diferido")**: se sacó el aviso "Guardá el estudio primero...". El formulario de alta ahora tiene su propio selector de archivo (validación inline, sin `alert()`); al guardar, primero se crea el estudio y recién con el `id` real se sube el archivo — si el upload falla, el estudio queda igual guardado, con un error explicando que se puede reintentar desde la lista. `useFichaInicial.ts`'s `addEstudio()` ahora devuelve el estudio creado. Ver `docs/modules/clinical-history.md`.
+
+**6) Turno: eliminación real (baja lógica) en cualquier estado**: nuevo `Turno.eliminadoAt` (migración `20260817170811_turno_eliminado_at`) + `DELETE /api/turnos/:turnoId` — nunca `DELETE` físico (una fila eliminada podía corromper en silencio estadísticas de meses ya cerrados, aunque `Evolucion.turnoId` ya sea `SetNull`). El botón "Eliminar turno" del modal de edición **antes en realidad cancelaba** (`cancelTurno`) — quedó rewireado al endpoint real. El menú `⋮` de Inicio/Turnos/modal ahora incluye "Eliminar turno" sin importar el estado (antes, para `FINALIZADO`/`AUSENTE`/`CANCELADO`, la lista de acciones salía vacía y el botón `⋮` de `TurnosPage` directamente no se renderizaba). Mismo filtro por rol que las demás acciones administrativas (`ADMINISTRADOR`/`RECEPCION`, no `PROFESIONAL`/`SUPERVISOR`). Ver `docs/modules/appointments.md`/`docs/database.md`.
+
+**Regla transversal — Nombre completo, extendida a Profesional y Usuario**: `ProfesionalFormModal.tsx`, `UsuarioFormModal.tsx` y `RegisterPage.tsx` (alta pública del primer administrador) dejaron de pedir Nombre/Apellido por separado — mismo criterio ya usado en Paciente (un único campo, `apellido: ''`, sin parseo, sin migración). `POST /auth/register` dejó de exigir `apellido`. Nuevos helpers `professionalFullName()`/`userFullName()` reemplazan las concatenaciones sueltas que había en varios listados/dropdowns. Ver `docs/modules/patients.md`/`docs/modules/professionals.md`/`docs/modules/users-and-roles.md`.
+
+**Producción**: una migración nueva y puramente aditiva, `20260817170811_turno_eliminado_at`. Aplicada al dev DB a mano, **no** aplicada a Aiven — correr manualmente:
+```bash
+npx prisma migrate status
+npx prisma migrate deploy
+```
+
+**Tests**: backend 210→215 (+5: DELETE de turno es baja lógica y desaparece de `GET /api/turnos`; funciona en cualquier estado incluido `CANCELADO`; un `PROFESIONAL` no puede eliminar turnos ajenos; aislamiento cross-consultorio; registro con nombre completo en un solo campo). Frontend 93→94 (+1: `fichaSeccionesResumen` ya no cuenta `MOTIVO`, total pasa a 4). `tsc -b` limpio en ambos paquetes en cada tanda de cambios.
+
+**No verificado con navegador real en esta ronda** (a diferencia de rondas anteriores que sí usaron Playwright ad-hoc) — ver el bullet nuevo en "Known gaps" más abajo sobre los 6 breakpoints pedidos (1920×1080 a 390×844), que quedan pendientes.
+
+---
+
 ## Known gaps / next priorities
 
 - **Pre-existing bug found during manual verification of this round, not fixed (out of scope — not touched by this work):** the Inicio/home dashboard's mini-calendar renders a React "duplicate key" console warning (`Encountered two children with the same key... "M"`) on every load — almost certainly the weekday-initial header (L, M, M, J, V, S, D) using the letter itself as the React `key` instead of an index, so the two `M`s (Martes/Miércoles) collide. Confirmed via isolated console-error-count checkpoints that this fires during the post-login home render, before any Estadísticas/Turnos navigation — unrelated to the new code in this round. Cosmetic/non-crashing, but worth a one-line fix (`key={index}`) next time that file is touched.
@@ -400,7 +430,8 @@ Para Vercel (proyecto `kineq-api`), falta configurar `BLOB_READ_WRITE_TOKEN` —
 - "Número de sesión" auto-calculation has no documented formula in `docs/modules/appointments.md` beyond "should be automatic but user-editable" — the summary cards use "count of `FINALIZADO` turnos" as the closest existing precedent, not a new invented rule.
 - **The "autoría clínica" round shipped with the same shared-dev-server verification limitation as the previous two rounds** — `tsc -b`/`vite build`/full test suites (backend 92, frontend 31) pass, but no live click-through of the new "Usuario vinculado" selects, the turno pencil icon, or the profile-photo popover.
 - **Real accounts currently unlinked** (checked against the dev DB at ship time — these lose clinical write access until an admin links them via Configuración → Usuarios or → Profesionales): `admin@kineq-demo.local` (consultorio 1) and the IAFS demo consultorio's admin (consultorio 13). Not a bug — this is the intended effect of the new rule — just needs a manual link to restore write access on those two accounts.
-- **`.patient-detail-page` has a ~30-45px horizontal overflow at 390/414/430px**, found while verifying the Evoluciones mobile round above — reproduces identically on "Ficha inicial" (untouched by that round), so it's a container-level issue shared by every clinical tab (likely a grid/flex child under `PatientProfileHeader`/`PatientSummaryCards` missing `min-width: 0`), not specific to Evoluciones. Not fixed — was explicitly out of scope for a round scoped to Evoluciones only.
+- **`.patient-detail-page` has a ~30-45px horizontal overflow at 390/414/430px**, found while verifying the Evoluciones mobile round above — reproduces identically on "Ficha inicial" (untouched by that round), so it's a container-level issue shared by every clinical tab (likely a grid/flex child under `PatientProfileHeader`/`PatientSummaryCards` missing `min-width: 0`), not specific to Evoluciones. Not fixed — was explicitly out of scope for a round scoped to Evoluciones only. Still not fixed as of the "Ajustes de Evoluciones, Ficha Inicial, Estudios y Turnos del Paciente" round either (out of scope again).
+- **No live-browser verification for the "Ajustes de Evoluciones, Ficha Inicial, Estudios y Turnos del Paciente" round** — unlike the Ficha Inicial/Evoluciones-mobile rounds above (which used Playwright ad-hoc against the shared dev server), this round shipped verified only via `tsc -b` + full backend/frontend test suites, no screenshots at the 6 requested breakpoints (1920×1080, 1366×768, 1024×768, 768×1024, 430×932, 390×844) and no manual click-through of: the Diagnóstico dropdown chevron, the reordered Evolución fields row + read view, Ficha Inicial without "Motivo", the clickable Antecedentes category headers, the Turnos-in-Patient table click-to-edit at narrow widths, the Estudios staged-file picker, or the `⋮`/"Eliminar turno" menu across all 6 turno states. This is the single largest remaining gap from that round's own acceptance criteria.
 
 ---
 

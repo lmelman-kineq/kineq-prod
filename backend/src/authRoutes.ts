@@ -42,7 +42,9 @@ function toPublicUsuario(usuario: {
 router.post('/register', async (req, res) => {
   const { nombreConsultorio, nombre, apellido, email, password, confirmPassword } = req.body
 
-  if (!nombreConsultorio || !nombre || !apellido || !email || !password) {
+  // apellido no es requerido: el frontend manda el nombre completo en un solo
+  // campo (`nombre`), mismo criterio que Paciente/Profesional/Usuario.
+  if (!nombreConsultorio || !nombre || !email || !password) {
     return res.status(400).json({ error: 'Faltan campos requeridos' })
   }
   if (password !== confirmPassword) {
@@ -67,7 +69,7 @@ router.post('/register', async (req, res) => {
         data: {
           consultorioId: consultorio.id,
           nombre,
-          apellido,
+          apellido: apellido || '',
           email: normalizedEmail,
           passwordHash,
           rol: RolUsuario.ADMINISTRADOR,

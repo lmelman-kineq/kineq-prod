@@ -393,6 +393,11 @@ export function patchTurno(turnoId: number, data: UpdateTurnoInput): Promise<Tur
   })
 }
 
+// Baja lógica en el backend (Turno.eliminadoAt) — nunca DELETE físico.
+export function deleteTurno(turnoId: number): Promise<void> {
+  return request(`/api/turnos/${turnoId}`, { method: 'DELETE' })
+}
+
 export function getEvoluciones(pacienteId?: number): Promise<Evolucion[]> {
   const query = pacienteId ? `?pacienteId=${pacienteId}` : ''
   return request(`/api/evoluciones${query}`)

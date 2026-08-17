@@ -66,6 +66,7 @@ export type TurnoMinAggregateOutputType = {
   inicioAtencion: Date | null
   finAtencion: Date | null
   canceladoAt: Date | null
+  eliminadoAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -86,6 +87,7 @@ export type TurnoMaxAggregateOutputType = {
   inicioAtencion: Date | null
   finAtencion: Date | null
   canceladoAt: Date | null
+  eliminadoAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -106,6 +108,7 @@ export type TurnoCountAggregateOutputType = {
   inicioAtencion: number
   finAtencion: number
   canceladoAt: number
+  eliminadoAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -152,6 +155,7 @@ export type TurnoMinAggregateInputType = {
   inicioAtencion?: true
   finAtencion?: true
   canceladoAt?: true
+  eliminadoAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -172,6 +176,7 @@ export type TurnoMaxAggregateInputType = {
   inicioAtencion?: true
   finAtencion?: true
   canceladoAt?: true
+  eliminadoAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -192,6 +197,7 @@ export type TurnoCountAggregateInputType = {
   inicioAtencion?: true
   finAtencion?: true
   canceladoAt?: true
+  eliminadoAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -299,6 +305,7 @@ export type TurnoGroupByOutputType = {
   inicioAtencion: Date | null
   finAtencion: Date | null
   canceladoAt: Date | null
+  eliminadoAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: TurnoCountAggregateOutputType | null
@@ -342,6 +349,7 @@ export type TurnoWhereInput = {
   inicioAtencion?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
   finAtencion?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
   canceladoAt?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
+  eliminadoAt?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Turno"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Turno"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
@@ -369,6 +377,7 @@ export type TurnoOrderByWithRelationInput = {
   inicioAtencion?: Prisma.SortOrderInput | Prisma.SortOrder
   finAtencion?: Prisma.SortOrderInput | Prisma.SortOrder
   canceladoAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  eliminadoAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   consultorio?: Prisma.ConsultorioOrderByWithRelationInput
@@ -400,6 +409,7 @@ export type TurnoWhereUniqueInput = Prisma.AtLeast<{
   inicioAtencion?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
   finAtencion?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
   canceladoAt?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
+  eliminadoAt?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Turno"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Turno"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
@@ -427,6 +437,7 @@ export type TurnoOrderByWithAggregationInput = {
   inicioAtencion?: Prisma.SortOrderInput | Prisma.SortOrder
   finAtencion?: Prisma.SortOrderInput | Prisma.SortOrder
   canceladoAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  eliminadoAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.TurnoCountOrderByAggregateInput
@@ -455,6 +466,7 @@ export type TurnoScalarWhereWithAggregatesInput = {
   inicioAtencion?: Prisma.DateTimeNullableWithAggregatesFilter<"Turno"> | Date | string | null
   finAtencion?: Prisma.DateTimeNullableWithAggregatesFilter<"Turno"> | Date | string | null
   canceladoAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Turno"> | Date | string | null
+  eliminadoAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Turno"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Turno"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Turno"> | Date | string
 }
@@ -468,6 +480,7 @@ export type TurnoCreateInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutTurnosInput
@@ -495,6 +508,7 @@ export type TurnoUncheckedCreateInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutTurnoInput
@@ -509,6 +523,7 @@ export type TurnoUpdateInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutTurnosNestedInput
@@ -536,6 +551,7 @@ export type TurnoUncheckedUpdateInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutTurnoNestedInput
@@ -557,6 +573,7 @@ export type TurnoCreateManyInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -570,6 +587,7 @@ export type TurnoUpdateManyMutationInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -590,6 +608,7 @@ export type TurnoUncheckedUpdateManyInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -626,6 +645,7 @@ export type TurnoCountOrderByAggregateInput = {
   inicioAtencion?: Prisma.SortOrder
   finAtencion?: Prisma.SortOrder
   canceladoAt?: Prisma.SortOrder
+  eliminadoAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -658,6 +678,7 @@ export type TurnoMaxOrderByAggregateInput = {
   inicioAtencion?: Prisma.SortOrder
   finAtencion?: Prisma.SortOrder
   canceladoAt?: Prisma.SortOrder
+  eliminadoAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -678,6 +699,7 @@ export type TurnoMinOrderByAggregateInput = {
   inicioAtencion?: Prisma.SortOrder
   finAtencion?: Prisma.SortOrder
   canceladoAt?: Prisma.SortOrder
+  eliminadoAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -980,6 +1002,7 @@ export type TurnoCreateWithoutConsultorioInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   paciente: Prisma.PacienteCreateNestedOneWithoutTurnosInput
@@ -1005,6 +1028,7 @@ export type TurnoUncheckedCreateWithoutConsultorioInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutTurnoInput
@@ -1055,6 +1079,7 @@ export type TurnoScalarWhereInput = {
   inicioAtencion?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
   finAtencion?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
   canceladoAt?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
+  eliminadoAt?: Prisma.DateTimeNullableFilter<"Turno"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Turno"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Turno"> | Date | string
 }
@@ -1068,6 +1093,7 @@ export type TurnoCreateWithoutPacienteInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutTurnosInput
@@ -1093,6 +1119,7 @@ export type TurnoUncheckedCreateWithoutPacienteInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutTurnoInput
@@ -1133,6 +1160,7 @@ export type TurnoCreateWithoutProfesionalInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutTurnosInput
@@ -1158,6 +1186,7 @@ export type TurnoUncheckedCreateWithoutProfesionalInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutTurnoInput
@@ -1198,6 +1227,7 @@ export type TurnoCreateWithoutEspecialidadInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutTurnosInput
@@ -1223,6 +1253,7 @@ export type TurnoUncheckedCreateWithoutEspecialidadInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutTurnoInput
@@ -1263,6 +1294,7 @@ export type TurnoCreateWithoutObraSocialInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutTurnosInput
@@ -1288,6 +1320,7 @@ export type TurnoUncheckedCreateWithoutObraSocialInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutTurnoInput
@@ -1328,6 +1361,7 @@ export type TurnoCreateWithoutEvolucionesInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutTurnosInput
@@ -1354,6 +1388,7 @@ export type TurnoUncheckedCreateWithoutEvolucionesInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1383,6 +1418,7 @@ export type TurnoUpdateWithoutEvolucionesInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutTurnosNestedInput
@@ -1409,6 +1445,7 @@ export type TurnoUncheckedUpdateWithoutEvolucionesInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1422,6 +1459,7 @@ export type TurnoCreateWithoutGrupoInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutTurnosInput
@@ -1447,6 +1485,7 @@ export type TurnoUncheckedCreateWithoutGrupoInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutTurnoInput
@@ -1493,6 +1532,7 @@ export type TurnoCreateManyConsultorioInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1506,6 +1546,7 @@ export type TurnoUpdateWithoutConsultorioInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   paciente?: Prisma.PacienteUpdateOneRequiredWithoutTurnosNestedInput
@@ -1531,6 +1572,7 @@ export type TurnoUncheckedUpdateWithoutConsultorioInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutTurnoNestedInput
@@ -1551,6 +1593,7 @@ export type TurnoUncheckedUpdateManyWithoutConsultorioInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1570,6 +1613,7 @@ export type TurnoCreateManyPacienteInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1583,6 +1627,7 @@ export type TurnoUpdateWithoutPacienteInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutTurnosNestedInput
@@ -1608,6 +1653,7 @@ export type TurnoUncheckedUpdateWithoutPacienteInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutTurnoNestedInput
@@ -1628,6 +1674,7 @@ export type TurnoUncheckedUpdateManyWithoutPacienteInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1647,6 +1694,7 @@ export type TurnoCreateManyProfesionalInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1660,6 +1708,7 @@ export type TurnoUpdateWithoutProfesionalInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutTurnosNestedInput
@@ -1685,6 +1734,7 @@ export type TurnoUncheckedUpdateWithoutProfesionalInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutTurnoNestedInput
@@ -1705,6 +1755,7 @@ export type TurnoUncheckedUpdateManyWithoutProfesionalInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1724,6 +1775,7 @@ export type TurnoCreateManyEspecialidadInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1737,6 +1789,7 @@ export type TurnoUpdateWithoutEspecialidadInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutTurnosNestedInput
@@ -1762,6 +1815,7 @@ export type TurnoUncheckedUpdateWithoutEspecialidadInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutTurnoNestedInput
@@ -1782,6 +1836,7 @@ export type TurnoUncheckedUpdateManyWithoutEspecialidadInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1801,6 +1856,7 @@ export type TurnoCreateManyObraSocialInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1814,6 +1870,7 @@ export type TurnoUpdateWithoutObraSocialInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutTurnosNestedInput
@@ -1839,6 +1896,7 @@ export type TurnoUncheckedUpdateWithoutObraSocialInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutTurnoNestedInput
@@ -1859,6 +1917,7 @@ export type TurnoUncheckedUpdateManyWithoutObraSocialInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1878,6 +1937,7 @@ export type TurnoCreateManyGrupoInput = {
   inicioAtencion?: Date | string | null
   finAtencion?: Date | string | null
   canceladoAt?: Date | string | null
+  eliminadoAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1891,6 +1951,7 @@ export type TurnoUpdateWithoutGrupoInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutTurnosNestedInput
@@ -1916,6 +1977,7 @@ export type TurnoUncheckedUpdateWithoutGrupoInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutTurnoNestedInput
@@ -1936,6 +1998,7 @@ export type TurnoUncheckedUpdateManyWithoutGrupoInput = {
   inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  eliminadoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1987,6 +2050,7 @@ export type TurnoSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   inicioAtencion?: boolean
   finAtencion?: boolean
   canceladoAt?: boolean
+  eliminadoAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
@@ -2017,11 +2081,12 @@ export type TurnoSelectScalar = {
   inicioAtencion?: boolean
   finAtencion?: boolean
   canceladoAt?: boolean
+  eliminadoAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type TurnoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "pacienteId" | "profesionalId" | "especialidadId" | "obraSocialId" | "grupoId" | "inicio" | "duracionMinutos" | "numeroSesion" | "notas" | "estado" | "inicioAtencion" | "finAtencion" | "canceladoAt" | "createdAt" | "updatedAt", ExtArgs["result"]["turno"]>
+export type TurnoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "pacienteId" | "profesionalId" | "especialidadId" | "obraSocialId" | "grupoId" | "inicio" | "duracionMinutos" | "numeroSesion" | "notas" | "estado" | "inicioAtencion" | "finAtencion" | "canceladoAt" | "eliminadoAt" | "createdAt" | "updatedAt", ExtArgs["result"]["turno"]>
 export type TurnoInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
   paciente?: boolean | Prisma.PacienteDefaultArgs<ExtArgs>
@@ -2060,6 +2125,7 @@ export type $TurnoPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     inicioAtencion: Date | null
     finAtencion: Date | null
     canceladoAt: Date | null
+    eliminadoAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["turno"]>
@@ -2453,6 +2519,7 @@ export interface TurnoFieldRefs {
   readonly inicioAtencion: Prisma.FieldRef<"Turno", 'DateTime'>
   readonly finAtencion: Prisma.FieldRef<"Turno", 'DateTime'>
   readonly canceladoAt: Prisma.FieldRef<"Turno", 'DateTime'>
+  readonly eliminadoAt: Prisma.FieldRef<"Turno", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Turno", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Turno", 'DateTime'>
 }

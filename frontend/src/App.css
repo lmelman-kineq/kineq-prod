@@ -1340,6 +1340,20 @@ body,
   gap: 8px;
 }
 
+/* Chevron: sin esto, un combobox custom (Paciente/Profesional/Especialidad/
+   Diagnóstico) no se distingue a simple vista de un input de texto suelto.
+   `::after` en vez de un ícono SVG por componente — un solo lugar para los
+   cuatro dropdowns, `pointer-events: none` para no interceptar clicks. */
+.dropdown-input-row::after {
+  content: '▾';
+  margin-left: auto;
+  padding-left: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
 .dropdown-input-row .clear-button {
   padding: 6px 8px;
   border: none;
@@ -2338,6 +2352,39 @@ select:disabled {
   display: block;
 }
 
+/* Turnos dentro de Paciente: tabla angosta (comparte ancho con el Resumen
+   clínico de la derecha), nunca necesita scroll horizontal — a diferencia
+   de la tabla de Turnos de página completa, que sí lo permite. Mismo
+   criterio que .evolution-table: table-layout fijo + columnas con ancho
+   explícito para las cortas, texto truncado con "..." (title = texto
+   completo) para Profesional/Especialidad, que pueden ser largos. */
+.patient-turnos-table {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.patient-turnos-table th:nth-child(1),
+.patient-turnos-table td:nth-child(1) {
+  width: 90px;
+}
+
+.patient-turnos-table th:nth-child(4),
+.patient-turnos-table td:nth-child(4) {
+  width: 64px;
+}
+
+.patient-turnos-table th:nth-child(5),
+.patient-turnos-table td:nth-child(5) {
+  width: 110px;
+}
+
+.patient-turnos-cell-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .turnos-table td:first-child small {
   margin-top: 3px;
   color: var(--color-text-muted);
@@ -2903,6 +2950,15 @@ select:disabled {
   color: var(--color-text);
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+/* Diagnóstico/Archivos en la vista de solo lectura de una evolución
+   (EvolucionContent.tsx) — arriba del contenido, cada uno solo si hay algo
+   que mostrar. */
+.evolution-item-diagnostico {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
 }
 
 .patient-detail-note {
@@ -4095,14 +4151,6 @@ select:disabled {
   gap: 12px;
 }
 
-.antecedentes-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
 .antecedentes-categorias {
   display: flex;
   gap: 4px;
@@ -4127,6 +4175,25 @@ select:disabled {
   background: var(--color-surface);
   color: var(--color-primary);
   box-shadow: var(--shadow-panel);
+}
+
+/* "Antecedentes personales/familiares/quirúrgicos" — antes solo un toggle
+   de categoría, ahora también abre el catálogo completo (reemplaza al
+   botón suelto "Ver todos"). Chevron + hover para que se note que abre
+   algo, no solo que cambia una pestaña. */
+.antecedentes-categoria-button--clickable {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.antecedentes-categoria-button--clickable:hover {
+  color: var(--color-primary);
+}
+
+.antecedentes-categoria-chevron {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .antecedentes-search {
@@ -4385,6 +4452,32 @@ select:disabled {
 .ficha-field-archivo-hint {
   color: var(--color-text-muted);
   font-size: 12px;
+}
+
+.ficha-estudio-staged-archivo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.ficha-estudio-staged-archivo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 13px;
+  max-width: 100%;
+}
+
+.ficha-estudio-staged-archivo-chip svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 /* Drawer "Ver todos" (catálogo completo) */

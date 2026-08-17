@@ -6,6 +6,7 @@ import ConfigSectionHeader from './ConfigSectionHeader'
 import ConfigRowActions from './ConfigRowActions'
 import ProfesionalFormModal from './ProfesionalFormModal'
 import { useAuth } from '../auth/AuthContext'
+import { professionalFullName } from '../utils/professional'
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message
@@ -69,7 +70,7 @@ export default function ConfiguracionProfesionales({ onRequestConfirm, onProfesi
   const visibleProfesionales = useMemo(() => {
     const term = search.trim().toLowerCase()
     if (!term) return profesionales
-    return profesionales.filter((profesional) => `${profesional.nombre} ${profesional.apellido}`.toLowerCase().includes(term))
+    return profesionales.filter((profesional) => professionalFullName(profesional).toLowerCase().includes(term))
   }, [profesionales, search])
 
   const openCreate = () => {
@@ -116,7 +117,7 @@ export default function ConfiguracionProfesionales({ onRequestConfirm, onProfesi
 
     onRequestConfirm({
       title: 'Eliminar profesional',
-      description: `Se va a eliminar a ${profesional.nombre} ${profesional.apellido} de forma permanente. Esta acción no se puede deshacer.${
+      description: `Se va a eliminar a ${professionalFullName(profesional)} de forma permanente. Esta acción no se puede deshacer.${
         profesional.usuario ? ' Su usuario vinculado no se elimina, solo se desvincula.' : ''
       }`,
       confirmLabel: 'Eliminar',
@@ -190,7 +191,7 @@ export default function ConfiguracionProfesionales({ onRequestConfirm, onProfesi
                     }
                   }}
                 >
-                  <td><strong>{profesional.nombre} {profesional.apellido}</strong></td>
+                  <td><strong>{professionalFullName(profesional)}</strong></td>
                   <td data-label="Título">{profesional.titulo || '—'}</td>
                   <td data-label="Matrícula">{profesional.matricula || '—'}</td>
                   <td data-label="Especialidades">

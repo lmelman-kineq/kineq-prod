@@ -33,6 +33,7 @@ type PatientDetailPageProps = {
   refreshKey: number
   onBack: () => void
   onNewTurno?: (patientId: number) => void
+  onEditTurno?: (turno: Turno) => void
   onRequestConfirm: (dialog: ConfirmDialogOptions) => void
   // Contexto de sesión: cuando se entra desde un turno (Iniciar/Continuar
   // atención), esta es la MISMA pantalla de Paciente — nunca una variante
@@ -55,6 +56,7 @@ export default function PatientDetailPage({
   refreshKey,
   onBack,
   onNewTurno,
+  onEditTurno,
   onRequestConfirm,
   activeTurno = null,
   onUpdateEstado,
@@ -543,15 +545,6 @@ export default function PatientDetailPage({
             <p className="patient-detail-note patient-detail-note--inline">
               La evolución se va a registrar como {propioProfesional ? professionalName(propioProfesional) : 'tu profesional vinculado'}.
             </p>
-            <RichTextEditor
-              id="nueva-evolucion"
-              html={newEvolucionHtml}
-              placeholder="Qué se observó, qué se trabajó, indicaciones y próximos pasos..."
-              onChange={(html, plainText) => {
-                setNewEvolucionHtml(html)
-                setNewEvolucionText(plainText)
-              }}
-            />
             <div className="evolution-form-fields-row">
               <DiagnosticoSelect
                 grupos={grupos}
@@ -566,6 +559,15 @@ export default function PatientDetailPage({
                 error={stagedImagesError}
               />
             </div>
+            <RichTextEditor
+              id="nueva-evolucion"
+              html={newEvolucionHtml}
+              placeholder="Qué se observó, qué se trabajó, indicaciones y próximos pasos..."
+              onChange={(html, plainText) => {
+                setNewEvolucionHtml(html)
+                setNewEvolucionText(plainText)
+              }}
+            />
             <button
               type="button"
               className="primary-button"
@@ -728,7 +730,7 @@ export default function PatientDetailPage({
       </>
     ),
     ficha: <InitialAssessmentPanel fichaHook={fichaHook} patientId={patientId} navTarget={navTarget} onNavTargetHandled={() => setNavTarget(null)} />,
-    turnos: <PatientAppointmentsTable turnos={turnos} />,
+    turnos: <PatientAppointmentsTable turnos={turnos} onEditTurno={onEditTurno} />,
     estudios: <FichaEstudiosTab fichaHook={fichaHook} navTarget={navTarget} onNavTargetHandled={() => setNavTarget(null)} />,
   }
 

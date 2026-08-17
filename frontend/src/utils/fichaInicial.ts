@@ -140,10 +140,18 @@ export function buildFichaPayload(form: Record<string, string>): FichaInicialInp
   return payload as FichaInicialInput
 }
 
-// MOTIVO, ANTECEDENTES, SEGURIDAD, HABITOS, DOLOR_FUNCION — Estudios ya no
-// forma parte de la Ficha Inicial (tab general propio), así que no cuenta acá.
+// Secciones revisables de Ficha Inicial (valores del enum Prisma
+// SeccionFicha) — única fuente de verdad de "cuántas secciones hay para
+// revisar", consumida acá y por InitialAssessmentPanel.tsx. MOTIVO ya no es
+// una sección propia (se fusionó dentro de Antecedentes, mismos campos/
+// columnas, sin cambio de datos — ver comentario en InitialAssessmentPanel.tsx)
+// y ESTUDIOS nunca contó acá (tiene su propia tab general). Filas
+// preexistentes en FichaSeccionEstado con seccion='MOTIVO' quedan como
+// historial inofensivo, no se migran ni se borran.
+export const REVISABLE_SECCIONES = ['ANTECEDENTES', 'SEGURIDAD', 'HABITOS', 'DOLOR_FUNCION'] as const
+
 export function fichaSeccionesResumen(seccionesEstado: FichaInicial['seccionesEstado']): { revisadas: number; total: number } {
-  const TOTAL_SECCIONES = 5
-  const revisadas = (seccionesEstado ?? []).filter((s) => s.estado === 'REVISADA' && s.seccion !== 'ESTUDIOS').length
-  return { revisadas, total: TOTAL_SECCIONES }
+  const revisables: readonly string[] = REVISABLE_SECCIONES
+  const revisadas = (seccionesEstado ?? []).filter((s) => s.estado === 'REVISADA' && revisables.includes(s.seccion)).length
+  return { revisadas, total: REVISABLE_SECCIONES.length }
 }

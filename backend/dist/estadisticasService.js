@@ -11,7 +11,11 @@ exports.getEstadisticasResumen = getEstadisticasResumen;
 const prisma_1 = __importDefault(require("./prisma"));
 const ESTADOS = ['ASIGNADO', 'EN_ESPERA', 'ATENDIENDO', 'FINALIZADO', 'AUSENTE', 'CANCELADO'];
 function turnoWhere(f) {
-    const where = { consultorioId: f.consultorioId, inicio: { gte: f.desde, lte: f.hasta } };
+    // `eliminadoAt: null` acá una sola vez cubre todas las queries de este
+    // módulo (todas parten de `where`/`whereFinalizado`) — un turno eliminado
+    // (baja lógica, ver Turno.eliminadoAt en schema.prisma) no debe alterar
+    // estadísticas históricas ya cerradas.
+    const where = { consultorioId: f.consultorioId, inicio: { gte: f.desde, lte: f.hasta }, eliminadoAt: null };
     if (f.profesionalId)
         where.profesionalId = f.profesionalId;
     if (f.especialidadId)

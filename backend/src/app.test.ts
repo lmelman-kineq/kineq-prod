@@ -96,6 +96,24 @@ describe('registro público', () => {
     expect(res.body.consultorioId).not.toBe(999999)
     expect(res.body).not.toHaveProperty('passwordHash')
   })
+
+  it('registra con nombre completo en un solo campo, sin apellido separado', async () => {
+    const emailNombreCompleto = `${email}-nombre-completo`
+    const res = await request(app).post('/auth/register').send({
+      nombreConsultorio: `Consultorio Registro NC ${RUN_ID}`,
+      nombre: 'Ana Pérez',
+      email: emailNombreCompleto,
+      password: PASSWORD,
+      confirmPassword: PASSWORD,
+    })
+
+    expect(res.status).toBe(201)
+    expect(res.body.nombre).toBe('Ana Pérez')
+    expect(res.body.apellido).toBe('')
+
+    await prisma.usuario.delete({ where: { id: res.body.id } })
+    await prisma.consultorio.delete({ where: { id: res.body.consultorioId } })
+  })
 })
 
 describe('auth, roles y aislamiento por consultorio', () => {
@@ -322,6 +340,44 @@ describe('auth, roles y aislamiento por consultorio', () => {
   it('profesional sin vínculo a un Profesional recibe un error controlado, no acceso total', async () => {
     const res = await request(app).patch(`/api/turnos/${turnoAId}`).set('Cookie', cookies.profesionalSinVinculo).send({ notas: 'x' })
     expect(res.status).toBe(403)
+  })
+
+  it('DELETE /api/turnos/:id es baja lógica: el turno desaparece de las lecturas pero la fila sobrevive con eliminadoAt', async () => {
+    const turno = await prisma.turno.create({
+      data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: profesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-08-05T15:00:00.000Z'), duracionMinutos: 60, estado: 'FINALIZADO' },
+    })
+
+    const res = await request(app).delete(`/api/turnos/${turno.id}`).set('Cookie', cookies.adminA)
+    expect(res.status).toBe(204)
+
+    const enBase = await prisma.turno.findUnique({ where: { id: turno.id } })
+    expect(enBase).not.toBeNull()
+    expect(enBase?.eliminadoAt).not.toBeNull()
+
+    const listado = await request(app).get('/api/turnos').set('Cookie', cookies.adminA)
+    expect(listado.body.find((t: { id: number }) => t.id === turno.id)).toBeUndefined()
+  })
+
+  it('DELETE /api/turnos/:id funciona sin importar el estado del turno (incluye CANCELADO)', async () => {
+    const turno = await prisma.turno.create({
+      data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: profesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-08-06T15:00:00.000Z'), duracionMinutos: 60, estado: 'CANCELADO' },
+    })
+    const res = await request(app).delete(`/api/turnos/${turno.id}`).set('Cookie', cookies.recepcionA)
+    expect(res.status).toBe(204)
+  })
+
+  it('profesional no puede eliminar el turno de otro profesional', async () => {
+    const otroTurno = await prisma.turno.create({
+      data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-08-07T15:00:00.000Z'), duracionMinutos: 60 },
+    })
+    const res = await request(app).delete(`/api/turnos/${otroTurno.id}`).set('Cookie', cookies.profesionalA)
+    expect(res.status).toBe(403)
+    await prisma.turno.delete({ where: { id: otroTurno.id } })
+  })
+
+  it('no se puede eliminar un turno de otro consultorio', async () => {
+    const res = await request(app).delete(`/api/turnos/${turnoAId}`).set('Cookie', cookies.adminB)
+    expect(res.status).toBe(404)
   })
 
   it('un profesional sin la especialidad asignada en su ficha igual puede recibir un turno con esa especialidad', async () => {
@@ -1523,8 +1579,9 @@ describe('auth, roles y aislamiento por consultorio', () => {
         expect(parcial.status).toBe(200)
         const seccionEstado = (body: any, seccion: string) => body.seccionesEstado.find((s: any) => s.seccion === seccion)?.estado
         // Empezar a completar una sección ya cuenta como revisada — no hace
-        // falta llenarla entera.
-        expect(seccionEstado(parcial.body, 'MOTIVO')).toBe('REVISADA')
+        // falta llenarla entera. motivoConsulta ya no tiene su propia sección
+        // MOTIVO: cuenta para ANTECEDENTES (ver recomputeSeccionesEstado).
+        expect(seccionEstado(parcial.body, 'ANTECEDENTES')).toBe('REVISADA')
         expect(seccionEstado(parcial.body, 'SEGURIDAD')).toBe('PENDIENTE')
         expect(parcial.body.estado).toBe('BORRADOR')
 
@@ -1548,7 +1605,6 @@ describe('auth, roles y aislamiento por consultorio', () => {
 
         const final = await request(app).get(`/api/pacientes/${pacienteBId}/ficha-inicial`).set('Cookie', cookies.adminB)
         expect(final.body.estado).toBe('COMPLETA')
-        expect(seccionEstado(final.body, 'MOTIVO')).toBe('REVISADA')
         expect(seccionEstado(final.body, 'ANTECEDENTES')).toBe('REVISADA')
         expect(seccionEstado(final.body, 'SEGURIDAD')).toBe('REVISADA')
         expect(seccionEstado(final.body, 'HABITOS')).toBe('REVISADA')

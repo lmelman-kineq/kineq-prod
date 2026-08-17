@@ -248,6 +248,7 @@ exports.TurnoScalarFieldEnum = {
     inicioAtencion: 'inicioAtencion',
     finAtencion: 'finAtencion',
     canceladoAt: 'canceladoAt',
+    eliminadoAt: 'eliminadoAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
 };
