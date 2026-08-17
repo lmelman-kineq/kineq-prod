@@ -33,6 +33,8 @@ Esto permite que un profesional pueda tener varias especialidades y que una espe
 
 **Actualización (implementado) — vínculo automático**: crear (o cambiar el rol de) un `Usuario` hacia `PROFESIONAL` sin elegir un `Profesional` existente ya no requiere ese segundo paso administrativo — se crea y vincula uno automáticamente (mismo nombre/apellido/email). Detalle completo en `docs/modules/users-and-roles.md` → "Actualización (implementado) — creación automática de Profesional...".
 
+**Actualización (implementado) — alta rápida también desde Crear/Editar Turno**: hay ahora una tercera vía para crear un Profesional, además de Configuración → Profesionales y de crear un Usuario con rol `PROFESIONAL` — el botón "+ Agregar profesional" dentro del selector de Profesional del formulario de Turno (ver "alta rápida de Paciente y de Profesional" en `docs/modules/appointments.md`). Usa el mismo `POST /api/profesionales` sin cambios de contrato (Nombre completo, Título, Matrícula, Usuario vinculado opcional — el nombre completo se guarda entero en `nombre` con `apellido: ''`, mismo criterio "sin parseo" que `docs/modules/patients.md`). Un profesional creado por cualquiera de las tres vías aparece de inmediato en el selector de Turnos sin recargar la página — antes solo el creado desde el propio formulario de Turno lo hacía (`setProfesionalesState` local); ahora `ConfiguracionUsuarios.tsx`/`ConfiguracionProfesionales.tsx` también disparan un refresh (`onProfesionalesChanged` → `App.tsx` `setReloadKey`).
+
 ---
 
 ## Entidades relacionadas
@@ -132,6 +134,8 @@ Ejemplos:
 - Especialista en rehabilitación deportiva.
 
 No debería ser obligatorio en el MVP.
+
+**Actualización (implementado) — placeholder más claro**: el campo pasó de un placeholder genérico ("Lic. en Kinesiología") a `"Ej. Lic. en Kinesiología y Fisiatría"`, en los tres lugares donde existe (`ProfesionalFormModal.tsx`, compartido por Crear y Editar Profesional en Configuración; y el alta rápida de Profesional desde Crear/Editar Turno — ver `docs/modules/appointments.md`). Sigue sin ser obligatorio en ningún lado.
 
 ### Matrícula
 

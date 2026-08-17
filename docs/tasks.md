@@ -356,6 +356,39 @@ npx prisma migrate deploy
 
 ---
 
+## Sesiones por Diagnóstico, mejoras de dropdowns, Home, timezone, título y Vercel Blob
+
+Ronda de nueve partes.
+
+**1) Diagnóstico con sesiones planificadas — "Sesión X de Y"**: `GrupoEvolucion.cantidadSesionesPlanificadas Int?` (opcional, nuevo) + `Turno.grupoId Int?` (FK nueva, `onDelete: SetNull`) — antes solo Evolución se relacionaba con un Diagnóstico, no Turno. Con un Diagnóstico con sesiones planificadas elegido en el formulario de Turno, "Nro. de sesión" pasa a "Sesión (de Y)" y se autocompleta (`GET /api/grupos-evolucion/:id/proxima-sesion`) con `count(Turno FINALIZADO mismo paciente+diagnóstico) + 1` — nunca `count(Evolucion)+1` (se desincroniza), nunca cuenta `CANCELADO`/`AUSENTE` (mismo criterio que `sesionesRealizadas` en `estadisticasService.ts`). Sigue siendo un input editable normal, el cálculo es solo un default. Solo visible para roles clínicos (`ADMINISTRADOR`/`PROFESIONAL`) — no se amplió quién ve Diagnósticos. Ver `docs/modules/clinical-history.md`/`docs/modules/appointments.md`.
+
+**2) "Ver Historia Clínica" en Home**: nuevo ítem, siempre presente, al final del menú contextual (click derecho sobre un turno) — exclusivo de Inicio, no se tocó `getTurnoQuickActions` (compartida con Turnos/modal de edición). Navega con el mismo `openPatientDetail` de siempre.
+
+**3-4) Alta rápida de Paciente y de Profesional, fuera del dropdown**: el mini-formulario de "+ Agregar paciente" vivía DENTRO del panel del dropdown — pasó a ser una sección propia del formulario del turno (`.quick-create-section`), el dropdown solo tiene el botón que la abre. Mismo patrón nuevo para "+ Agregar profesional" (no existía antes): Nombre completo (sin parseo, mismo criterio que Paciente), Título, Matrícula, Usuario vinculado opcional (solo si el rol puede ver `GET /api/usuarios`). Sin cambios de backend — `POST /api/profesionales` ya soportaba estos campos.
+
+**5) Dropdowns nunca esconden la opción elegida**: bug real en Paciente/Profesional — al reabrir con algo seleccionado, el buscador se precargaba con el nombre exacto elegido, y el filtro por texto entonces solo dejaba ver esa opción. Fix: el buscador arranca vacío al abrir, la opción elegida se marca con `✓` en vez de sacarse de la lista — mismo tratamiento en Especialidad y Diagnóstico (que no tenían el bug del buscador, pero tampoco marcaban la selección). Se corrigió además el layout CSS del formulario de Turno, que dependía de `nth-child` (posición) para decidir qué campos ocupan el ancho completo — se rompía apenas se insertaba una sección condicional antes; ahora es una clase explícita (`.dropdown-field`/`.appointment-form-full-row`), robusta a insertar/sacar secciones.
+
+**6) Profesional recién creado aparece sin reload**: `ConfiguracionUsuarios.tsx`/`ConfiguracionProfesionales.tsx` no disparaban ningún refresh de `pacientesState`/`profesionalesState` (`App.tsx`) al crear/editar/eliminar — un profesional nuevo no aparecía en el selector de Turnos hasta recargar la página. Nuevo `onProfesionalesChanged` (vía `ConfiguracionPage.tsx`) conectado a `setReloadKey`.
+
+**7) Timezone del mini calendario de Home**: "hoy" se calculaba con getters locales del navegador (`new Date().getDate()` etc.), no con la zona horaria del consultorio — de noche podía resaltar el día siguiente. Nuevo `todayInTimeZone()` en `utils/timezone.ts`; mismo fix aplicado al valor inicial de `selectedDate`.
+
+**8) Título de la pestaña**: `frontend/index.html` decía `<title>frontend</title>` (default de Vite, nunca tocado) — ahora `Kineq`.
+
+**9) Vercel Blob**: la infraestructura ya estaba completa (ronda anterior) para las 4 superficies. Esta ronda: se verificó que sigue faltando `BLOB_READ_WRITE_TOKEN` real en todo ambiente (se agregó un placeholder vacío documentado en `backend/.env`, nunca un valor real) — los dos valores recibidos (`..._WEBHOOK_PUBLIC_KEY`, `..._STORE_ID`) **no son un write token** y no se usaron como reemplazo (confirmado contra los tipos reales del SDK instalado: no aplican a `put`/`get`/`del` server-side con token estático, que es como este proyecto usa Blob). Sin cambios de código en `blobStorage.ts` — ya era correcto.
+
+**Producción**: una migración nueva y puramente aditiva, `20260817163218_turno_grupo_y_sesiones_planificadas`. Aplicada al dev DB a mano, **no** aplicada a Aiven — correr manualmente:
+```bash
+npx prisma migrate status
+npx prisma migrate deploy
+```
+Para Vercel (proyecto `kineq-api`), falta configurar `BLOB_READ_WRITE_TOKEN` — sin eso, la subida de archivos (Estudios, imágenes de Evolución, fotos) sigue fallando con mensaje amigable en cualquier ambiente donde se despliegue.
+
+**Tests**: backend 201→210 (+9: sesiones planificadas — cantidad inválida, primer turno "sesión 1", solo FINALIZADO cuenta, numeroSesion explícito nunca se pisa y sigue editable, turno sin diagnóstico sin cambios, cross-paciente/cross-consultorio). Frontend 90→93 (+3: `todayInTimeZone` con reloj simulado — domingo 23:30 ART sigue domingo, lunes 00:30 ya es lunes, zonas distintas dan días distintos). `tsc -b`/`build`/`lint` limpios en ambos paquetes.
+
+**Verificado manualmente** con Playwright (varias sesiones): título de pestaña = Kineq; mini calendario resalta exactamente un día; placeholder de Título actualizado; alta rápida de Paciente y de Profesional con los campos fuera del dropdown (nunca dentro del panel); paciente recién creado y elegido sigue apareciendo (con check) al reabrir el dropdown; selector de Diagnóstico visible para rol clínico; menú contextual de Home incluye "Ver Historia Clínica" y navega al paciente correcto del turno.
+
+---
+
 ## Known gaps / next priorities
 
 - **Pre-existing bug found during manual verification of this round, not fixed (out of scope — not touched by this work):** the Inicio/home dashboard's mini-calendar renders a React "duplicate key" console warning (`Encountered two children with the same key... "M"`) on every load — almost certainly the weekday-initial header (L, M, M, J, V, S, D) using the letter itself as the React `key` instead of an index, so the two `M`s (Martes/Miércoles) collide. Confirmed via isolated console-error-count checkpoints that this fires during the post-login home render, before any Estadísticas/Turnos navigation — unrelated to the new code in this round. Cosmetic/non-crashing, but worth a one-line fix (`key={index}`) next time that file is touched.

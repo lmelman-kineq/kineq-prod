@@ -241,6 +241,8 @@ Acciones principales:
 - Ver paciente.
 - Acceder a historia clínica.
 
+**Actualización (implementado) — "Ver Historia Clínica"**: el menú contextual (click derecho sobre un bloque de turno) ahora siempre tiene, al final, "Ver Historia Clínica" — navega a la pantalla única de Paciente (`openPatientDetail`, mismo helper que el resto de la app) del paciente de ese turno. Es exclusivo de Inicio: `getTurnoQuickActions()` (la función que arma las acciones de estado, compartida con la tabla de Turnos y el modal "Editar turno" — ver `docs/modules/appointments.md`) no se tocó; el ítem se agrega directamente en el render del menú de `App.tsx`. Antes, si no había ninguna acción de estado disponible para el rol/turno (ej. `SUPERVISOR`), el menú ni se abría — ahora siempre se abre porque siempre hay al menos este ítem.
+
 El objetivo es reducir la cantidad de clicks necesarios para operar el día.
 
 ---
@@ -298,6 +300,8 @@ Debe servir para:
 - Moverse por la agenda sin salir de Inicio.
 
 No debe ocupar demasiado espacio ni competir con la vista principal del día.
+
+**Actualización (implementado) — bug corregido: "identificar el día actual" usaba la hora del navegador, no la del consultorio**: el resaltado de "hoy" comparaba `day`/mes/año contra `new Date().getDate()`/`.getMonth()`/`.getFullYear()` (getters locales del navegador) — de noche, con el navegador en una zona horaria distinta a la del consultorio, podía resaltar el día equivocado (ej. domingo a la noche en Argentina ya marcaba lunes como "hoy"). Nuevo helper `todayInTimeZone(timeZone)` (`frontend/src/utils/timezone.ts`) da el string `YYYY-MM-DD` de "ahora" en cualquier zona IANA; el mini calendario lo usa con `api.getConsultorioTimeZone()`, mismo criterio de timezone que ya usan los turnos (ver `docs/modules/appointments.md`). `selectedDate` (qué día se ve por defecto al entrar a Inicio) tenía el mismo bug en su valor inicial y se corrigió igual. La grilla del mes navegado (`getMonthDays`) no tenía este problema — arma la estructura de un mes ya elegido, no depende de "ahora".
 
 ---
 

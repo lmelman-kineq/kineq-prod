@@ -1229,3 +1229,64 @@ abre el dropdown custom tanto en alta como en **edición** (ya no el
 `<select>` nativo); sin scroll horizontal en 390px. La subida real a Blob no
 se pudo probar de punta a punta en el navegador (sin token local) — esperado,
 sí verificado de punta a punta en los tests de backend con el mock.
+
+---
+
+## Sesión: Sesiones por Diagnóstico, dropdowns, Home, timezone, título, Blob
+
+Ronda de nueve partes.
+
+**1) "Sesión X de Y"**: `GrupoEvolucion.cantidadSesionesPlanificadas` +
+`Turno.grupoId` (nuevos, ambos opcionales/aditivos). Con un Diagnóstico con
+sesiones planificadas elegido en el turno, "Nro. de sesión" se autocompleta
+(`GET /api/grupos-evolucion/:id/proxima-sesion`) con `count(Turno
+FINALIZADO mismo paciente+diagnóstico) + 1` — nunca cuenta
+`CANCELADO`/`AUSENTE`, nunca cuenta Evoluciones. Sigue siendo editable a
+mano. Solo visible para roles clínicos, no se amplió quién ve Diagnósticos.
+
+**2) "Ver Historia Clínica" en Home**: nuevo ítem siempre presente al final
+del menú contextual del turno — exclusivo de Inicio, navega al paciente.
+
+**3-4) Alta rápida de Paciente/Profesional fuera del dropdown**: el
+mini-form vivía DENTRO del panel del dropdown — pasó a una sección propia
+del formulario de turno. Profesional es nuevo (no existía antes): Nombre
+completo, Título, Matrícula, Usuario vinculado opcional.
+
+**5) Dropdowns nunca esconden lo elegido**: bug real — reabrir con algo
+seleccionado precargaba el buscador con ese nombre exacto, y el filtro por
+texto dejaba ver solo esa opción. Fix: buscador vacío al abrir, elegido
+marcado con `✓`. De paso, el layout del formulario de Turno dejó de
+depender de `nth-child` (se rompía con las nuevas secciones condicionales)
+y pasó a clases explícitas.
+
+**6) Profesional sin reload**: Configuración → Usuarios/Profesionales no
+disparaban ningún refresh de los selectores de Turno al crear/editar/
+eliminar — agregado `onProfesionalesChanged` → `setReloadKey`.
+
+**7) Timezone del mini calendario**: "hoy" usaba getters locales del
+navegador, no la zona del consultorio — de noche podía resaltar el día
+siguiente. Nuevo `todayInTimeZone()`.
+
+**8) Título de pestaña**: `frontend/index.html` decía "frontend" (default
+de Vite nunca tocado) — ahora "Kineq".
+
+**9) Vercel Blob**: infraestructura ya completa (ronda anterior). Se
+verificó que sigue faltando `BLOB_READ_WRITE_TOKEN` real — los dos valores
+recibidos (Webhook Public Key, Store ID) **no son un write token** y no se
+usaron como reemplazo (confirmado contra los tipos reales del SDK, no
+asumido). Sin cambios de código en `blobStorage.ts`.
+
+**Producción**: migración nueva y aditiva,
+`20260817163218_turno_grupo_y_sesiones_planificadas` — no aplicada a
+Aiven, correr `npx prisma migrate status` y `npx prisma migrate deploy`.
+Falta configurar `BLOB_READ_WRITE_TOKEN` en el proyecto `kineq-api` de
+Vercel.
+
+Backend 201→210 tests (+9). Frontend 90→93 (+3, timezone con reloj
+simulado). `tsc -b`/`build`/`lint` limpios en ambos paquetes.
+
+Verificado con Playwright (varias sesiones): título "Kineq"; mini
+calendario resalta un único día; placeholder de Título actualizado; alta
+rápida de Paciente/Profesional con campos fuera del dropdown; paciente
+recién creado sigue apareciendo (con check) al reabrir; Diagnóstico visible
+para rol clínico; "Ver Historia Clínica" navega al paciente correcto.
