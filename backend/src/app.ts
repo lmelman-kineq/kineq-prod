@@ -935,9 +935,10 @@ app.post('/api/turnos', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
       if (!obra) return res.status(404).json({ error: 'obra social not found in consultorio' })
     }
 
-    // validar que profesional tenga la especialidad
-    const pe = await prisma.profesionalEspecialidad.findFirst({ where: { profesionalId, especialidadId } })
-    if (!pe) return res.status(400).json({ error: 'profesional does not have the especialidad' })
+    // La especialidad del turno ya no exige que el profesional la tenga
+    // asignada en su ficha: Profesional↔Especialidad es solo organización/
+    // filtros/configuración, nunca una restricción de agenda. Las únicas
+    // validaciones que quedan son consultorio/aislamiento (arriba).
 
     // chequear solapamientos
     const conflict = await overlapExists(consultorioId, profesionalId, inicioDate, Number(duracionMinutos))
@@ -1079,7 +1080,10 @@ app.post('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) =>
     })
     res.status(201).json(ev)
   } catch (err) {
-    res.status(500).json({ error: 'failed to create evolucion' })
+    // El detalle real (excepción/SQL de Prisma) va solo al log del server —
+    // nunca al cliente, para no filtrar stack traces ni detalles internos.
+    console.error('failed to create evolucion', err)
+    res.status(500).json({ error: 'No se pudo guardar la evolución. Volvé a intentar.' })
   }
 })
 
@@ -1142,7 +1146,8 @@ app.patch('/api/evoluciones/:evolucionId', requireRole(...CLINICAL_ROLES), async
     const updated = await prisma.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true } })
     res.json(updated)
   } catch (err) {
-    res.status(500).json({ error: 'failed to update evolucion' })
+    console.error('failed to update evolucion', err)
+    res.status(500).json({ error: 'No se pudo guardar los cambios de la evolución. Volvé a intentar.' })
   }
 })
 

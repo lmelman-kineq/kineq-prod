@@ -887,10 +887,10 @@ app.post('/api/turnos', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES), asy
             if (!obra)
                 return res.status(404).json({ error: 'obra social not found in consultorio' });
         }
-        // validar que profesional tenga la especialidad
-        const pe = await prisma_1.default.profesionalEspecialidad.findFirst({ where: { profesionalId, especialidadId } });
-        if (!pe)
-            return res.status(400).json({ error: 'profesional does not have the especialidad' });
+        // La especialidad del turno ya no exige que el profesional la tenga
+        // asignada en su ficha: Profesional↔Especialidad es solo organización/
+        // filtros/configuración, nunca una restricción de agenda. Las únicas
+        // validaciones que quedan son consultorio/aislamiento (arriba).
         // chequear solapamientos
         const conflict = await overlapExists(consultorioId, profesionalId, inicioDate, Number(duracionMinutos));
         if (conflict)
@@ -1028,7 +1028,10 @@ app.post('/api/evoluciones', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), 
         res.status(201).json(ev);
     }
     catch (err) {
-        res.status(500).json({ error: 'failed to create evolucion' });
+        // El detalle real (excepción/SQL de Prisma) va solo al log del server —
+        // nunca al cliente, para no filtrar stack traces ni detalles internos.
+        console.error('failed to create evolucion', err);
+        res.status(500).json({ error: 'No se pudo guardar la evolución. Volvé a intentar.' });
     }
 });
 // Editar evolución: igual criterio que turnos (PATCH /turnos/:id) — el
@@ -1095,7 +1098,8 @@ app.patch('/api/evoluciones/:evolucionId', (0, auth_1.requireRole)(...auth_1.CLI
         res.json(updated);
     }
     catch (err) {
-        res.status(500).json({ error: 'failed to update evolucion' });
+        console.error('failed to update evolucion', err);
+        res.status(500).json({ error: 'No se pudo guardar los cambios de la evolución. Volvé a intentar.' });
     }
 });
 // Borrado lógico: mismo criterio de permisos que PATCH (el profesional solo

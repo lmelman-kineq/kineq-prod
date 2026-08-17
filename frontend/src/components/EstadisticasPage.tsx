@@ -12,6 +12,7 @@ import {
   ActividadPorEspecialidadChart,
   ResumenProfesionalesTable,
 } from './EstadisticasCharts'
+import { SkeletonCards } from './Skeleton'
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message
@@ -167,11 +168,18 @@ export default function EstadisticasPage() {
         <section className="patients-table-card">
           <p className="turnos-table-message"><strong>Elegí una fecha de inicio y fin para el período personalizado.</strong></p>
         </section>
-      ) : loading ? (
-        <section className="patients-table-card">
-          <p>Cargando estadísticas...</p>
-        </section>
-      ) : error ? (
+      ) : loading && !resumen ? (
+        // Primera carga (sin datos previos todavía): skeleton discreto en
+        // vez de un texto grande de "Cargando...".
+        <>
+          <div className="patient-summary-grid">
+            <SkeletonCards count={4} />
+          </div>
+          <div className="patient-summary-grid">
+            <SkeletonCards count={4} />
+          </div>
+        </>
+      ) : error && !resumen ? (
         <section className="patients-table-card" role="alert">
           <p className="evolution-form-error">{error}</p>
           <button type="button" className="secondary-button" onClick={() => setReloadKey((k) => k + 1)}>Reintentar</button>
@@ -185,6 +193,15 @@ export default function EstadisticasPage() {
         </section>
       ) : (
         <>
+          {/* Cambiar filtros/período dispara un refetch, pero los datos del
+              período anterior se mantienen en pantalla (sin volver a un
+              "Cargando...") hasta que llegan los nuevos — solo se avisa con
+              una nota chica, nunca se oculta un error real. */}
+          {loading ? (
+            <p className="patient-detail-note patient-detail-note--inline">Actualizando estadísticas…</p>
+          ) : error ? (
+            <p className="evolution-form-error">{error}</p>
+          ) : null}
           <div className="patient-summary-grid">
             <KpiCard label="Turnos" value={String(resumen.kpis.turnos)} />
             <KpiCard label="Sesiones realizadas" value={String(resumen.kpis.sesionesRealizadas)} />

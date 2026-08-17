@@ -276,6 +276,86 @@ describe('auth, roles y aislamiento por consultorio', () => {
     expect(res.status).toBe(403)
   })
 
+  it('un profesional sin la especialidad asignada en su ficha igual puede recibir un turno con esa especialidad', async () => {
+    // otroProfesionalAId no tiene ninguna especialidad asignada (solo
+    // profesionalAId tiene especialidadAId en el fixture de este describe).
+    const sinEspecialidad = await prisma.profesionalEspecialidad.count({ where: { profesionalId: otroProfesionalAId } })
+    expect(sinEspecialidad).toBe(0)
+
+    const res = await request(app)
+      .post('/api/turnos')
+      .set('Cookie', cookies.adminA)
+      .send({
+        pacienteId: pacienteAId,
+        profesionalId: otroProfesionalAId,
+        especialidadId: especialidadAId,
+        inicio: '2026-08-01T20:00:00.000Z',
+        duracionMinutos: 30,
+      })
+    expect(res.status).toBe(201)
+    expect(res.body.profesionalId).toBe(otroProfesionalAId)
+    expect(res.body.especialidadId).toBe(especialidadAId)
+
+    await prisma.turno.delete({ where: { id: res.body.id } })
+  })
+
+  it('rechaza crear un turno con una especialidad de otro consultorio', async () => {
+    const especialidadB = await prisma.especialidad.create({ data: { consultorioId: consultorioBId, nombre: `Especialidad Turno B ${RUN_ID}`, color: '#222' } })
+
+    const res = await request(app)
+      .post('/api/turnos')
+      .set('Cookie', cookies.adminA)
+      .send({
+        pacienteId: pacienteAId,
+        profesionalId: profesionalAId,
+        especialidadId: especialidadB.id,
+        inicio: '2026-08-01T21:00:00.000Z',
+        duracionMinutos: 30,
+      })
+    expect(res.status).toBe(404)
+
+    await prisma.especialidad.delete({ where: { id: especialidadB.id } })
+  })
+
+  it('rechaza crear un turno con un profesional de otro consultorio', async () => {
+    const res = await request(app)
+      .post('/api/turnos')
+      .set('Cookie', cookies.adminA)
+      .send({
+        pacienteId: pacienteAId,
+        profesionalId: profesionalBId,
+        especialidadId: especialidadAId,
+        inicio: '2026-08-01T22:00:00.000Z',
+        duracionMinutos: 30,
+      })
+    expect(res.status).toBe(404)
+  })
+
+  it('la misma regla aplica al editar: se puede cambiar a una especialidad que el profesional no tiene asignada', async () => {
+    const turno = await prisma.turno.create({
+      data: {
+        consultorioId: consultorioAId,
+        pacienteId: pacienteAId,
+        profesionalId: otroProfesionalAId,
+        especialidadId: especialidadAId,
+        inicio: new Date('2026-08-02T15:00:00.000Z'),
+        duracionMinutos: 30,
+      },
+    })
+
+    const otraEspecialidad = await prisma.especialidad.create({ data: { consultorioId: consultorioAId, nombre: `Otra Especialidad ${RUN_ID}`, color: '#654321' } })
+
+    const res = await request(app)
+      .patch(`/api/turnos/${turno.id}`)
+      .set('Cookie', cookies.adminA)
+      .send({ especialidadId: otraEspecialidad.id })
+    expect(res.status).toBe(200)
+    expect(res.body.especialidadId).toBe(otraEspecialidad.id)
+
+    await prisma.turno.delete({ where: { id: turno.id } })
+    await prisma.especialidad.delete({ where: { id: otraEspecialidad.id } })
+  })
+
   it('profesional crea un turno para sí mismo aunque envíe el profesionalId de otro profesional', async () => {
     const res = await request(app)
       .post('/api/turnos')
@@ -520,6 +600,113 @@ describe('auth, roles y aislamiento por consultorio', () => {
       expect(res.body.grupoId).toBeNull()
 
       await prisma.evolucion.delete({ where: { id: res.body.id } })
+    })
+  })
+
+  describe('evoluciones: contenido largo (regresión — VARCHAR(191) por default)', () => {
+    // `contenido` era `String` sin `@db.Text` en el schema (VARCHAR(191) por
+    // default de Prisma en MySQL) — una nota clínica real de más de 191
+    // caracteres hacía fallar el INSERT en la base con un 500 genérico, sin
+    // loguear la excepción real. Ver migración `20260817145447_evolucion_contenido_text`.
+    it('contenido corto se guarda normalmente', async () => {
+      const res = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'Prueba corta' })
+      expect(res.status).toBe(201)
+      expect(res.body.contenido).toBe('Prueba corta')
+
+      await prisma.evolucion.delete({ where: { id: res.body.id } })
+    })
+
+    it('contenido de varios miles de caracteres se guarda completo, sin truncar', async () => {
+      const largo = 'Evolución clínica extensa. '.repeat(300) // ~8400 caracteres, bien por encima de 191
+      expect(largo.length).toBeGreaterThan(5000)
+
+      const res = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: largo })
+      expect(res.status).toBe(201)
+      expect(res.body.contenido).toBe(largo)
+      expect(res.body.contenido.length).toBe(largo.length)
+
+      const fetched = await prisma.evolucion.findUniqueOrThrow({ where: { id: res.body.id } })
+      expect(fetched.contenido).toBe(largo)
+
+      await prisma.evolucion.delete({ where: { id: res.body.id } })
+    })
+
+    it('contenidoHtml largo con formato se sanitiza y guarda completo', async () => {
+      const parrafo = '<p><b>Dolor</b> <i>persistente</i> en zona <u>lumbar</u>, evoluciona favorablemente. </p>'
+      const largoHtml = parrafo.repeat(80) // varios miles de caracteres
+      expect(largoHtml.length).toBeGreaterThan(5000)
+
+      const res = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'placeholder', contenidoHtml: largoHtml })
+      expect(res.status).toBe(201)
+      expect(res.body.contenidoHtml).toBe(largoHtml)
+      expect(res.body.contenidoHtml).not.toMatch(/script|onclick|javascript:/i)
+      expect(res.body.contenido.length).toBeGreaterThan(191)
+
+      await prisma.evolucion.delete({ where: { id: res.body.id } })
+    })
+
+    it('crea con Diagnóstico y contenido largo a la vez', async () => {
+      const grupo = await request(app)
+        .post(`/api/pacientes/${pacienteAId}/grupos-evolucion`)
+        .set('Cookie', cookies.profesionalA)
+        .send({ nombre: `Diagnostico largo ${RUN_ID}`, color: 'var(--appointment-teal)' })
+      expect(grupo.status).toBe(201)
+
+      const largo = 'Seguimiento kinésico detallado. '.repeat(200)
+      const res = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: largo, grupoId: grupo.body.id })
+      expect(res.status).toBe(201)
+      expect(res.body.contenido.length).toBe(largo.length)
+      expect(res.body.grupoId).toBe(grupo.body.id)
+
+      await prisma.evolucion.delete({ where: { id: res.body.id } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.body.id } })
+    })
+
+    it('crea sin Diagnóstico y contenido largo', async () => {
+      const largo = 'Nota extensa sin diagnóstico asociado. '.repeat(150)
+      const res = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: largo })
+      expect(res.status).toBe(201)
+      expect(res.body.grupoId).toBeNull()
+      expect(res.body.contenido.length).toBe(largo.length)
+
+      await prisma.evolucion.delete({ where: { id: res.body.id } })
+    })
+
+    it('edita una evolución agregándole contenido largo, y la lectura posterior no lo trunca', async () => {
+      const created = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'corta al principio' })
+      expect(created.status).toBe(201)
+
+      const largo = 'Actualización extensa de la evolución tras varias sesiones. '.repeat(150)
+      const edited = await request(app)
+        .patch(`/api/evoluciones/${created.body.id}`)
+        .set('Cookie', cookies.profesionalA)
+        .send({ contenido: largo })
+      expect(edited.status).toBe(200)
+      expect(edited.body.contenido.length).toBe(largo.length)
+
+      const read = await request(app).get('/api/evoluciones').set('Cookie', cookies.adminA).query({ pacienteId: pacienteAId })
+      const leida = read.body.find((e: any) => e.id === created.body.id)
+      expect(leida.contenido).toBe(largo)
+
+      await prisma.evolucion.delete({ where: { id: created.body.id } })
     })
   })
 

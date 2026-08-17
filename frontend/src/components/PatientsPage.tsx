@@ -3,6 +3,10 @@ import * as api from '../services/api'
 import type { Paciente } from '../types/domain'
 import { useAuth } from '../auth/AuthContext'
 import PatientFormModal from './PatientFormModal'
+import { SkeletonTableRows } from './Skeleton'
+import { getCachedData, setCachedData } from '../utils/dataCache'
+
+const PATIENTS_CACHE_KEY = 'patients-page-list'
 
 type PatientsPageProps = {
   refreshKey: number
@@ -38,7 +42,9 @@ export default function PatientsPage({ refreshKey, patientSocialWorkById, onOpen
   const { user } = useAuth()
   const canCreatePatient = user?.rol === 'ADMINISTRADOR' || user?.rol === 'RECEPCION'
 
-  const [patients, setPatients] = useState<Paciente[]>([])
+  // Placeholder inicial desde la última visita (evita el flash de skeleton
+  // al volver a Pacientes) — siempre se vuelve a pedir al backend igual.
+  const [patients, setPatients] = useState<Paciente[]>(() => getCachedData<Paciente[]>(PATIENTS_CACHE_KEY) ?? [])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -60,7 +66,10 @@ export default function PatientsPage({ refreshKey, patientSocialWorkById, onOpen
 
       try {
         const response = await api.getPacientes()
-        if (!cancelled) setPatients(response)
+        if (!cancelled) {
+          setPatients(response)
+          setCachedData(PATIENTS_CACHE_KEY, response)
+        }
       } catch (loadError) {
         if (!cancelled) {
           setPatients([])
@@ -277,8 +286,23 @@ export default function PatientsPage({ refreshKey, patientSocialWorkById, onOpen
             <strong>No se pudieron cargar los pacientes.</strong>
             <span>{error}</span>
           </div>
-        ) : loading ? (
-          <div className="turnos-table-message">Cargando pacientes...</div>
+        ) : loading && patients.length === 0 ? (
+          <div className="turnos-table-scroll">
+            <table className="turnos-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Documento</th>
+                  <th>Teléfono</th>
+                  <th>Estado</th>
+                  <th aria-label="Acciones" />
+                </tr>
+              </thead>
+              <tbody>
+                <SkeletonTableRows rows={6} columns={5} />
+              </tbody>
+            </table>
+          </div>
         ) : visiblePatients.length === 0 ? (
           <div className="turnos-table-message">
             <strong>No hay pacientes para mostrar.</strong>

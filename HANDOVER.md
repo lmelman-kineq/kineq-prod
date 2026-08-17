@@ -944,3 +944,140 @@ el profesional auto-vinculado y "+ Agregar diagnóstico" desde Nueva
 evolución con color automático y contenido intacto; sin copy "Grupo" viejo
 en Evoluciones; capturas mobile a 390/414/430px; favicon sirviendo el
 isotipo real.
+
+---
+
+## Sesión: Turno↔Especialidad sin restricción, alineación de Turnos, Diagnóstico inline, splash en paralelo
+
+Cinco ajustes independientes, sin migraciones. Detalle completo en
+`docs/tasks.md` (misma sección, mismo título) — acá el resumen.
+
+**Turno ya no exige que el Profesional tenga la Especialidad asignada**:
+`POST /api/turnos` tenía un chequeo `profesionalEspecialidad.findFirst(...)`
+que devolvía 400 `profesional does not have the especialidad`. Eliminado
+del todo — `ProfesionalEspecialidad` sigue existiendo para organización/
+filtros, nunca vuelve a bloquear la agenda.
+
+**Alineación de acciones en Turnos, causa real encontrada**:
+`<td className="turnos-actions-cell config-row-actions">` ponía
+`display: flex` directo en el `<td>`, lo que anula `vertical-align: middle`
+(el navegador deja de tratarlo como celda de tabla normal y lo ancla arriba
+en filas de 2+ líneas). Fix: el flex pasa a un `<div>` interno, el `<td>`
+vuelve a ser celda pura. Verificado con una fila real de 2 líneas:
+diferencia de centrado 0px.
+
+**Diagnóstico inline de verdad**: nuevo `DiagnosticoSelect.tsx`, réplica
+exacta del combobox de Especialidad de Turnos (mismas clases CSS, sin CSS
+nueva) — "+ Agregar diagnóstico" pasa a vivir *dentro* del panel
+desplegable, se sacó el link suelto que había quedado debajo del selector
+en la ronda anterior.
+
+**Splash + carga en paralelo**: `App.tsx` montaba `Dashboard` recién cuando
+el splash terminaba (`return` temprano antes de renderizarlo) — ningún
+fetch arrancaba hasta que "Preparando Kineq" desaparecía del todo. Ahora,
+con sesión resuelta, `Dashboard` se monta de una y el splash se renderiza
+como overlay encima (mismo `position: fixed; z-index: 9999`, sin cambios de
+diseño/duración) — los fetches corren mientras el splash sigue visible.
+Nuevo `Skeleton.tsx` (Turnos/Pacientes/Estadísticas, primera carga
+solamente) y `dataCache.ts` (placeholder al volver a una pantalla ya
+visitada, siempre revalida, se limpia en logout para no filtrar datos entre
+consultorios) — ver `docs/modules/dashboard.md` → "Carga inicial y splash".
+
+### Tests
+
+Backend: 4 tests nuevos. Suite completa: 173 (antes 169). Frontend: sigue
+en 81 (mismo criterio de rondas anteriores). `tsc -b`/`npm run
+build`/`lint` limpios en ambos paquetes.
+
+### Verificación manual
+
+Playwright contra los dev servers reales: timestamps de red confirmando
+fetches de catálogos/turnos arrancando ~300ms después del login mientras el
+splash (mínimo 1900ms) sigue visible; turno creado con especialidad que el
+profesional no tenía asignada, sin error; fila de 2 líneas con acciones
+medidas en 0px de diferencia de centrado; dropdown de Diagnóstico con
+"+ Agregar diagnóstico" solo dentro del panel, alta inline preserva
+contenido de la evolución y selecciona automáticamente.
+
+---
+
+## Sesión: Editar paciente desde Atención, cierre de "Editar turno", layout invertido, tab inicial de Ficha Inicial
+
+Cuatro ajustes, solo frontend, sin migraciones. Detalle completo en
+`docs/tasks.md` (misma sección/título) — acá el resumen.
+
+**Bug real: "Editar turno" quedaba abierto sobre Atención.** Las acciones
+rápidas "Iniciar atención"/"Continuar atención" de ese modal navegaban a
+`activePage: 'atencion'` pero nunca lo cerraban — es un overlay hermano de
+`activePage`, no condicionado por él. Fix de lifecycle real (no
+`setTimeout`): ambas funciones llaman a `closeTurnoDetails()`, el mismo
+helper que ya usaban la X/"Cancelar" del modal.
+
+**"Editar paciente" ahora también en Atención**, mismo `PatientFormModal.tsx`
+y mismos permisos que en el detalle normal — antes solo existía ahí.
+
+**Layout invertido (contenido izquierda, Resumen clínico derecha)**: cambio
+puramente CSS (`order` dentro de `.patient-detail-layout`), sin tocar el
+JSX de `PatientDetailPage.tsx` ni `AttentionPage.tsx` — por eso queda
+estable entre ambas pantallas y las cuatro tabs. En mobile (≤1170px,
+breakpoint ya existente) el mismo `order` apila tabs primero, Resumen
+después.
+
+**Ficha Inicial realmente vacía abre en "Motivo"** en vez de "Resumen" —
+antes era fijo. Se decide una sola vez por paciente (nunca en cada render,
+para no interrumpir mientras el profesional navega manualmente).
+
+### Tests
+
+Sin cambios de backend (sigue en 173). Frontend sigue en 81. `tsc -b`/
+`npm run build`/`lint` limpios.
+
+### Verificación manual
+
+Playwright: layout con contenido a la izquierda y Resumen a la derecha
+confirmado en las 4 tabs; ficha vacía abre en Motivo (`aria-selected=true`),
+navegar manualmente no vuelve sola; "Editar turno" → acción rápida
+"Iniciar atención" → el modal y su backdrop desaparecen del todo, navega
+correctamente a Atención, sin `overflow:hidden` residual nuevo; "Editar
+paciente" visible en Atención y abre el mismo modal; "Volver" funciona.
+
+---
+
+## Sesión: bugfix — Evoluciones largas fallaban con 500 en producción
+
+Causa: `Evolucion.contenido` seguía siendo `String` sin `@db.Text`
+(`VARCHAR(191)` por default de Prisma en MySQL) — una nota clínica de más
+de 191 caracteres hacía fallar el `INSERT` en la base, devuelto como
+`POST /api/evoluciones → 500` genérico **sin loguear la excepción real**.
+El propio comentario del código ya decía que "191 caracteres se queda
+corto para una nota clínica" — ese fix se había aplicado a `contenidoHtml`
+(agregado con el formato rico) pero nunca al campo original `contenido`.
+
+**Fix**: `contenido String @db.Text`; migración
+`20260817145447_evolucion_contenido_text`
+(`ALTER TABLE Evolucion MODIFY contenido TEXT NOT NULL`, no destructiva).
+Aplicada al dev DB a mano (`prisma db execute` + `migrate resolve
+--applied`, mismo patrón de sesiones anteriores) — **no** aplicada a
+Aiven/producción, ver comando abajo. `POST`/`PATCH /api/evoluciones` ahora
+loguean la excepción real con `console.error()` y devuelven un mensaje en
+español en vez del string técnico en inglés que el frontend mostraba tal
+cual.
+
+Sin cambios de frontend esta ronda — el mensaje amigable se corrigió del
+lado del servidor únicamente.
+
+### Tests
+
+6 nuevos en `app.test.ts` (corto, largo ~8400 caracteres sin truncar, HTML
+largo con formato, con/sin Diagnóstico, edición larga con lectura íntegra).
+Suite completa: 179 (antes 173). Frontend sin cambios (81). `tsc`/
+`npm run build` limpios en backend.
+
+### Comando para producción (Aiven) — pendiente, correr manualmente
+
+```bash
+npx prisma migrate status
+npx prisma migrate deploy
+```
+
+Con `DATABASE_URL` apuntando a Aiven. Nunca `db push` ni `migrate reset`.

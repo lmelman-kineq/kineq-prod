@@ -894,6 +894,13 @@ function Dashboard() {
   // a la pantalla de atención. Si falla, no navega (el error ya quedó en loadError).
   const iniciarAtencion = async (turnoId: number) => {
     setContextMenu(null)
+    // Si esta acción se disparó desde las acciones rápidas del modal "Editar
+    // turno" (turno-quick-actions), ese modal sigue montado como overlay
+    // hermano de `activePage` — no se cierra solo al navegar. Sin este
+    // cierre explícito quedaba flotando por encima de la pantalla de
+    // Atención (backdrop incluido, nunca un problema de scroll/focus-trap
+    // porque no usan JS para eso, pero sí una modal fantasma).
+    closeTurnoDetails()
     const returnPage = activePage
     const updated = await updateTurnoEstado(turnoId, 'ATENDIENDO')
     if (!updated) return
@@ -911,6 +918,10 @@ function Dashboard() {
   // seleccionado en Inicio.
   const continuarAtencion = (turno: TurnosPageItem) => {
     setContextMenu(null)
+    // Mismo motivo que en iniciarAtencion: cierra el modal "Editar turno" si
+    // la acción se disparó desde sus acciones rápidas, para no dejarlo
+    // flotando sobre la pantalla de Atención.
+    closeTurnoDetails()
     setAttentionTurno(turno)
     setAttentionReturnPage(activePage)
     setActivePage('atencion')
@@ -2006,11 +2017,10 @@ function App() {
   const [authView, setAuthView] = useState<'login' | 'registro'>('login')
   const bootPhase = useBootPhase(loading, loginBootTrigger)
 
-  if (bootPhase !== 'hidden') {
-    return <BootScreen fading={bootPhase === 'fading'} />
-  }
-
   if (!user) {
+    // Sin sesión: nada que precargar todavía, se mantiene el comportamiento
+    // previo (el splash tapa la restauración de sesión y da paso a Login).
+    if (bootPhase !== 'hidden') return <BootScreen fading={bootPhase === 'fading'} />
     return authView === 'login' ? (
       <LoginPage onSwitchToRegister={() => setAuthView('registro')} />
     ) : (
@@ -2018,7 +2028,21 @@ function App() {
     )
   }
 
-  return <Dashboard />
+  // Con sesión ya resuelta: `Dashboard` se monta de una, así que sus fetches
+  // iniciales (pacientes/profesionales/especialidades/turnos del día, ver
+  // `loadCatalogs`/`loadTurnos`) arrancan en paralelo con el splash en vez de
+  // esperar a que termine — `BootScreen` es un overlay `position: fixed`
+  // (`z-index: 9999`, ver BootScreen.css) que tapa a `Dashboard` mientras
+  // dura, así que no cambia nada visualmente ni de duración, solo cuándo
+  // empieza a cargar lo de abajo. En la práctica, para cuando el splash
+  // termina los datos ya suelen estar listos y no aparece un segundo
+  // "Cargando..." después del splash.
+  return (
+    <>
+      <Dashboard />
+      {bootPhase !== 'hidden' ? <BootScreen fading={bootPhase === 'fading'} /> : null}
+    </>
+  )
 }
 
 export default App

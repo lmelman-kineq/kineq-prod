@@ -237,6 +237,59 @@ Nine independent, incremental pieces of work. One Prisma migration (`20260817123
 
 ---
 
+## Turno↔Especialidad sin restricción, alineación de acciones en Turnos, Diagnóstico inline, carga paralela con el splash
+
+Cinco puntos independientes. Sin migraciones.
+
+**Profesional↔Especialidad ya no restringe Turnos**: `POST /api/turnos` tenía `if (!profesionalEspecialidad.findFirst(...)) return 400 'profesional does not have the especialidad'`. Eliminado por completo — la relación `ProfesionalEspecialidad` sigue existiendo (organización/filtros/ficha del profesional) pero nunca bloquea qué especialidad puede llevar un turno. `PATCH /api/turnos/:id` no tenía un check equivalente, así que no hubo nada que sacar ahí. El frontend nunca filtraba el selector de especialidad por profesional, así que tampoco hubo cambio ahí.
+
+**Alineación vertical de acciones en la tabla de Turnos**: causa real — `<td className="turnos-actions-cell config-row-actions">` ponía `display: flex` directo en el `<td>`, lo que anula `vertical-align: middle` (el navegador deja de tratarlo como una celda de tabla normal y lo ancla arriba cuando la fila es más alta que una línea). Fix: el flex vive en un `<div className="config-row-actions">` interno, el `<td>` vuelve a ser una celda de tabla pura. Verificado con Playwright con una fila de 2 líneas reales: diferencia de centrado 0px.
+
+**Diagnóstico inline dentro del dropdown**: la ronda anterior había puesto "+ Agregar diagnóstico" como link suelto debajo del `<select>` nativo — no era el patrón pedido. Nuevo componente `DiagnosticoSelect.tsx`, réplica exacta del combobox de Especialidad de Turnos (mismas clases CSS, sin CSS nueva): dropdown propio, "+ Agregar diagnóstico" como último ítem *dentro* del panel, mini-alta con un solo campo (Nombre) y color automático. Se usa en el selector de "Nueva evolución"; el de "Editar evolución" (dentro de `EvolutionTable.tsx`) sigue siendo un `<select>` nativo sin cambios, no pedido esta vez.
+
+**Splash "Preparando Kineq" + carga en paralelo**: `App.tsx` montaba `Dashboard` recién cuando el splash terminaba (`return` temprano) — ningún fetch de `Dashboard` arrancaba hasta ahí. Ahora, con sesión resuelta, `Dashboard` se monta de una y el splash se renderiza como overlay encima (mismo `position: fixed; z-index: 9999`, sin cambios visuales/de duración) — los fetches corren mientras el splash sigue visible. Detalle completo, incluida la política de skeletons/cache de placeholder, en `docs/modules/dashboard.md` → "Carga inicial y splash".
+
+**Tests**: backend — 4 tests nuevos en `app.test.ts` (profesional sin especialidad recibe turno con esa especialidad, misma regla al editar, especialidad de otro consultorio rechazada en Turno, profesional de otro consultorio rechazado en Turno). Suite: 173 passing (was 169). Frontend suite sigue en 81 (mismo criterio de rondas anteriores — sin infraestructura de test de componentes; `dataCache.ts` es demasiado trivial para ameritar test propio). `tsc -b`/`npm run build`/`npm run lint` limpios en ambos paquetes; el único error de lint (`AuthContext.tsx`) es el mismo preexistente de siempre.
+
+**Verificado manualmente** con Playwright contra los dev servers reales: capturó timestamps de red confirmando que los fetches de catálogos/turnos arrancan ~300ms después del login, mientras el boot screen (mínimo 1900ms) sigue visible; turno creado con una especialidad que el profesional no tenía asignada, sin error; fila de turno con nombre de paciente de dos líneas, botones de acción medidos con diferencia de centrado 0px; dropdown de Diagnóstico con "+ Agregar diagnóstico" solo dentro del panel (nunca afuera), alta inline preserva el contenido de la evolución, selecciona automáticamente, cierra con click afuera.
+
+---
+
+## Editar paciente desde Atención, cierre correcto de "Editar turno", layout invertido, tab inicial de Ficha Inicial
+
+Cuatro ajustes independientes, solo frontend, sin migraciones.
+
+**Bug real corregido — "Editar turno" quedaba abierto sobre Atención**: las acciones rápidas "Iniciar atención"/"Continuar atención" del modal "Editar turno" (`App.tsx`, `iniciarAtencion`/`continuarAtencion`) navegan a `activePage: 'atencion'` pero nunca cerraban ese modal — es un overlay hermano de `activePage` (`showViewTurno`), no condicionado por él, así que quedaba flotando sobre `AttentionPage`. Fix real de lifecycle, no un `setTimeout`: ambas funciones llaman a `closeTurnoDetails()` (el mismo helper que ya usan la X/"Cancelar" del modal) antes de navegar. No había scroll-lock ni focus-trap por JS que limpiar — el `.modal-overlay` en `position: fixed` no necesita ninguno, y desmontarlo vía React ya lo saca del todo.
+
+**"Editar paciente" disponible en Atención**: `AttentionPage.tsx` no tenía forma de editar los datos administrativos del paciente durante la atención. Se agregó el mismo botón (mismo `PatientFormModal.tsx`, mismos permisos `ADMINISTRADOR`/`RECEPCION` que `PatientDetailPage.tsx`) en `.attention-header-actions`, antes del timer/"Finalizar atención" — sin competir con esa acción principal.
+
+**Layout invertido, contenido a la izquierda / Resumen clínico a la derecha**: cambio puramente CSS (`order` en `.patient-detail-stack`/`.clinical-workspace`, dentro de `.patient-detail-layout`) — nunca se tocó el JSX de `PatientDetailPage.tsx` ni `AttentionPage.tsx`, así que el orden queda automáticamente estable entre las dos pantallas y entre las cuatro tabs (Ficha inicial/Evoluciones/Turnos/Estudios). En el breakpoint de una columna (≤1170px, ya existente) el mismo `order` decide el apilado vertical (tabs → Resumen), sin breakpoint nuevo. Detalle en `docs/modules/clinical-history.md` → "Vista clínica durante el turno".
+
+**Ficha Inicial vacía abre en "Motivo"**: antes abría siempre en "Resumen" (`useState('resumen')` fijo). Ahora, una vez resuelta la carga, decide una única vez por paciente si la ficha está realmente vacía (form plano sin contenido **y** sin antecedentes/alergias/medicaciones/estudios/alertas — no alcanza con el estado `pendiente` solo, que únicamente mira el form plano) y abre en "Motivo" en ese caso, o "Resumen" si ya hay cualquier progreso real. Se aplica una sola vez por paciente (`useRef`), nunca en cada render, para no interrumpir al profesional mientras navega manualmente entre secciones. Detalle en `docs/modules/clinical-history.md` → "Ficha inicial".
+
+**Tests**: sin cambios de backend (nada de backend se tocó esta ronda) — sigue en 173. Frontend sigue en 81 (mismo criterio de rondas anteriores). `tsc -b`/`npm run build`/`lint` limpios.
+
+**Verificado manualmente** con Playwright contra los dev servers reales: layout con `clinical-workspace.x < patient-detail-stack.x` confirmado en las cuatro tabs de `PatientDetailPage`; ficha vacía abre con `aria-selected="true"` en "Motivo" y el panel "Motivo y contexto" visible; navegar manualmente a Antecedentes no vuelve solo a Motivo; botón "Editar paciente" visible en el detalle normal; en `AttentionPage` (vía "Continuar atención" disparado desde las acciones rápidas del modal "Editar turno"), el modal y su backdrop desaparecen del todo, la navegación a Atención ocurre correctamente, sin `overflow: hidden` residual nuevo en `<body>`, "Editar paciente" visible y abre el mismo `PatientFormModal`, y "Volver" navega de nuevo a Turnos sin roturas.
+
+---
+
+## Bugfix: Evoluciones largas fallaban con 500 en producción
+
+Causa exacta: `Evolucion.contenido` seguía siendo `String` sin `@db.Text` en `schema.prisma` — Prisma mapea eso a `VARCHAR(191)` en MySQL por default. Una nota clínica de más de 191 caracteres hacía fallar el `INSERT` a nivel base de datos ("Data too long for column 'contenido'"), y el `catch` de `POST /api/evoluciones` (`backend/src/app.ts`) devolvía `{ error: 'failed to create evolucion' }` con status `500` **sin loguear la excepción real** — de ahí que Vercel Logs no mostrara nada útil. El propio código ya documentaba (en el comentario de `contenidoHtml`) que "191 caracteres se queda corto para una nota clínica" — ese fix se había aplicado a `contenidoHtml` cuando se agregó el formato rico, pero nunca se hizo el mismo cambio en `contenido`, el campo original.
+
+**Fix**: `contenido String @db.Text` en el schema; migración `20260817145447_evolucion_contenido_text` (`ALTER TABLE Evolucion MODIFY contenido TEXT NOT NULL`, no destructiva — ensancha el tipo de columna sin tocar filas existentes). Aplicada al dev DB a mano (`prisma db execute` + `migrate resolve --applied`), **no** aplicada a producción (Aiven) — ver el comando exacto que hay que correr, más abajo. `POST`/`PATCH /api/evoluciones` ahora loguean la excepción real con `console.error()` (mismo patrón que ya usaban `PATCH /api/pacientes/:id/ficha-inicial` y antecedentes) y devuelven un mensaje en español ("No se pudo guardar la evolución/los cambios. Volvé a intentar.") en vez del string técnico en inglés — el frontend (`getErrorMessage()`) ya mostraba tal cual cualquier mensaje no vacío del backend, así que alcanzó con corregir el string del lado del servidor, sin tocar frontend.
+
+**Tests**: 6 nuevos en `app.test.ts` (contenido corto, contenido largo ~8400 caracteres sin truncar, `contenidoHtml` largo con formato y sanitización, creación con y sin Diagnóstico junto a contenido largo, edición agregando contenido largo con lectura posterior íntegra). Suite completa: 179 passing (era 173). Nada de frontend se tocó esta ronda — sigue en 81. `tsc`/`npm run build` limpios en backend.
+
+**Comando para aplicar en producción (Aiven)** — no se ejecutó automáticamente, correr manualmente con `DATABASE_URL` apuntando a Aiven:
+```bash
+npx prisma migrate status
+npx prisma migrate deploy
+```
+Nunca `prisma db push` ni `prisma migrate reset`.
+
+---
+
 ## Known gaps / next priorities
 
 - **Pre-existing bug found during manual verification of this round, not fixed (out of scope — not touched by this work):** the Inicio/home dashboard's mini-calendar renders a React "duplicate key" console warning (`Encountered two children with the same key... "M"`) on every load — almost certainly the weekday-initial header (L, M, M, J, V, S, D) using the letter itself as the React `key` instead of an index, so the two `M`s (Martes/Miércoles) collide. Confirmed via isolated console-error-count checkpoints that this fires during the post-login home render, before any Estadísticas/Turnos navigation — unrelated to the new code in this round. Cosmetic/non-crashing, but worth a one-line fix (`key={index}`) next time that file is touched.

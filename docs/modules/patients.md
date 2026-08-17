@@ -55,6 +55,8 @@ El módulo de Pacientes se relaciona principalmente con:
 
 Los datos administrativos son los datos básicos necesarios para identificar y contactar al paciente.
 
+**Actualización (implementado) — editar paciente también desde Atención**: el botón "Editar paciente" (`PatientFormModal.tsx`, mismos permisos `ADMINISTRADOR`/`RECEPCION` de siempre) ya no vive solo en `PatientDetailPage.tsx` — `AttentionPage.tsx` ("Continuar atención") también lo tiene, en el header, reutilizando exactamente el mismo componente y flujo (nunca un segundo formulario). Ver `docs/modules/appointments.md` para el detalle de ubicación y permisos.
+
 ### Campos obligatorios iniciales
 
 **Actualización (implementado)**: los únicos campos obligatorios para crear un paciente son **Nombre** y **Apellido**, tanto en frontend (`PatientFormModal.tsx`) como en backend (`POST`/`PATCH /api/pacientes`, `backend/src/app.ts`). Documento, fecha de nacimiento, teléfono, email, dirección, obra social, número de afiliado y observaciones son opcionales — el schema de Prisma (`Paciente`) ya los tenía como columnas nullable, así que no hizo falta ninguna migración para volverlos opcionales, solo sacar la validación extra que el frontend agregaba únicamente en el alta (`isCreate`). Un campo opcional vacío se guarda como `null`, nunca como `''` (ver "Documento / DNI" abajo). Esto también habilita el alta rápida de paciente desde Crear Turno (ver `docs/modules/appointments.md`), que solo pide Nombre y Apellido como obligatorios (más Documento/Teléfono opcionales).

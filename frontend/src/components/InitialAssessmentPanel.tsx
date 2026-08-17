@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { UseFichaInicial } from '../hooks/useFichaInicial'
 import { formatDateTime } from '../utils/dateFormat'
 import { professionalName } from '../utils/professional'
@@ -117,13 +117,47 @@ const NAV_SECTIONS: AssessmentSection[] = [
 
 type InitialAssessmentPanelProps = {
   fichaHook: UseFichaInicial
+  patientId: number
   navTarget?: ClinicalNavTarget | null
   onNavTargetHandled?: () => void
 }
 
-export default function InitialAssessmentPanel({ fichaHook, navTarget, onNavTargetHandled }: InitialAssessmentPanelProps) {
+// Una ficha cuenta como "sin carga clínica real" cuando ni el form plano
+// (Motivo, Antecedentes en texto libre, Seguridad, Hábitos, Dolor y función)
+// ni ninguna lista estructurada (antecedentes del catálogo, alergias,
+// medicación, estudios, alertas manuales) tiene contenido — no alcanza con
+// mirar el estado `pendiente` de `computeFichaCompletionStatus` solo, porque
+// ese cálculo solo conoce el form plano: una ficha puede seguir en
+// `pendiente` (0% del form) y ya tener antecedentes/alergias cargados.
+function fichaEstaRealmenteVacia(ficha: UseFichaInicial['ficha'], form: Record<string, string>): boolean {
+  if (computeFichaCompletionStatus(form) !== 'pendiente') return false
+  if (!ficha) return true
+  return (
+    (ficha.antecedentes?.length ?? 0) === 0
+    && (ficha.alergias?.length ?? 0) === 0
+    && (ficha.medicaciones?.length ?? 0) === 0
+    && (ficha.estudios?.length ?? 0) === 0
+    && (ficha.alertasCampo?.length ?? 0) === 0
+  )
+}
+
+export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget, onNavTargetHandled }: InitialAssessmentPanelProps) {
   const [activeKey, setActiveKey] = useState('resumen')
   const { ficha, loading, form, saving, saveError, canWrite, updateField, toggleAlertaCampo } = fichaHook
+
+  // Tab inicial: "Motivo" si la ficha está realmente vacía, "Resumen" si ya
+  // tiene algún progreso — se decide una sola vez por paciente (apenas
+  // termina de cargar), nunca en cada render, para no arrancarle la sección
+  // de las manos al profesional mientras está completando otra más adelante
+  // en la lista (Antecedentes, Seguridad, etc.).
+  const initialTabPatientRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (loading) return
+    if (initialTabPatientRef.current === patientId) return
+    initialTabPatientRef.current = patientId
+    setActiveKey(fichaEstaRealmenteVacia(ficha, form) ? 'motivo' : 'resumen')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, patientId])
 
   // Deep-link desde una alerta clínica: cambia a la sección de origen y
   // resalta el campo. Escucha `navTarget?.token` (no el objeto entero) para

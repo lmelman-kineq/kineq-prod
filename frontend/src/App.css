@@ -2398,6 +2398,38 @@ select:disabled {
   margin-top: 8px;
 }
 
+/* Skeletons discretos: reemplazan los "Cargando..." grandes en Turnos/
+   Pacientes/Estadísticas (ver docs/tasks.md). Mismas dimensiones que el
+   contenido real (fila de tabla / card de resumen) para no generar layout
+   shift cuando llegan los datos. */
+.skeleton-bar {
+  display: inline-block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--color-surface-muted) 25%, var(--color-border) 37%, var(--color-surface-muted) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+.skeleton-row td {
+  cursor: default;
+}
+
+.skeleton-card {
+  display: grid;
+  gap: 10px;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar {
+    animation: none;
+  }
+}
+
 /* =========================================================
    14b. PANTALLA DE PACIENTES (listado)
    Misma receta visual que la pantalla de Turnos.
@@ -2729,15 +2761,26 @@ select:disabled {
 
 .patient-detail-layout {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   gap: 24px;
   align-items: start;
 }
 
+/* Resumen clínico (.patient-detail-stack) a la derecha, tabs/contenido
+   (.clinical-workspace) a la izquierda — estable entre Ficha inicial/
+   Evoluciones/Turnos/Estudios porque ambos componentes (PatientDetailPage,
+   AttentionPage) comparten este mismo grid, nunca reordenan su propio JSX.
+   En el breakpoint de una columna (1170px, ver media query) el orden decide
+   además el apilado vertical: tabs primero, resumen después. */
 .patient-detail-stack {
   display: grid;
   gap: 24px;
   min-width: 0;
+  order: 2;
+}
+
+.clinical-workspace {
+  order: 1;
 }
 
 .patient-detail-card {

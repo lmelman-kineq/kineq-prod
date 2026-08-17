@@ -64,6 +64,16 @@ Debe responder rápidamente preguntas como:
 
 ---
 
+## Carga inicial y splash "Preparando Kineq"
+
+**Actualización (implementado)**: `App()` (`frontend/src/App.tsx`) montaba `Dashboard` recién cuando el splash (`BootScreen`, duración mínima 1900ms + 400ms de fade, `useBootPhase.ts`) terminaba — un `if (bootPhase !== 'hidden') return <BootScreen/>` con `return` temprano, así que ningún efecto de `Dashboard` (catálogos de pacientes/profesionales/especialidades/obras sociales/consultorio, turnos del día) corría hasta que el splash desaparecía del todo. Eso producía el patrón "Preparando Kineq → recién ahí Cargando turnos...".
+
+Ahora, con sesión ya resuelta (`user` no nulo), `Dashboard` se monta de una — sus fetches iniciales arrancan en paralelo con el splash — y `BootScreen` se renderiza **encima**, como overlay (`position: fixed; z-index: 9999`, sin cambios de CSS/diseño/duración): mientras el splash sigue visible, `Dashboard` ya está cargando debajo. En la práctica, para cuando el splash termina los datos ya suelen estar listos y no aparece un segundo loading. Sin sesión (`!user`), el comportamiento no cambió: el splash sigue tapando la restauración de sesión y da paso a Login/Registro, porque ahí no hay nada útil que precargar todavía. El splash nunca queda bloqueado esperando estos fetches — su duración depende únicamente de `useBootPhase` (restauración de sesión + mínimo visual), independiente de si los datos de `Dashboard` ya llegaron o fallaron; un fetch fallido lo maneja `Dashboard` con su propio `loadError`/reintentar, ya existente.
+
+**Skeletons discretos** (`frontend/src/components/Skeleton.tsx`, `SkeletonTableRows`/`SkeletonCards`) reemplazan los textos grandes "Cargando turnos..."/"Cargando pacientes..."/"Cargando estadísticas..." en `TurnosPage.tsx`, `PatientsPage.tsx` y `EstadisticasPage.tsx` — mismas dimensiones que el contenido real (filas de tabla / cards de KPI) para no generar salto de layout. Solo se muestran en la **primera** carga (sin datos previos todavía); en Estadísticas, cambiar filtros/período ya no vacía la pantalla durante el refetch — el resultado anterior se sigue mostrando con una nota chica "Actualizando estadísticas…" en vez de un loading que tapa todo (`resumen` nunca se resetea a `null` al refetchear, solo se reemplazaba visualmente por el branch de `loading`; ahora ese branch respeta si ya hay datos).
+
+**Placeholder de datos al navegar** (`frontend/src/utils/dataCache.ts`): un cache en memoria mínimo, sin librería nueva — `TurnosPage`/`PatientsPage` siembran su estado inicial con el último resultado exitoso (si existe) para no mostrar el skeleton al volver a una pantalla ya visitada (Inicio → Turnos → Pacientes → Inicio), pero **siempre** vuelven a pedir datos frescos al montar y sobrescriben la cache con la respuesta real — nunca se confía en el valor cacheado como definitivo, así que no hay ventana real de datos desactualizados más allá de lo que tarda ese fetch. La cache se limpia en `logout()` (`AuthContext.tsx`) para que, si otro usuario de otro consultorio inicia sesión en la misma pestaña, no vea ni por un instante datos del consultorio anterior.
+
 ## Dashboard operativo vs estadísticas
 
 El Dashboard de Inicio no debe confundirse con la futura sección de Estadísticas.

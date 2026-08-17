@@ -15,6 +15,7 @@ import { useAuth } from '../auth/AuthContext'
 import PatientAvatar from './PatientAvatar'
 import PatientSummaryCards from './PatientSummaryCards'
 import PatientAdminSummary from './PatientAdminSummary'
+import PatientFormModal from './PatientFormModal'
 import ClinicalSummaryPanel from './ClinicalSummaryPanel'
 import ClinicalTabs, { type ClinicalTab } from './ClinicalTabs'
 import EvolutionTable from './EvolutionTable'
@@ -46,6 +47,7 @@ export default function AttentionPage({ turno, refreshKey, onBack, onUpdateEstad
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [activeTab, setActiveTab] = useState('evoluciones')
+  const [editPatientOpen, setEditPatientOpen] = useState(false)
 
   const navTokenRef = useRef(0)
   const [navTarget, setNavTarget] = useState<ClinicalNavTarget | null>(null)
@@ -67,6 +69,9 @@ export default function AttentionPage({ turno, refreshKey, onBack, onUpdateEstad
   const [savingEvolucionEdit, setSavingEvolucionEdit] = useState(false)
   const [editEvolucionError, setEditEvolucionError] = useState<string | null>(null)
 
+  // Mismo criterio que PatientDetailPage.tsx: datos administrativos del
+  // paciente (no contenido clínico), editables por Administrador/Recepción.
+  const canEditAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'RECEPCION'
   const canEditClinical = user?.rol === 'ADMINISTRADOR' || user?.rol === 'PROFESIONAL'
   // Autoría clínica: además del rol, hace falta un profesional vinculado —
   // el backend vuelve a exigir esto en cada escritura clínica.
@@ -335,7 +340,7 @@ export default function AttentionPage({ turno, refreshKey, onBack, onUpdateEstad
     </>
   )
 
-  const fichaPanel = <InitialAssessmentPanel fichaHook={fichaHook} navTarget={navTarget} onNavTargetHandled={() => setNavTarget(null)} />
+  const fichaPanel = <InitialAssessmentPanel fichaHook={fichaHook} patientId={turno.patientId} navTarget={navTarget} onNavTargetHandled={() => setNavTarget(null)} />
 
   const panels: Record<string, ReactNode> = {
     evoluciones: evolucionesPanel,
@@ -372,6 +377,12 @@ export default function AttentionPage({ turno, refreshKey, onBack, onUpdateEstad
         </div>
 
         <div className="attention-header-actions">
+          {canEditAdmin ? (
+            <button type="button" className="secondary-button" onClick={() => setEditPatientOpen(true)}>
+              Editar paciente
+            </button>
+          ) : null}
+
           {turno.status === 'Atendiendo' && turno.startAttention ? (
             <div className="attention-timer">
               <p className="details-label">Tiempo atendiendo</p>
@@ -439,6 +450,18 @@ export default function AttentionPage({ turno, refreshKey, onBack, onUpdateEstad
           <ClinicalTabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} panels={panels} />
         </div>
       </div>
+
+      {editPatientOpen && patient ? (
+        <PatientFormModal
+          patient={patient}
+          canEditObservaciones={user?.rol === 'ADMINISTRADOR'}
+          onClose={() => setEditPatientOpen(false)}
+          onSaved={(updated) => {
+            setPatient(updated)
+            setEditPatientOpen(false)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

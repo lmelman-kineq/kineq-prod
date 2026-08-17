@@ -325,15 +325,19 @@ model Evolucion {
   profesionalId Int
   turnoId       Int?
   grupoId       Int?
-  contenido     String
+  // `@db.Text` (no el VARCHAR(191) por default de Prisma en MySQL): una
+  // evolución larga superaba los 191 caracteres y el INSERT fallaba en la
+  // base con "Data too long for column 'contenido'", devuelto como 500
+  // genérico. `contenidoHtml` ya tenía este mismo fix desde que se agregó
+  // el formato rico (ver comentario original, movido acá) — quedó pendiente
+  // aplicarlo también a `contenido`, el campo que sí existe desde el inicio.
+  contenido     String   @db.Text
   // Formato básico (negrita/cursiva/subrayado) — HTML ya sanitizado contra
   // una allowlist estricta (ver backend/src/sanitizeRichText.ts), nunca
   // HTML crudo del cliente. Nulo para evoluciones sin formato aplicado
   // (incluidas todas las anteriores a esta funcionalidad): en ese caso se
   // sigue mostrando `contenido` como texto plano, comportamiento sin
-  // cambios. `@db.Text` (no el VARCHAR(191) por default) porque `contenido`
-  // ya demostró que 191 caracteres se queda corto para una nota clínica, y
-  // el HTML agrega overhead de tags sobre el mismo texto.
+  // cambios.
   contenidoHtml String?  @db.Text
   activo        Boolean  @default(true)
   createdAt     DateTime @default(now())

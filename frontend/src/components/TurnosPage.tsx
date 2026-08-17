@@ -7,7 +7,11 @@ import { mapEstadoToStatus, statusClass, compareByAttentionPriority } from '../u
 import { professionalName } from '../utils/professional'
 import { utcIsoToZonedParts } from '../utils/timezone'
 import DateInput from './DateInput'
+import { SkeletonTableRows } from './Skeleton'
+import { getCachedData, setCachedData } from '../utils/dataCache'
 import type { TurnoQuickAction } from '../App'
+
+const TURNOS_CACHE_KEY = 'turnos-page-list'
 
 export type TurnosPageItem = {
   id: number
@@ -156,7 +160,10 @@ export default function TurnosPage({
   onEditTurno,
   getQuickActions,
 }: TurnosPageProps) {
-  const [turnos, setTurnos] = useState<TurnosPageItem[]>([])
+  // Placeholder inicial desde la última visita a esta pantalla (evita el
+  // flash de skeleton al volver a Turnos si ya se habían cargado antes) —
+  // siempre se vuelve a pedir al backend igual, ver el efecto de abajo.
+  const [turnos, setTurnos] = useState<TurnosPageItem[]>(() => getCachedData<TurnosPageItem[]>(TURNOS_CACHE_KEY) ?? [])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [localReloadKey, setLocalReloadKey] = useState(0)
@@ -185,7 +192,9 @@ export default function TurnosPage({
       try {
         const response = await api.getTurnos()
         if (cancelled) return
-        setTurnos(response.map((turno) => mapApiTurno(turno, patientSocialWorkById)))
+        const mapped = response.map((turno) => mapApiTurno(turno, patientSocialWorkById))
+        setTurnos(mapped)
+        setCachedData(TURNOS_CACHE_KEY, mapped)
       } catch (loadError) {
         if (cancelled) return
         setTurnos([])
@@ -601,8 +610,26 @@ export default function TurnosPage({
               Reintentar
             </button>
           </div>
-        ) : loading ? (
-          <div className="turnos-table-message">Cargando turnos...</div>
+        ) : loading && turnos.length === 0 ? (
+          <div className="turnos-table-scroll">
+            <table className="turnos-table">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Nombre</th>
+                  <th>Profesional</th>
+                  <th>Obra Social</th>
+                  <th>Nro. de Sesión</th>
+                  <th>Especialidad</th>
+                  <th>Estado</th>
+                  <th aria-label="Acciones" />
+                </tr>
+              </thead>
+              <tbody>
+                <SkeletonTableRows rows={6} columns={8} />
+              </tbody>
+            </table>
+          </div>
         ) : visibleTurnos.length === 0 ? (
           <div className="turnos-table-message">
             <strong>No hay turnos para mostrar.</strong>
@@ -673,51 +700,53 @@ export default function TurnosPage({
                           {pillContent.text}
                         </span>
                       </td>
-                      <td className="turnos-actions-cell config-row-actions">
-                        <button
-                          type="button"
-                          className="config-icon-button"
-                          aria-label="Editar turno"
-                          title="Editar turno"
-                          onKeyDown={(event) => event.stopPropagation()}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            onEditTurno(turno)
-                          }}
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 20h9" />
-                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                          </svg>
-                        </button>
-                        {rowActions.length > 0 ? (
+                      <td className="turnos-actions-cell">
+                        <div className="config-row-actions">
                           <button
                             type="button"
-                            className="turnos-row-actions-button"
-                            aria-label="Acciones del turno"
+                            className="config-icon-button"
+                            aria-label="Editar turno"
+                            title="Editar turno"
                             onKeyDown={(event) => event.stopPropagation()}
                             onClick={(event) => {
                               event.stopPropagation()
-                              const rect = event.currentTarget.getBoundingClientRect()
-                              const menuWidth = 190
-                              setRowMenu((current) =>
-                                current?.turnoId === turno.id
-                                  ? null
-                                  : {
-                                      turnoId: turno.id,
-                                      x: Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)),
-                                      y: rect.bottom + 6,
-                                    },
-                              )
+                              onEditTurno(turno)
                             }}
                           >
                             <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <circle cx="12" cy="5" r="1.6" />
-                              <circle cx="12" cy="12" r="1.6" />
-                              <circle cx="12" cy="19" r="1.6" />
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
                             </svg>
                           </button>
-                        ) : null}
+                          {rowActions.length > 0 ? (
+                            <button
+                              type="button"
+                              className="turnos-row-actions-button"
+                              aria-label="Acciones del turno"
+                              onKeyDown={(event) => event.stopPropagation()}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                const rect = event.currentTarget.getBoundingClientRect()
+                                const menuWidth = 190
+                                setRowMenu((current) =>
+                                  current?.turnoId === turno.id
+                                    ? null
+                                    : {
+                                        turnoId: turno.id,
+                                        x: Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)),
+                                        y: rect.bottom + 6,
+                                      },
+                                )
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="12" cy="5" r="1.6" />
+                                <circle cx="12" cy="12" r="1.6" />
+                                <circle cx="12" cy="19" r="1.6" />
+                              </svg>
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   )

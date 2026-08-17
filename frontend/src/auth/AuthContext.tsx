@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import * as api from '../services/api'
 import { ApiError } from '../services/api'
 import type { Usuario } from '../types/domain'
+import { clearDataCache } from '../utils/dataCache'
 
 type AuthContextValue = {
   user: Usuario | null
@@ -76,6 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!(err instanceof ApiError && err.status === 401)) throw err
     }
     setUser(null)
+    // Si otro usuario (de otro consultorio) inicia sesión después en la
+    // misma pestaña, no debe ver ni por un instante datos cacheados de este.
+    clearDataCache()
   }, [])
 
   const register = useCallback(async (data: Parameters<AuthContextValue['register']>[0]) => {

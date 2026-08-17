@@ -10,6 +10,7 @@ import ClinicalTabs, { type ClinicalTab } from './ClinicalTabs'
 import EvolutionTable, { GrupoChip } from './EvolutionTable'
 import GrupoEvolucionModal from './GrupoEvolucionModal'
 import GestionarGruposModal from './GestionarGruposModal'
+import DiagnosticoSelect from './DiagnosticoSelect'
 import InitialAssessmentPanel from './InitialAssessmentPanel'
 import PatientAppointmentsTable from './PatientAppointmentsTable'
 import FichaEstudiosTab from './FichaEstudiosTab'
@@ -76,10 +77,6 @@ export default function PatientDetailPage({
 
   const [grupos, setGrupos] = useState<GrupoEvolucion[]>([])
   const [nuevaEvolucionGrupoId, setNuevaEvolucionGrupoId] = useState<number | ''>('')
-  const [addingDiagnostico, setAddingDiagnostico] = useState(false)
-  const [newDiagnosticoNombre, setNewDiagnosticoNombre] = useState('')
-  const [creatingDiagnostico, setCreatingDiagnostico] = useState(false)
-  const [newDiagnosticoError, setNewDiagnosticoError] = useState<string | null>(null)
   const [grupoModal, setGrupoModal] = useState<'crear' | GrupoEvolucion | null>(null)
   const [vistaEvoluciones, setVistaEvoluciones] = useState<'fecha' | 'grupo'>('fecha')
   const [gestionarGruposOpen, setGestionarGruposOpen] = useState(false)
@@ -106,30 +103,17 @@ export default function PatientDetailPage({
     setGrupos(response)
   }
 
-  // Alta rápida de Diagnóstico desde el mismo selector de Nueva evolución:
-  // único campo obligatorio es el nombre, color asignado automáticamente
-  // (rotación sobre la misma paleta curada que ya usa Especialidad/Grupo) —
-  // la gestión completa (editar nombre/color, eliminar) sigue viviendo en
-  // GrupoEvolucionModal, sin duplicar esa lógica acá. No toca el contenido
-  // de la evolución en curso, que vive en estado aparte.
-  const createDiagnosticoQuick = async () => {
-    const nombre = newDiagnosticoNombre.trim()
-    if (!nombre) return
-
-    setCreatingDiagnostico(true)
-    setNewDiagnosticoError(null)
-    try {
-      const color = SPECIALTY_COLOR_TOKENS[grupos.length % SPECIALTY_COLOR_TOKENS.length]
-      const created = await api.createGrupoEvolucion(patientId, { nombre, color })
-      setGrupos((current) => [created, ...current])
-      setNuevaEvolucionGrupoId(created.id)
-      setNewDiagnosticoNombre('')
-      setAddingDiagnostico(false)
-    } catch (createError) {
-      setNewDiagnosticoError(getErrorMessage(createError, 'No se pudo crear el diagnóstico.'))
-    } finally {
-      setCreatingDiagnostico(false)
-    }
+  // Alta rápida de Diagnóstico desde el propio dropdown (DiagnosticoSelect,
+  // mismo patrón que "+ Nueva Especialidad"): único campo obligatorio es el
+  // nombre, color asignado automáticamente (rotación sobre la misma paleta
+  // curada que ya usa Especialidad/Grupo). La gestión completa (editar
+  // nombre/color, eliminar) sigue viviendo en GrupoEvolucionModal, sin
+  // duplicar esa lógica acá. No toca el contenido de la evolución en curso.
+  const createDiagnosticoInline = async (nombre: string): Promise<GrupoEvolucion> => {
+    const color = SPECIALTY_COLOR_TOKENS[grupos.length % SPECIALTY_COLOR_TOKENS.length]
+    const created = await api.createGrupoEvolucion(patientId, { nombre, color })
+    setGrupos((current) => [created, ...current])
+    return created
   }
 
   const loadEvoluciones = async () => {
@@ -405,47 +389,12 @@ export default function PatientDetailPage({
                 setNewEvolucionText(plainText)
               }}
             />
-            <label className="ficha-field">
-              <span>Diagnóstico</span>
-              <select value={nuevaEvolucionGrupoId} onChange={(event) => setNuevaEvolucionGrupoId(event.target.value ? Number(event.target.value) : '')}>
-                <option value="">Sin diagnóstico</option>
-                {grupos.map((g) => (
-                  <option key={g.id} value={g.id}>{g.nombre}</option>
-                ))}
-              </select>
-            </label>
-            {!addingDiagnostico ? (
-              <button type="button" className="clinical-summary-link" onClick={() => setAddingDiagnostico(true)}>
-                + Agregar diagnóstico
-              </button>
-            ) : (
-              <div className="dropdown-footer-edit">
-                <input
-                  autoFocus
-                  value={newDiagnosticoNombre}
-                  placeholder="Ej. Lumbalgia"
-                  onChange={(event) => setNewDiagnosticoNombre(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') createDiagnosticoQuick()
-                  }}
-                />
-                <button type="button" className="add-button" disabled={!newDiagnosticoNombre.trim() || creatingDiagnostico} onClick={createDiagnosticoQuick}>
-                  {creatingDiagnostico ? 'Creando...' : 'Agregar'}
-                </button>
-                <button
-                  type="button"
-                  className="cancel-button"
-                  onClick={() => {
-                    setNewDiagnosticoNombre('')
-                    setNewDiagnosticoError(null)
-                    setAddingDiagnostico(false)
-                  }}
-                >
-                  Cancelar
-                </button>
-              </div>
-            )}
-            {newDiagnosticoError ? <p className="evolution-form-error">{newDiagnosticoError}</p> : null}
+            <DiagnosticoSelect
+              grupos={grupos}
+              value={nuevaEvolucionGrupoId}
+              onChange={setNuevaEvolucionGrupoId}
+              onCreate={createDiagnosticoInline}
+            />
             <button
               type="button"
               className="primary-button"
@@ -607,7 +556,7 @@ export default function PatientDetailPage({
         ) : null}
       </>
     ),
-    ficha: <InitialAssessmentPanel fichaHook={fichaHook} navTarget={navTarget} onNavTargetHandled={() => setNavTarget(null)} />,
+    ficha: <InitialAssessmentPanel fichaHook={fichaHook} patientId={patientId} navTarget={navTarget} onNavTargetHandled={() => setNavTarget(null)} />,
     turnos: <PatientAppointmentsTable turnos={turnos} />,
     estudios: <FichaEstudiosTab fichaHook={fichaHook} navTarget={navTarget} onNavTargetHandled={() => setNavTarget(null)} />,
   }
