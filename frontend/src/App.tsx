@@ -728,6 +728,21 @@ function Dashboard() {
     return next
   }
 
+  // Alta rápida de Paciente desde Crear/Editar Turno: mismo patrón que
+  // createSpecialty arriba — crea, agrega al listado ya cargado y devuelve
+  // el Item para que el selector lo marque como elegido sin recargar nada.
+  const createPatientQuick = async (data: { nombre: string; apellido: string; documento?: string; telefono?: string }) => {
+    const created = await api.createPaciente({
+      nombre: data.nombre,
+      apellido: data.apellido,
+      documento: data.documento || null,
+      telefono: data.telefono || null,
+    })
+    const next = { id: created.id, displayName: `${created.nombre} ${created.apellido}` }
+    setPacientesState((s) => [...s, next])
+    return next
+  }
+
   const saveNewTurno = async () => {
     if (!newTurnoForm.patientId || !newTurnoForm.professionalId || newTurnoForm.specialtyId === 0) return
     try {
@@ -1663,6 +1678,7 @@ function Dashboard() {
                 professionals={profesionalesState}
                 specialties={specialtiesState}
                 onCreateSpecialty={user?.rol === 'ADMINISTRADOR' ? createSpecialty : undefined}
+                onCreatePatient={createPatientQuick}
                 hideProfessionalField={user?.rol === 'PROFESIONAL'}
               />
 
@@ -1760,6 +1776,7 @@ function Dashboard() {
                 professionals={profesionalesState}
                 specialties={specialtiesState}
                 onCreateSpecialty={user?.rol === 'ADMINISTRADOR' ? createSpecialty : undefined}
+                onCreatePatient={createPatientQuick}
                 hideProfessionalField={user?.rol === 'PROFESIONAL'}
               />
 

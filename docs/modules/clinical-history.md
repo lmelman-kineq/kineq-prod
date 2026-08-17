@@ -23,7 +23,7 @@ El modelo actual de evolución incluye:
 - Paciente.
 - Profesional.
 - Turno opcional.
-- Grupo opcional (`grupoId`, ver "Grupos de evolución" más abajo).
+- Diagnóstico opcional (`grupoId` — modelo interno `GrupoEvolucion`, presentado en toda la UI como "Diagnóstico"; ver "Grupos de evolución" más abajo).
 - Contenido.
 - Estado activo/inactivo (borrado lógico).
 - Fecha de creación.
@@ -496,22 +496,25 @@ Endpoints: `GET/POST /api/pacientes/:pacienteId/grupos-evolucion`, `PATCH/DELETE
 
 Sigue sin implementarse (y sigue fuera de alcance sin definición previa): `Tratamiento` formal, diagnóstico codificado, plan de sesiones, alta clínica, facturación por tratamiento.
 
+#### `GrupoEvolucion` ahora se presenta como "Diagnóstico"
+
+**Actualización (implementado)**: todo el copy visible pasó de "Grupo"/"Grupo de evolución" a **"Diagnóstico"** ("Sin diagnóstico", "Ver diagnósticos", "Nuevo/Editar/Eliminar diagnóstico", "Por diagnóstico", filtro "Diagnóstico"). El modelo interno **no se renombró** — sigue siendo `GrupoEvolucion`/`grupoId` en `schema.prisma`, endpoints y estado de React (`grupos`, `grupoModal`, etc.) — por ser un cambio de copy seguro y de bajo riesgo frente a una migración de rename real; ya tenía `pacienteId` propio (agregado en la ronda que lo creó), así que no hizo falta backfill ni migración nueva para esta funcionalidad. Sigue siendo, como antes, una organización libre y simple creada por el profesional — nunca CIE/SNOMED ni diagnóstico automático (ver aviso arriba).
+
+**Alta rápida desde Nueva evolución**: junto al selector "Diagnóstico" de "Nueva evolución" (`PatientDetailPage.tsx`) hay un enlace "+ Agregar diagnóstico" que despliega un mini formulario inline (mismo patrón visual que el `dropdown-footer-edit` de "+ Nueva Especialidad" en Turnos) con **un único campo obligatorio, Nombre** (placeholder "Ej. Lumbalgia") — sin selector de color. El color se asigna automáticamente por rotación sobre la misma paleta curada (`SPECIALTY_COLOR_TOKENS`, `frontend/src/utils/specialtyColors.ts`) usada por Especialidad y por la gestión completa de Diagnósticos; se persiste como cualquier otro `GrupoEvolucion.color` (`POST /api/pacientes/:id/grupos-evolucion`, sin cambios de backend). Al crear: el diagnóstico se agrega a la lista ya cargada y queda seleccionado automáticamente, sin tocar el contenido/formato ya tipeado de la evolución en curso. La gestión completa (crear con color elegido a mano, editar nombre/color, eliminar) sigue viviendo en "Ver diagnósticos" (`GestionarGruposModal.tsx`/`GrupoEvolucionModal.tsx`), sin cambios funcionales — solo el copy.
+
+#### Evoluciones en mobile: cards reorganizadas
+
+**Actualización (implementado)**: la card mobile de cada evolución (`EvolutionTable.tsx`, breakpoint ≤820px existente) usaba el mismo fallback genérico "etiqueta: valor" en fila que el resto de `.turnos-table` — con contenido largo (Resumen) y un chip (Diagnóstico) esto quedaba comprimido, con la etiqueta compitiendo por espacio con el valor en la misma fila. Se agregó un layout en grid **scoped a `.evolution-table`** (no toca las demás tablas): Fecha y los botones editar/borrar comparten la fila de arriba (mismo ancho que el resto de la card); Profesional, Diagnóstico y Resumen se apilan a ancho completo, cada uno con su etiqueta en su propia línea arriba del valor. Probado en vivo (Playwright) a 390/414/430px sin overflow horizontal nuevo ni regresión visible en desktop. El toolbar ("Por fecha | Por diagnóstico | Filtro | Ver diagnósticos") pasó de `flex-wrap: nowrap` a `wrap` — "Por diagnóstico"/"Ver diagnósticos" son más largos que el "grupo" original y ya no entran siempre en una sola fila a los anchos más chicos probados; se prefiere que envuelva a una segunda fila antes que desbordar horizontalmente.
+
+**Gap preexistente encontrado, no corregido en esta ronda** (fuera del alcance pedido, que era específicamente Evoluciones): `.patient-detail-page` tiene un overflow horizontal de ~30-45px a 390/414/430px que **no es específico de Evoluciones** — se reproduce igual en la tab "Ficha inicial", que esta ronda no tocó. Afecta al contenedor de toda la página de detalle de paciente (header, cards de resumen), no a las cards de evolución en sí. Necesita su propia investigación (probablemente un hijo de un grid/flex sin `min-width: 0`) y toca componentes compartidos por todas las tabs clínicas (`PatientProfileHeader.tsx`, `PatientSummaryCards.tsx`), por lo que corregirlo ahí hubiera excedido el pedido explícito de "sin rediseñar módulos completos, solo Evoluciones".
+
 ---
 
 ## Diagnóstico, motivo de consulta y problemas
 
-Todavía no está definido cómo se representarán diagnóstico, motivo de consulta o problemas clínicos.
+**Actualización (implementado) — "Diagnóstico" simple por paciente**: se optó por la opción 3 (entidad propia), pero deliberadamente liviana — ver "`GrupoEvolucion` ahora se presenta como Diagnóstico" más abajo, dentro de la sección de Grupos de evolución. Sigue sin implementarse: diagnóstico codificado (CIE/SNOMED), diagnóstico automático, múltiples diagnósticos por evolución o reglas clínicas — eso queda fuera de alcance sin una definición previa explícita, igual que antes.
 
-Opciones posibles:
-
-1. Incluirlos dentro de la ficha inicial.
-2. Crear campos específicos dentro de historia clínica.
-3. Crear una entidad de problemas o diagnósticos.
-4. Asociarlos a tratamientos.
-
-Para mantener simple el MVP, conviene empezar con campos dentro de ficha inicial o historia clínica básica.
-
-No crear una estructura compleja de diagnósticos/problemas sin validarlo antes.
+El motivo de consulta (`FichaInicial.motivoConsulta`) y el diagnóstico de derivación (`FichaInicial.diagnosticoDerivacion`) ya existen como campos de texto libre dentro de la ficha inicial — sin cambios en esta ronda.
 
 ---
 

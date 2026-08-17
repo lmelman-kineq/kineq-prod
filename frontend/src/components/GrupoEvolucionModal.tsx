@@ -20,10 +20,12 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
-// Agrupación puramente visual/organizativa de evoluciones (ej. "Lumbalgia") —
-// nunca un Tratamiento o diagnóstico formal. Eliminar se delega íntegramente
-// a `onDelete` (misma función que usa GestionarGruposModal) para que ambos
-// puntos de entrada compartan exactamente la misma confirmación y lógica.
+// UI: "Diagnóstico". Internamente sigue siendo GrupoEvolucion — una
+// organización libre y simple de evoluciones (ej. "Lumbalgia") creada por el
+// profesional, nunca CIE/SNOMED, tratamiento ni diagnóstico codificado.
+// Eliminar se delega íntegramente a `onDelete` (misma función que usa
+// GestionarGruposModal) para que ambos puntos de entrada compartan
+// exactamente la misma confirmación y lógica.
 export default function GrupoEvolucionModal({ pacienteId, grupo, onClose, onSaved, onDelete, onRequestConfirm }: GrupoEvolucionModalProps) {
   const isCreate = !grupo
   const [initial] = useState(() => ({ nombre: grupo?.nombre ?? '', color: grupo?.color ?? SPECIALTY_COLOR_TOKENS[0] }))
@@ -61,7 +63,7 @@ export default function GrupoEvolucionModal({ pacienteId, grupo, onClose, onSave
         <div className="modal-header">
           <div className="modal-header-title">
             <div>
-              <h3>{isCreate ? 'Nuevo grupo' : 'Editar grupo'}</h3>
+              <h3>{isCreate ? 'Nuevo diagnóstico' : 'Editar diagnóstico'}</h3>
             </div>
           </div>
           <button type="button" className="close-button" aria-label="Cerrar" onClick={requestClose}>&times;</button>
@@ -95,14 +97,14 @@ export default function GrupoEvolucionModal({ pacienteId, grupo, onClose, onSave
 
         <div className="modal-actions">
           {!isCreate && onDelete ? (
-            <button type="button" className="modal-delete-button" onClick={() => onDelete(grupo)} disabled={saving} title="Eliminar grupo">
+            <button type="button" className="modal-delete-button" onClick={() => onDelete(grupo)} disabled={saving} title="Eliminar diagnóstico">
               <TrashIcon />
-              Eliminar grupo
+              Eliminar diagnóstico
             </button>
           ) : null}
           <button type="button" className="secondary-button" onClick={requestClose} disabled={saving}>Cancelar</button>
           <button type="button" className="primary-button" onClick={() => { void submit() }} disabled={saving}>
-            {saving ? 'Guardando...' : isCreate ? 'Crear grupo' : 'Guardar cambios'}
+            {saving ? 'Guardando...' : isCreate ? 'Crear diagnóstico' : 'Guardar cambios'}
           </button>
         </div>
       </div>

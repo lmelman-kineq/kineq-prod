@@ -1257,6 +1257,27 @@ body,
   filter: brightness(0.98);
 }
 
+/* Alta rápida de paciente desde Crear Turno: 4 campos, no entran en la fila
+   única que usa el resto de .dropdown-footer-edit (pensada para 1 input). */
+.dropdown-footer-edit--patient {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.dropdown-footer-edit--patient input {
+  width: 100%;
+}
+
+.dropdown-footer-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dropdown-footer-edit-actions .add-button,
+.dropdown-footer-edit-actions .cancel-button {
+  flex: 1 1 0;
+}
+
 .dropdown-input-row {
   display: flex;
   align-items: center;
@@ -4801,6 +4822,52 @@ select:disabled {
     white-space: normal;
   }
 
+  /* Card de Evolución en mobile: grid en vez del flex "etiqueta: valor" que
+     usa el resto de .turnos-table — acá hay contenido largo (Resumen) y un
+     chip (Diagnóstico) que no entran bien en una fila angosta compitiendo
+     con su etiqueta. Fecha y acciones comparten la fila de arriba (mismo
+     ancho que el resto de la card); Profesional, Diagnóstico y Resumen se
+     apilan a ancho completo, cada uno con su etiqueta en su propia línea. */
+  .evolution-table .evolution-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 12px;
+    row-gap: 8px;
+    align-items: start;
+  }
+
+  .evolution-table .evolution-row td {
+    display: block;
+    padding: 0;
+    border-bottom: none;
+    text-align: left;
+  }
+
+  .evolution-table .evolution-row td[data-label]::before {
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .evolution-table .evolution-row td:first-child {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 0;
+    margin-bottom: 0;
+    border-bottom: none;
+  }
+
+  .evolution-table .evolution-row td:nth-child(2),
+  .evolution-table .evolution-row td:nth-child(3),
+  .evolution-table .evolution-row td.evolution-resumen-cell {
+    grid-column: 1 / -1;
+  }
+
+  .evolution-table .evolution-row td.turnos-actions-cell {
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-end;
+  }
+
   .evolution-table .evolution-resumen-cell {
     max-width: none;
     overflow: visible;
@@ -4812,6 +4879,11 @@ select:disabled {
   .evolution-table .evolution-resumen-cell span {
     min-width: 0;
     flex: 1 1 auto;
+  }
+
+  /* Nombre de diagnóstico largo: nunca fuerza scroll horizontal de la card. */
+  .evolution-table .grupo-evolucion-chip {
+    white-space: normal;
   }
 
   .evolution-table .evolution-row:has(+ .evolution-expanded-row) {
@@ -4874,21 +4946,25 @@ select:disabled {
     flex-wrap: wrap;
   }
 
-  /* Ver por fecha/grupo + Filtro + Ver grupos en una sola fila en mobile:
-     copy compacto (.label-compact, ver arriba), Filtro icon-only, y menos
-     padding/gap para que las 4 piezas entren sin scroll horizontal. */
+  /* Ver por fecha/diagnóstico + Filtro + Ver diagnósticos: copy compacto
+     (.label-compact, ver arriba), Filtro icon-only, y menos padding/gap para
+     que entren en una sola fila a los anchos probados (390/414/430px). "Por
+     diagnóstico"/"Ver diagnósticos" son más largos que el "grupo" original;
+     se permite wrap como salvavidas en vez de forzar una fila y desbordar. */
   .evolutions-toolbar {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
   .evolutions-toolbar-actions {
     gap: 6px;
+    flex-wrap: wrap;
   }
 
   .evolutions-toolbar .antecedentes-categoria-button {
     padding: 8px 10px;
-    font-size: 12px;
+    font-size: 11px;
+    white-space: nowrap;
   }
 
   .evolutions-toolbar-actions .filter-button {
@@ -4897,7 +4973,7 @@ select:disabled {
 
   .evolutions-toolbar-actions .secondary-button {
     padding: 8px 10px;
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 

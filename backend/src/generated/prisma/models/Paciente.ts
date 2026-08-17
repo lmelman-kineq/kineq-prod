@@ -339,6 +339,7 @@ export type PacienteOrderByWithRelationInput = {
 
 export type PacienteWhereUniqueInput = Prisma.AtLeast<{
   id?: number
+  consultorioId_documento?: Prisma.PacienteConsultorioIdDocumentoCompoundUniqueInput
   AND?: Prisma.PacienteWhereInput | Prisma.PacienteWhereInput[]
   OR?: Prisma.PacienteWhereInput[]
   NOT?: Prisma.PacienteWhereInput | Prisma.PacienteWhereInput[]
@@ -362,7 +363,7 @@ export type PacienteWhereUniqueInput = Prisma.AtLeast<{
   evoluciones?: Prisma.EvolucionListRelationFilter
   fichaInicial?: Prisma.XOR<Prisma.FichaInicialNullableScalarRelationFilter, Prisma.FichaInicialWhereInput> | null
   gruposEvolucion?: Prisma.GrupoEvolucionListRelationFilter
-}, "id">
+}, "id" | "consultorioId_documento">
 
 export type PacienteOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -559,6 +560,11 @@ export type PacienteOrderByRelevanceInput = {
   fields: Prisma.PacienteOrderByRelevanceFieldEnum | Prisma.PacienteOrderByRelevanceFieldEnum[]
   sort: Prisma.SortOrder
   search: string
+}
+
+export type PacienteConsultorioIdDocumentoCompoundUniqueInput = {
+  consultorioId: number
+  documento: string
 }
 
 export type PacienteCountOrderByAggregateInput = {

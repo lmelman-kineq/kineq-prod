@@ -71,10 +71,6 @@ export default function PatientFormModal({ patient, canEditObservaciones, onClos
       setError('Nombre y apellido son obligatorios.')
       return
     }
-    if (isCreate && (!form.documento.trim() || !form.fechaNacimiento || !form.telefono.trim())) {
-      setError('Documento, fecha de nacimiento y teléfono son obligatorios para dar de alta un paciente.')
-      return
-    }
 
     setSaving(true)
     setError(null)

@@ -176,6 +176,15 @@ Restricciones iniciales:
 - No debería crear o modificar obras sociales y especialidades, salvo que se le otorgue permiso adicional.
 - No debería acceder a información de otros consultorios.
 
+**Actualización (implementado) — creación automática de Profesional al crear/editar Usuario `PROFESIONAL`**: antes, un `Usuario` con rol `PROFESIONAL` sin un `Profesional` vinculado manualmente no podía recibir turnos ni cargar evoluciones hasta que un administrador completara ese vínculo en un segundo paso. Ahora:
+
+- `POST /api/usuarios` (`backend/src/app.ts`): si el rol es `PROFESIONAL` y no se envía `profesionalId`, se crea automáticamente un `Profesional` en el mismo consultorio (copiando `nombre`/`apellido`/`email` del Usuario) y se vincula, todo en una única operación de Prisma (nested write, atómica — si falla cualquier parte, no queda ni Usuario ni Profesional huérfano). Si se envía `profesionalId` explícito, se usa ese vínculo y no se crea uno nuevo.
+- `PATCH /api/usuarios/:id`: la creación automática solo dispara ante la **transición real** de rol hacia `PROFESIONAL` (de otro rol a `PROFESIONAL` en el mismo PATCH) cuando el resultado quedaría sin `profesionalId`. Un PATCH que no toca `rol` en un usuario que ya era `PROFESIONAL` nunca crea uno nuevo, aunque su `profesionalId` sea `null` — eso preserva la desvinculación manual explícita (ver más abajo) en vez de revertirla sola.
+- Cambio de rol **desde** `PROFESIONAL` hacia otro rol nunca borra ni desvincula el `Profesional` — puede tener historial de turnos/evoluciones. El vínculo se conserva (`Usuario.profesionalId` sigue apuntando al mismo `Profesional`) salvo que un administrador lo desvincule explícitamente con `profesionalId: null` (acción manual ya existente, con su propia protección — ver "desvincular Usuario-Profesional" en `backend/src/app.test.ts`).
+- `Usuario` y `Profesional` siguen siendo entidades distintas: puede existir un `Profesional` sin `Usuario` (sin acceso al sistema) y un `Usuario` administrativo sin `Profesional` (sin autoría clínica).
+
+**Actualización (implementado) — vínculo también desde el alta de Profesional**: `ProfesionalFormModal.tsx` muestra el campo "Usuario vinculado" tanto en edición como en la creación (antes solo en edición). `POST /api/profesionales` acepta `usuarioId` opcional; valida que el usuario sea del mismo consultorio, esté activo y no tenga ya otro `Profesional` vinculado (`409` si no), y crea+vincula en una transacción. `usuariosDisponibles` (`ConfiguracionProfesionales.tsx`) ya filtraba a usuarios activos del consultorio sin vínculo previo — se reutiliza sin cambios para el alta.
+
 ---
 
 ## Recepción

@@ -3,170 +3,290 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-require("dotenv/config");
 const prisma_1 = __importDefault(require("./prisma"));
-const auth_1 = require("./auth");
-const seedCatalogoClinico_1 = require("./seedCatalogoClinico");
-const seedCatalogosGlobales_1 = require("./seedCatalogosGlobales");
+const client_1 = require("./generated/prisma/client");
+const ESPECIALIDADES_BASE = [
+    { nombre: 'Kinesiología general', color: '#602DE6' },
+    { nombre: 'Rehabilitación deportiva', color: '#0F8A7B' },
+    { nombre: 'Terapia manual', color: '#D97706' },
+    { nombre: 'Osteopatía', color: '#7D52E8' },
+    { nombre: 'Reeducación postural', color: '#0284C7' },
+];
+const OBRAS_SOCIALES_BASE = [
+    { nombre: 'OSDE' },
+    { nombre: 'Swiss Medical' },
+    { nombre: 'Galeno' },
+    { nombre: 'Medifé' },
+    { nombre: 'Sancor Salud' },
+];
+const personales = [
+    ['hiv-sida', 'HIV/SIDA'],
+    ['tabaquismo', 'Tabaquismo'],
+    ['ex-tabaquismo', 'Ex tabaquismo'],
+    ['alcohol', 'Consumo de alcohol'],
+    ['sedentarismo', 'Sedentarismo'],
+    ['hta', 'HTA'],
+    ['uso-antihipertensivos', 'Uso de antihipertensivos'],
+    ['dislipidemia', 'Dislipidemia'],
+    ['iam', 'IAM'],
+    ['enfermedad-coronaria-sin-iam', 'Enfermedad coronaria (sin IAM)'],
+    ['arritmia', 'Arritmia'],
+    ['aneurisma-aorta-abdominal', 'Aneurisma de aorta abdominal'],
+    ['enfermedad-vascular-periferica', 'Enfermedad vascular periférica'],
+    ['insuficiencia-cardiaca', 'Insuficiencia cardíaca'],
+    ['acv-isquemico', 'ACV isquémico'],
+    ['acv-hemorragico', 'ACV hemorrágico'],
+    ['depresion', 'Depresión'],
+    ['demencia', 'Demencia'],
+    ['institucionalizacion', 'Institucionalización'],
+    ['parkinson', 'Parkinson'],
+    ['irc', 'IRC'],
+    ['cirrosis', 'Cirrosis'],
+    ['hda', 'HDA'],
+    ['hdb', 'HDB'],
+    ['diabetes', 'Diabetes'],
+    ['enfermedad-tiroidea', 'Enfermedad tiroidea'],
+    ['bocio', 'Bocio'],
+    ['epoc', 'EPOC'],
+    ['asma', 'Asma'],
+    ['tepa', 'TEPA'],
+    ['diatesis-hemorragica', 'Diátesis hemorrágica'],
+    ['prostatismo', 'Prostatismo'],
+    ['litiasis-renal', 'Litiasis renal'],
+    ['glaucoma', 'Glaucoma'],
+    ['trombosis-venosa-profunda', 'Trombosis venosa profunda'],
+    ['cancer-colon', 'Cáncer de colon'],
+    ['cancer-pulmon', 'Cáncer de pulmón'],
+    ['cancer-mama', 'Cáncer de mama'],
+    ['cancer-ovario', 'Cáncer de ovario'],
+    ['cancer-prostata', 'Cáncer de próstata'],
+    ['cancer-rinon', 'Cáncer de riñón'],
+    ['lupus-eritematoso-sistemico', 'Lupus eritematoso sistémico'],
+    ['artritis-reumatoidea', 'Artritis reumatoidea'],
+    ['vasculitis', 'Vasculitis'],
+    ['otras-enfermedades-autoinmunes', 'Otras enfermedades autoinmunes'],
+    ['tratamiento-cronico-corticoides', 'Tratamiento crónico con corticoides'],
+    ['otros-antecedentes-personales', 'Otros antecedentes personales'],
+];
+const familiares = [
+    ['asma', 'Asma'],
+    ['hta', 'HTA'],
+    ['diabetes', 'Diabetes'],
+    ['dislipidemia', 'Dislipidemia'],
+    ['iam', 'IAM'],
+    ['cardiopatia-isquemica', 'Cardiopatía isquémica'],
+    ['acv-isquemico', 'ACV isquémico'],
+    ['acv-hemorragico', 'ACV hemorrágico'],
+    ['cancer-colon', 'Cáncer de colon'],
+    ['cancer-pulmon', 'Cáncer de pulmón'],
+    ['cancer-mama', 'Cáncer de mama'],
+    ['cancer-ovario', 'Cáncer de ovario'],
+    ['cancer-prostata', 'Cáncer de próstata'],
+    ['cancer-rinon', 'Cáncer de riñón'],
+    ['enfermedades-autoinmunes', 'Enfermedades autoinmunes'],
+    ['enfermedad-tiroidea', 'Enfermedad tiroidea'],
+    ['otros-antecedentes-familiares', 'Otros antecedentes familiares'],
+];
+const quirurgicos = [
+    ['angioplastia-coronaria', 'Angioplastia coronaria'],
+    ['bypass-aortocoronario', 'Bypass aortocoronario'],
+    ['esplenectomia', 'Esplenectomía'],
+    ['colecistectomia-clasica', 'Colecistectomía clásica'],
+    ['colecistectomia-laparoscopica', 'Colecistectomía laparoscópica'],
+    ['apendicectomia', 'Apendicectomía'],
+    ['hernioplastia-inguinal', 'Hernioplastia inguinal'],
+    ['amigdalectomia', 'Amigdalectomía'],
+    ['hemorroidectomia', 'Hemorroidectomía'],
+    ['cesarea', 'Cesárea'],
+    ['histerectomia', 'Histerectomía'],
+    ['trasplante', 'Trasplante'],
+    ['otros-procedimientos', 'Otros procedimientos'],
+];
+const alergias = [
+    ['penicilina', 'Penicilina'],
+    ['iodo', 'Iodo'],
+    ['dipirona', 'Dipirona'],
+    ['aspirina', 'Aspirina'],
+    ['aines', 'AINEs'],
+    ['latex', 'Látex'],
+    ['contraste-iodado', 'Contraste iodado'],
+    ['otras-alergias', 'Otras alergias'],
+];
+function catalogo(categoria, rows) {
+    return rows.map(([codigo, nombre], index) => ({
+        categoria,
+        codigo,
+        nombre,
+        orden: (index + 1) * 10,
+    }));
+}
+const CATALOGO_CLINICO_BASE = [
+    ...catalogo(client_1.CategoriaCatalogoClinico.ANTECEDENTE_PERSONAL, personales),
+    ...catalogo(client_1.CategoriaCatalogoClinico.ANTECEDENTE_FAMILIAR, familiares),
+    ...catalogo(client_1.CategoriaCatalogoClinico.PROCEDIMIENTO_QUIRURGICO, quirurgicos),
+    ...catalogo(client_1.CategoriaCatalogoClinico.ALERGIA, alergias),
+];
+async function seedEspecialidades() {
+    console.log('→ Especialidades globales');
+    for (const item of ESPECIALIDADES_BASE) {
+        // MySQL permite múltiples NULL en un UNIQUE compuesto, por eso no
+        // dependemos de @@unique([consultorioId, nombre]) para filas globales.
+        const existente = await prisma_1.default.especialidad.findFirst({
+            where: {
+                consultorioId: null,
+                esSistema: true,
+                nombre: item.nombre,
+            },
+        });
+        if (existente) {
+            await prisma_1.default.especialidad.update({
+                where: { id: existente.id },
+                data: { color: item.color, activo: true, esSistema: true },
+            });
+        }
+        else {
+            await prisma_1.default.especialidad.create({
+                data: {
+                    consultorioId: null,
+                    esSistema: true,
+                    nombre: item.nombre,
+                    color: item.color,
+                    activo: true,
+                },
+            });
+        }
+    }
+    console.log(`  ✓ ${ESPECIALIDADES_BASE.length}`);
+}
+async function seedObrasSociales() {
+    console.log('→ Obras sociales globales');
+    for (const item of OBRAS_SOCIALES_BASE) {
+        const existente = await prisma_1.default.obraSocial.findFirst({
+            where: {
+                consultorioId: null,
+                esSistema: true,
+                nombre: item.nombre,
+            },
+        });
+        if (existente) {
+            await prisma_1.default.obraSocial.update({
+                where: { id: existente.id },
+                data: { activo: true, esSistema: true },
+            });
+        }
+        else {
+            await prisma_1.default.obraSocial.create({
+                data: {
+                    consultorioId: null,
+                    esSistema: true,
+                    nombre: item.nombre,
+                    activo: true,
+                },
+            });
+        }
+    }
+    console.log(`  ✓ ${OBRAS_SOCIALES_BASE.length}`);
+}
+async function seedCatalogoClinico() {
+    console.log('→ Catálogo clínico global');
+    for (const item of CATALOGO_CLINICO_BASE) {
+        // El mismo cuidado aplica a @@unique([consultorioId, categoria, codigo])
+        // porque consultorioId es NULL para los ítems del sistema.
+        const existente = await prisma_1.default.catalogoClinicoItem.findFirst({
+            where: {
+                consultorioId: null,
+                esSistema: true,
+                categoria: item.categoria,
+                codigo: item.codigo,
+            },
+        });
+        if (existente) {
+            await prisma_1.default.catalogoClinicoItem.update({
+                where: { id: existente.id },
+                data: {
+                    nombre: item.nombre,
+                    descripcion: item.descripcion ?? null,
+                    activo: true,
+                    esSistema: true,
+                    orden: item.orden,
+                },
+            });
+        }
+        else {
+            await prisma_1.default.catalogoClinicoItem.create({
+                data: {
+                    categoria: item.categoria,
+                    codigo: item.codigo,
+                    nombre: item.nombre,
+                    descripcion: item.descripcion ?? null,
+                    esSistema: true,
+                    consultorioId: null,
+                    activo: true,
+                    orden: item.orden,
+                },
+            });
+        }
+    }
+    console.log(`  ✓ ${CATALOGO_CLINICO_BASE.length}`);
+}
+async function printSummary() {
+    const [especialidades, obrasSociales, personalesCount, familiaresCount, quirurgicosCount, alergiasCount] = await Promise.all([
+        prisma_1.default.especialidad.count({ where: { consultorioId: null, esSistema: true, activo: true } }),
+        prisma_1.default.obraSocial.count({ where: { consultorioId: null, esSistema: true, activo: true } }),
+        prisma_1.default.catalogoClinicoItem.count({
+            where: {
+                consultorioId: null,
+                esSistema: true,
+                activo: true,
+                categoria: client_1.CategoriaCatalogoClinico.ANTECEDENTE_PERSONAL,
+            },
+        }),
+        prisma_1.default.catalogoClinicoItem.count({
+            where: {
+                consultorioId: null,
+                esSistema: true,
+                activo: true,
+                categoria: client_1.CategoriaCatalogoClinico.ANTECEDENTE_FAMILIAR,
+            },
+        }),
+        prisma_1.default.catalogoClinicoItem.count({
+            where: {
+                consultorioId: null,
+                esSistema: true,
+                activo: true,
+                categoria: client_1.CategoriaCatalogoClinico.PROCEDIMIENTO_QUIRURGICO,
+            },
+        }),
+        prisma_1.default.catalogoClinicoItem.count({
+            where: {
+                consultorioId: null,
+                esSistema: true,
+                activo: true,
+                categoria: client_1.CategoriaCatalogoClinico.ALERGIA,
+            },
+        }),
+    ]);
+    console.log('\nSeed base de Kineq completado.');
+    console.log('--------------------------------');
+    console.log(`Especialidades globales:    ${especialidades}`);
+    console.log(`Obras sociales globales:    ${obrasSociales}`);
+    console.log(`Antecedentes personales:    ${personalesCount}`);
+    console.log(`Antecedentes familiares:    ${familiaresCount}`);
+    console.log(`Procedimientos quirúrgicos: ${quirurgicosCount}`);
+    console.log(`Alergias globales:          ${alergiasCount}`);
+}
 async function main() {
-    await (0, seedCatalogosGlobales_1.seedCatalogosGlobales)();
-    const consultorio = await prisma_1.default.consultorio.upsert({
-        where: { slug: 'kineq-demo' },
-        update: { nombre: 'Consultorio Kineq Demo' },
-        create: {
-            nombre: 'Consultorio Kineq Demo',
-            slug: 'kineq-demo',
-            zonaHoraria: 'America/Argentina/Buenos_Aires',
-        },
-    });
-    const consultorioId = consultorio.id;
-    const especialidadesData = [
-        { nombre: 'Kinesiología general', color: 'var(--appointment-purple)' },
-        { nombre: 'Rehabilitación lumbar', color: 'var(--appointment-teal)' },
-        { nombre: 'Terapia avanzada', color: 'var(--appointment-red)' },
-    ];
-    const obrasData = ['OSDE', 'Medife', 'Swiss', 'Galeno'];
-    const pacientesData = ['María|López', 'Juan|Pérez', 'Verena|Pardo', 'Ana|Gómez', 'Sofía|Díaz'];
-    const profesionalesData = [
-        { nombre: 'Gómez', apellido: 'Perez', titulo: 'Dr.' },
-        { nombre: 'Ruiz', apellido: 'Lopez', titulo: 'Dra.' },
-        { nombre: 'Castro', apellido: 'Sanchez', titulo: 'Dr.' },
-        { nombre: 'Fernández', apellido: 'Diaz', titulo: 'Dra.' },
-    ];
-    const createdEspecialidades = [];
-    for (const e of especialidadesData) {
-        const espec = await prisma_1.default.especialidad.upsert({
-            where: { consultorioId_nombre: { consultorioId, nombre: e.nombre } },
-            create: { consultorioId, nombre: e.nombre, color: e.color },
-            update: { color: e.color },
-        });
-        createdEspecialidades.push(espec);
-    }
-    const createdObras = [];
-    for (const name of obrasData) {
-        const obra = await prisma_1.default.obraSocial.upsert({
-            where: { consultorioId_nombre: { consultorioId, nombre: name } },
-            create: { consultorioId, nombre: name },
-            update: { nombre: name },
-        });
-        createdObras.push(obra);
-    }
-    const createdPacientes = [];
-    for (const p of pacientesData) {
-        const [nombre, apellido] = p.split('|');
-        const documento = `${nombre}-${apellido}`;
-        const existing = await prisma_1.default.paciente.findFirst({ where: { consultorioId, documento } });
-        let paciente;
-        if (existing) {
-            paciente = await prisma_1.default.paciente.update({ where: { id: existing.id }, data: { nombre, apellido, documento } });
-        }
-        else {
-            paciente = await prisma_1.default.paciente.create({ data: { consultorioId, nombre, apellido, documento } });
-        }
-        createdPacientes.push(paciente);
-    }
-    const createdProfesionales = [];
-    for (const prof of profesionalesData) {
-        const matricula = `${prof.titulo}-${prof.nombre}`;
-        const existingProf = await prisma_1.default.profesional.findFirst({ where: { consultorioId, matricula } });
-        let profesional;
-        if (existingProf) {
-            profesional = await prisma_1.default.profesional.update({ where: { id: existingProf.id }, data: { nombre: prof.nombre, apellido: prof.apellido, titulo: prof.titulo, matricula } });
-        }
-        else {
-            profesional = await prisma_1.default.profesional.create({ data: { consultorioId, nombre: prof.nombre, apellido: prof.apellido, titulo: prof.titulo, matricula } });
-        }
-        createdProfesionales.push(profesional);
-    }
-    // Asociar profesional-especialidad (simple round-robin)
-    for (let i = 0; i < createdProfesionales.length; i++) {
-        const profesionalId = createdProfesionales[i].id;
-        const especialidadId = createdEspecialidades[i % createdEspecialidades.length].id;
-        await prisma_1.default.profesionalEspecialidad.upsert({
-            where: { profesionalId_especialidadId: { profesionalId, especialidadId } },
-            create: { consultorioId, profesionalId, especialidadId },
-            update: {},
-        });
-    }
-    // Crear tres turnos de demostración (hoy)
-    const clinicTimeZone = 'America/Argentina/Buenos_Aires';
-    const dateParts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: clinicTimeZone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    }).formatToParts(new Date());
-    const part = (type) => dateParts.find((item) => item.type === type)?.value ?? '';
-    const yyyy = Number(part('year'));
-    const mm = part('month');
-    const dd = part('day');
-    const times = ['09:00', '11:30', '19:00'];
-    const durations = [60, 60, 120];
-    for (let i = 0; i < times.length; i++) {
-        // Los horarios demo están expresados en la zona del consultorio
-        // (America/Argentina/Buenos_Aires, UTC-03:00). Convertimos ese horario
-        // local a un instante UTC antes de enviarlo a Prisma.
-        const inicio = new Date(`${yyyy}-${mm}-${dd}T${times[i]}:00-03:00`);
-        const paciente = createdPacientes[i % createdPacientes.length];
-        const profesional = createdProfesionales[i % createdProfesionales.length];
-        const especialidad = createdEspecialidades[i % createdEspecialidades.length];
-        const obra = createdObras[i % createdObras.length];
-        await prisma_1.default.turno.upsert({
-            where: { id: i + 1 },
-            create: {
-                consultorioId,
-                pacienteId: paciente.id,
-                profesionalId: profesional.id,
-                especialidadId: especialidad.id,
-                obraSocialId: obra.id,
-                inicio,
-                duracionMinutos: durations[i],
-                numeroSesion: i + 1,
-                notas: `Turno demo ${i + 1}`,
-            },
-            update: {
-                pacienteId: paciente.id,
-                profesionalId: profesional.id,
-                especialidadId: especialidad.id,
-                obraSocialId: obra.id,
-                inicio,
-                duracionMinutos: durations[i],
-                numeroSesion: i + 1,
-                notas: `Turno demo ${i + 1}`,
-            },
-        });
-    }
-    await (0, seedCatalogoClinico_1.seedCatalogoClinico)();
-    // Usuario administrador de desarrollo, opcional: solo se crea si se
-    // configuran SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD (ver backend/.env).
-    // No se convierte automáticamente ningún profesional existente en usuario.
-    const adminEmail = process.env.SEED_ADMIN_EMAIL;
-    const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-    if (adminEmail && adminPassword) {
-        const passwordHash = await (0, auth_1.hashPassword)(adminPassword);
-        await prisma_1.default.usuario.upsert({
-            where: { email: (0, auth_1.normalizeEmail)(adminEmail) },
-            update: { passwordHash, activo: true },
-            create: {
-                consultorioId,
-                nombre: 'Admin',
-                apellido: 'Desarrollo',
-                email: (0, auth_1.normalizeEmail)(adminEmail),
-                passwordHash,
-                rol: 'ADMINISTRADOR',
-            },
-        });
-        console.log(`Usuario administrador de desarrollo listo: ${(0, auth_1.normalizeEmail)(adminEmail)}`);
-    }
-    else {
-        console.log('SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD no configurados: no se creó usuario administrador de desarrollo');
-    }
-    console.log('Seed completed');
+    console.log('Inicializando datos base de Kineq...\n');
+    await seedEspecialidades();
+    await seedObrasSociales();
+    await seedCatalogoClinico();
+    await printSummary();
 }
 main()
-    .catch((e) => {
-    console.error(e);
-    process.exit(1);
+    .catch((error) => {
+    console.error('\nError al inicializar la base de Kineq:');
+    console.error(error);
+    process.exitCode = 1;
 })
     .finally(async () => {
     await prisma_1.default.$disconnect();

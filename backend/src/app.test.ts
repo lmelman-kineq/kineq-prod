@@ -1488,6 +1488,226 @@ describe('auth, roles y aislamiento por consultorio', () => {
     })
   })
 
+  describe('creación automática de Profesional al crear/editar Usuario PROFESIONAL', () => {
+    it('crear un Usuario PROFESIONAL sin profesionalId crea y vincula un Profesional con el mismo nombre/apellido', async () => {
+      const res = await request(app)
+        .post('/api/usuarios')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Auto', apellido: `Creado${RUN_ID}`, email: `auto-creado-${RUN_ID}@test.local`, password: PASSWORD, rol: 'PROFESIONAL' })
+      expect(res.status).toBe(201)
+      expect(res.body.profesionalId).not.toBeNull()
+
+      const profesional = await prisma.profesional.findUniqueOrThrow({ where: { id: res.body.profesionalId } })
+      expect(profesional.nombre).toBe('Auto')
+      expect(profesional.apellido).toBe(`Creado${RUN_ID}`)
+      expect(profesional.consultorioId).toBe(consultorioAId)
+
+      await prisma.usuario.delete({ where: { id: res.body.id } })
+      await prisma.profesional.delete({ where: { id: profesional.id } })
+    })
+
+    it('crear un Usuario de otro rol no crea Profesional', async () => {
+      const res = await request(app)
+        .post('/api/usuarios')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Sin', apellido: `Auto${RUN_ID}`, email: `sin-auto-${RUN_ID}@test.local`, password: PASSWORD, rol: 'RECEPCION' })
+      expect(res.status).toBe(201)
+      expect(res.body.profesionalId).toBeNull()
+
+      await prisma.usuario.delete({ where: { id: res.body.id } })
+    })
+
+    it('crear un Usuario PROFESIONAL con profesionalId explícito no crea uno nuevo (no duplica)', async () => {
+      const profesional = await prisma.profesional.create({ data: { consultorioId: consultorioAId, nombre: 'Ya', apellido: `Existe${RUN_ID}` } })
+      const res = await request(app)
+        .post('/api/usuarios')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Con', apellido: `Vinculo${RUN_ID}`, email: `con-vinculo-${RUN_ID}@test.local`, password: PASSWORD, rol: 'PROFESIONAL', profesionalId: profesional.id })
+      expect(res.status).toBe(201)
+      expect(res.body.profesionalId).toBe(profesional.id)
+
+      const totalConEseNombre = await prisma.profesional.count({ where: { consultorioId: consultorioAId, nombre: 'Con' } })
+      expect(totalConEseNombre).toBe(0)
+
+      await prisma.usuario.delete({ where: { id: res.body.id } })
+      await prisma.profesional.delete({ where: { id: profesional.id } })
+    })
+
+    it('cambiar el rol de un Usuario existente a PROFESIONAL crea un Profesional si no tenía', async () => {
+      const usuario = await prisma.usuario.create({
+        data: { consultorioId: consultorioAId, nombre: 'Cambia', apellido: `Rol${RUN_ID}`, email: `cambia-rol-${RUN_ID}@test.local`, passwordHash: await hashPassword(PASSWORD), rol: RolUsuario.RECEPCION },
+      })
+      const res = await request(app)
+        .patch(`/api/usuarios/${usuario.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ rol: 'PROFESIONAL' })
+      expect(res.status).toBe(200)
+      expect(res.body.profesionalId).not.toBeNull()
+
+      const profesional = await prisma.profesional.findUniqueOrThrow({ where: { id: res.body.profesionalId } })
+      expect(profesional.nombre).toBe('Cambia')
+
+      await prisma.usuario.delete({ where: { id: usuario.id } })
+      await prisma.profesional.delete({ where: { id: profesional.id } })
+    })
+
+    it('cambiar el rol de PROFESIONAL a otro rol no borra ni desvincula el Profesional', async () => {
+      const profesional = await prisma.profesional.create({ data: { consultorioId: consultorioAId, nombre: 'Se', apellido: `Queda${RUN_ID}` } })
+      const usuario = await prisma.usuario.create({
+        data: { consultorioId: consultorioAId, nombre: 'De', apellido: `Vuelta${RUN_ID}`, email: `de-vuelta-${RUN_ID}@test.local`, passwordHash: await hashPassword(PASSWORD), rol: RolUsuario.PROFESIONAL, profesionalId: profesional.id },
+      })
+      const res = await request(app)
+        .patch(`/api/usuarios/${usuario.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ rol: 'RECEPCION' })
+      expect(res.status).toBe(200)
+
+      const refetched = await prisma.usuario.findUniqueOrThrow({ where: { id: usuario.id } })
+      expect(refetched.profesionalId).toBe(profesional.id)
+      const profesionalSigueExistiendo = await prisma.profesional.findUnique({ where: { id: profesional.id } })
+      expect(profesionalSigueExistiendo).not.toBeNull()
+
+      await prisma.usuario.delete({ where: { id: usuario.id } })
+      await prisma.profesional.delete({ where: { id: profesional.id } })
+    })
+
+    it('un email duplicado hace rollback: no queda un Profesional huérfano', async () => {
+      const antesCount = await prisma.profesional.count({ where: { consultorioId: consultorioAId } })
+      const res = await request(app)
+        .post('/api/usuarios')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Falla', apellido: `Rollback${RUN_ID}`, email: emails.adminA, password: PASSWORD, rol: 'PROFESIONAL' })
+      expect(res.status).toBe(409)
+
+      const despuesCount = await prisma.profesional.count({ where: { consultorioId: consultorioAId } })
+      expect(despuesCount).toBe(antesCount)
+    })
+  })
+
+  describe('Crear Profesional: vincular Usuario también en el alta', () => {
+    it('crea el profesional y lo vincula al usuario elegido, en la misma operación', async () => {
+      const usuario = await prisma.usuario.create({
+        data: { consultorioId: consultorioAId, nombre: 'Para', apellido: `Vincular${RUN_ID}`, email: `para-vincular-${RUN_ID}@test.local`, passwordHash: await hashPassword(PASSWORD), rol: RolUsuario.RECEPCION },
+      })
+      const res = await request(app)
+        .post('/api/profesionales')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Nuevo', apellido: `ConUsuario${RUN_ID}`, usuarioId: usuario.id })
+      expect(res.status).toBe(201)
+      expect(res.body.usuario?.id).toBe(usuario.id)
+
+      const refetched = await prisma.usuario.findUniqueOrThrow({ where: { id: usuario.id } })
+      expect(refetched.profesionalId).toBe(res.body.id)
+
+      await prisma.usuario.delete({ where: { id: usuario.id } })
+      await prisma.profesional.delete({ where: { id: res.body.id } })
+    })
+
+    it('rechaza vincular un usuario de otro consultorio', async () => {
+      const usuarioB = await prisma.usuario.findUniqueOrThrow({ where: { email: emails.adminB } })
+      const res = await request(app)
+        .post('/api/profesionales')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Cross', apellido: `Consultorio${RUN_ID}`, usuarioId: usuarioB.id })
+      expect(res.status).toBe(404)
+    })
+
+    it('rechaza vincular un usuario ya vinculado a otro profesional (409), sin crear el nuevo profesional', async () => {
+      const yaVinculado = await prisma.usuario.findUniqueOrThrow({ where: { email: emails.profesionalA } })
+      const antesCount = await prisma.profesional.count({ where: { consultorioId: consultorioAId } })
+      const res = await request(app)
+        .post('/api/profesionales')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Doble', apellido: `Vinculo${RUN_ID}`, usuarioId: yaVinculado.id })
+      expect(res.status).toBe(409)
+
+      const despuesCount = await prisma.profesional.count({ where: { consultorioId: consultorioAId } })
+      expect(despuesCount).toBe(antesCount)
+    })
+
+    it('crear sin usuarioId sigue siendo válido', async () => {
+      const res = await request(app)
+        .post('/api/profesionales')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Suelto', apellido: `SinUsuario${RUN_ID}` })
+      expect(res.status).toBe(201)
+      expect(res.body.usuario).toBeNull()
+
+      await prisma.profesional.delete({ where: { id: res.body.id } })
+    })
+  })
+
+  describe('Pacientes: solo Nombre y Apellido son obligatorios', () => {
+    it('crea un paciente solo con nombre y apellido', async () => {
+      const res = await request(app)
+        .post('/api/pacientes')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Minimo', apellido: `Paciente${RUN_ID}` })
+      expect(res.status).toBe(201)
+      expect(res.body.documento).toBeNull()
+      expect(res.body.fechaNacimiento).toBeNull()
+      expect(res.body.telefono).toBeNull()
+
+      await prisma.paciente.delete({ where: { id: res.body.id } })
+    })
+
+    it('documento vacío ("") se normaliza a null, no se guarda como string vacío', async () => {
+      const res = await request(app)
+        .post('/api/pacientes')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Vacio', apellido: `Documento${RUN_ID}`, documento: '' })
+      expect(res.status).toBe(201)
+      expect(res.body.documento).toBeNull()
+
+      await prisma.paciente.delete({ where: { id: res.body.id } })
+    })
+
+    it('rechaza un documento duplicado dentro del mismo consultorio (409)', async () => {
+      const documento = `DUPLICADO-${RUN_ID}`
+      const primero = await request(app).post('/api/pacientes').set('Cookie', cookies.adminA).send({ nombre: 'Uno', apellido: 'Doc', documento })
+      expect(primero.status).toBe(201)
+
+      const segundo = await request(app).post('/api/pacientes').set('Cookie', cookies.adminA).send({ nombre: 'Dos', apellido: 'Doc', documento })
+      expect(segundo.status).toBe(409)
+
+      await prisma.paciente.delete({ where: { id: primero.body.id } })
+    })
+
+    it('el mismo documento puede repetirse en otro consultorio', async () => {
+      const documento = `MULTI-${RUN_ID}`
+      const enA = await request(app).post('/api/pacientes').set('Cookie', cookies.adminA).send({ nombre: 'EnA', apellido: 'Doc', documento })
+      expect(enA.status).toBe(201)
+      const enB = await request(app).post('/api/pacientes').set('Cookie', cookies.adminB).send({ nombre: 'EnB', apellido: 'Doc', documento })
+      expect(enB.status).toBe(201)
+
+      await prisma.paciente.deleteMany({ where: { id: { in: [enA.body.id, enB.body.id] } } })
+    })
+
+    it('editar un paciente no exige los campos opcionales', async () => {
+      const creado = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'Editar', apellido: 'Simple' } })
+      const res = await request(app)
+        .patch(`/api/pacientes/${creado.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Editado' })
+      expect(res.status).toBe(200)
+      expect(res.body.nombre).toBe('Editado')
+
+      await prisma.paciente.delete({ where: { id: creado.id } })
+    })
+
+    it('PATCH con documento="" lo normaliza a null', async () => {
+      const creado = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'Con', apellido: 'Documento', documento: `TEMP-${RUN_ID}` } })
+      const res = await request(app)
+        .patch(`/api/pacientes/${creado.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ documento: '' })
+      expect(res.status).toBe(200)
+      expect(res.body.documento).toBeNull()
+
+      await prisma.paciente.delete({ where: { id: creado.id } })
+    })
+  })
+
   describe('Configuración', () => {
     describe('permisos', () => {
       it('profesional, recepción y supervisor reciben 403 en GET /api/usuarios', async () => {
@@ -1942,6 +2162,56 @@ describe('catálogo global/custom, paciente archivado y profesional inactivo/eli
 
       const restoredList = await request(app).get('/api/especialidades').set('Cookie', cookies.admin)
       expect(restoredList.body.map((e: any) => e.id)).toContain(especialidadGlobalId)
+    })
+
+    // Bug real: una especialidad global (consultorioId: null) es visible y
+    // seleccionable en el frontend, pero la validación de asignación
+    // comparaba `especialidad.consultorioId === consultorioId` — eso excluye
+    // a todas las globales y devuelve "no pertenece al consultorio" para
+    // algo que el propio backend ofrece como válido. Ver
+    // especialidadesInvalidasParaConsultorio en app.ts.
+    it('una especialidad global puede asignarse a un profesional (antes fallaba con "no pertenece al consultorio")', async () => {
+      const res = await request(app)
+        .post('/api/profesionales')
+        .set('Cookie', cookies.admin)
+        .send({ nombre: 'Global', apellido: `Asignable${RUN_ID}`, especialidadIds: [especialidadGlobalId] })
+      expect(res.status).toBe(201)
+      expect(res.body.especialidades.map((pe: any) => pe.especialidadId)).toContain(especialidadGlobalId)
+
+      await prisma.profesionalEspecialidad.deleteMany({ where: { profesionalId: res.body.id } })
+      await prisma.profesional.delete({ where: { id: res.body.id } })
+    })
+
+    it('un turno puede crearse con una especialidad global', async () => {
+      const profesionalConGlobal = await prisma.profesional.create({ data: { consultorioId, nombre: 'Turno', apellido: `Global${RUN_ID}` } })
+      await prisma.profesionalEspecialidad.create({ data: { consultorioId, profesionalId: profesionalConGlobal.id, especialidadId: especialidadGlobalId } })
+
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.admin)
+        .send({
+          pacienteId,
+          profesionalId: profesionalConGlobal.id,
+          especialidadId: especialidadGlobalId,
+          inicio: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          duracionMinutos: 30,
+        })
+      expect(res.status).toBe(201)
+
+      await prisma.turno.delete({ where: { id: res.body.id } })
+      await prisma.profesionalEspecialidad.deleteMany({ where: { profesionalId: profesionalConGlobal.id } })
+      await prisma.profesional.delete({ where: { id: profesionalConGlobal.id } })
+    })
+
+    it('una especialidad custom de otro consultorio no puede asignarse a un profesional', async () => {
+      const especialidadOtro = await prisma.especialidad.create({ data: { consultorioId: otherConsultorioId, nombre: `Otro Custom ${RUN_ID}`, color: '#111111' } })
+      const res = await request(app)
+        .post('/api/profesionales')
+        .set('Cookie', cookies.admin)
+        .send({ nombre: 'Cross', apellido: `Especialidad${RUN_ID}`, especialidadIds: [especialidadOtro.id] })
+      expect(res.status).toBe(404)
+
+      await prisma.especialidad.delete({ where: { id: especialidadOtro.id } })
     })
   })
 

@@ -26,6 +26,8 @@ function getDatabaseConfig() {
         password: decodeURIComponent(parsedUrl.password),
         database,
         connectionLimit: Number(process.env.DATABASE_CONNECTION_LIMIT || '5'),
+        connectTimeout: Number(process.env.DATABASE_CONNECT_TIMEOUT || '10000'),
+        acquireTimeout: Number(process.env.DATABASE_ACQUIRE_TIMEOUT || '20000'),
         // Guardamos y leemos todos los DateTime de Prisma como UTC.
         // Evita que el adapter MariaDB aplique dos veces el huso horario local.
         timezone: 'Z',

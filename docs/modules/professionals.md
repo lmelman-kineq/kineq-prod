@@ -29,7 +29,9 @@ También existe una relación entre profesionales y especialidades mediante una 
 
 Esto permite que un profesional pueda tener varias especialidades y que una especialidad pueda estar asociada a varios profesionales.
 
-**Vínculo con Usuario (ya implementado, ver `docs/tasks.md` → "Autoría clínica, vínculo Usuario–Profesional y permisos")**: un `Profesional` puede tener un `Usuario` vinculado (relación 1:1 real, `Usuario.profesionalId` es la única fuente de verdad). Se edita desde Configuración → Usuarios o desde Configuración → Profesionales (`ProfesionalFormModal.tsx`, campo "Usuario vinculado", solo en edición) — ambos formularios tocan el mismo campo, nunca hay dos copias que puedan divergir. Ese vínculo ahora es además un requisito: un usuario sin profesional vinculado no puede escribir evoluciones, ficha inicial, antecedentes, alergias, medicación ni estudios, sin importar su rol — el backend devuelve `403`.
+**Vínculo con Usuario (ya implementado, ver `docs/tasks.md` → "Autoría clínica, vínculo Usuario–Profesional y permisos")**: un `Profesional` puede tener un `Usuario` vinculado (relación 1:1 real, `Usuario.profesionalId` es la única fuente de verdad). Se edita desde Configuración → Usuarios o desde Configuración → Profesionales (`ProfesionalFormModal.tsx`, campo "Usuario vinculado", **ahora también en el alta**, no solo en edición) — ambos formularios tocan el mismo campo, nunca hay dos copias que puedan divergir. Ese vínculo ahora es además un requisito: un usuario sin profesional vinculado no puede escribir evoluciones, ficha inicial, antecedentes, alergias, medicación ni estudios, sin importar su rol — el backend devuelve `403`.
+
+**Actualización (implementado) — vínculo automático**: crear (o cambiar el rol de) un `Usuario` hacia `PROFESIONAL` sin elegir un `Profesional` existente ya no requiere ese segundo paso administrativo — se crea y vincula uno automáticamente (mismo nombre/apellido/email). Detalle completo en `docs/modules/users-and-roles.md` → "Actualización (implementado) — creación automática de Profesional...".
 
 ---
 

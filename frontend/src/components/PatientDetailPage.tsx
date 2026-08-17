@@ -19,6 +19,7 @@ import { useFichaInicial } from '../hooks/useFichaInicial'
 import { computeFichaCompletionStatus } from '../utils/fichaInicial'
 import { professionalName } from '../utils/professional'
 import { groupEvolucionesByGrupo } from '../utils/groupEvolucionesByGrupo'
+import { SPECIALTY_COLOR_TOKENS } from '../utils/specialtyColors'
 import type { ClinicalNavRequest, ClinicalNavTarget } from '../utils/clinicalNavTarget'
 
 type PatientDetailPageProps = {
@@ -75,6 +76,10 @@ export default function PatientDetailPage({
 
   const [grupos, setGrupos] = useState<GrupoEvolucion[]>([])
   const [nuevaEvolucionGrupoId, setNuevaEvolucionGrupoId] = useState<number | ''>('')
+  const [addingDiagnostico, setAddingDiagnostico] = useState(false)
+  const [newDiagnosticoNombre, setNewDiagnosticoNombre] = useState('')
+  const [creatingDiagnostico, setCreatingDiagnostico] = useState(false)
+  const [newDiagnosticoError, setNewDiagnosticoError] = useState<string | null>(null)
   const [grupoModal, setGrupoModal] = useState<'crear' | GrupoEvolucion | null>(null)
   const [vistaEvoluciones, setVistaEvoluciones] = useState<'fecha' | 'grupo'>('fecha')
   const [gestionarGruposOpen, setGestionarGruposOpen] = useState(false)
@@ -101,6 +106,32 @@ export default function PatientDetailPage({
     setGrupos(response)
   }
 
+  // Alta rápida de Diagnóstico desde el mismo selector de Nueva evolución:
+  // único campo obligatorio es el nombre, color asignado automáticamente
+  // (rotación sobre la misma paleta curada que ya usa Especialidad/Grupo) —
+  // la gestión completa (editar nombre/color, eliminar) sigue viviendo en
+  // GrupoEvolucionModal, sin duplicar esa lógica acá. No toca el contenido
+  // de la evolución en curso, que vive en estado aparte.
+  const createDiagnosticoQuick = async () => {
+    const nombre = newDiagnosticoNombre.trim()
+    if (!nombre) return
+
+    setCreatingDiagnostico(true)
+    setNewDiagnosticoError(null)
+    try {
+      const color = SPECIALTY_COLOR_TOKENS[grupos.length % SPECIALTY_COLOR_TOKENS.length]
+      const created = await api.createGrupoEvolucion(patientId, { nombre, color })
+      setGrupos((current) => [created, ...current])
+      setNuevaEvolucionGrupoId(created.id)
+      setNewDiagnosticoNombre('')
+      setAddingDiagnostico(false)
+    } catch (createError) {
+      setNewDiagnosticoError(getErrorMessage(createError, 'No se pudo crear el diagnóstico.'))
+    } finally {
+      setCreatingDiagnostico(false)
+    }
+  }
+
   const loadEvoluciones = async () => {
     if (!canEditClinical) return
     const response = await api.getEvoluciones(patientId)
@@ -122,8 +153,8 @@ export default function PatientDetailPage({
   // El backend nunca borra evoluciones: grupoId queda en null (onDelete: SetNull).
   const deleteGrupo = (grupo: GrupoEvolucion, afterDelete?: () => void) => {
     onRequestConfirm({
-      title: 'Eliminar grupo',
-      description: 'Las evoluciones vinculadas a este grupo se conservarán y quedarán sin grupo.',
+      title: 'Eliminar diagnóstico',
+      description: 'Las evoluciones vinculadas a este diagnóstico se conservarán y quedarán sin diagnóstico.',
       confirmLabel: 'Eliminar',
       cancelLabel: 'Cancelar',
       destructive: true,
@@ -375,14 +406,46 @@ export default function PatientDetailPage({
               }}
             />
             <label className="ficha-field">
-              <span>Grupo / problema</span>
+              <span>Diagnóstico</span>
               <select value={nuevaEvolucionGrupoId} onChange={(event) => setNuevaEvolucionGrupoId(event.target.value ? Number(event.target.value) : '')}>
-                <option value="">Sin grupo</option>
+                <option value="">Sin diagnóstico</option>
                 {grupos.map((g) => (
                   <option key={g.id} value={g.id}>{g.nombre}</option>
                 ))}
               </select>
             </label>
+            {!addingDiagnostico ? (
+              <button type="button" className="clinical-summary-link" onClick={() => setAddingDiagnostico(true)}>
+                + Agregar diagnóstico
+              </button>
+            ) : (
+              <div className="dropdown-footer-edit">
+                <input
+                  autoFocus
+                  value={newDiagnosticoNombre}
+                  placeholder="Ej. Lumbalgia"
+                  onChange={(event) => setNewDiagnosticoNombre(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') createDiagnosticoQuick()
+                  }}
+                />
+                <button type="button" className="add-button" disabled={!newDiagnosticoNombre.trim() || creatingDiagnostico} onClick={createDiagnosticoQuick}>
+                  {creatingDiagnostico ? 'Creando...' : 'Agregar'}
+                </button>
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={() => {
+                    setNewDiagnosticoNombre('')
+                    setNewDiagnosticoError(null)
+                    setAddingDiagnostico(false)
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
+            {newDiagnosticoError ? <p className="evolution-form-error">{newDiagnosticoError}</p> : null}
             <button
               type="button"
               className="primary-button"
@@ -418,8 +481,8 @@ export default function PatientDetailPage({
               className={`antecedentes-categoria-button${vistaEvoluciones === 'grupo' ? ' antecedentes-categoria-button--active' : ''}`}
               onClick={() => setVistaEvoluciones('grupo')}
             >
-              <span className="label-full">Ver por grupo</span>
-              <span className="label-compact">Por grupo</span>
+              <span className="label-full">Ver por diagnóstico</span>
+              <span className="label-compact">Por diagnóstico</span>
             </button>
           </div>
           <div className="evolutions-toolbar-actions">
@@ -443,7 +506,7 @@ export default function PatientDetailPage({
               {grupoFilterOpen ? (
                 <div className="filters-panel">
                   <div className="filter-group">
-                    <strong>Grupo</strong>
+                    <strong>Diagnóstico</strong>
                     <label>
                       <input
                         type="radio"
@@ -451,7 +514,7 @@ export default function PatientDetailPage({
                         checked={filtroGrupo === 'todos'}
                         onChange={() => { setFiltroGrupo('todos'); setGrupoFilterOpen(false) }}
                       />
-                      Todos los grupos
+                      Todos los diagnósticos
                     </label>
                     <label>
                       <input
@@ -460,7 +523,7 @@ export default function PatientDetailPage({
                         checked={filtroGrupo === 'sin-grupo'}
                         onChange={() => { setFiltroGrupo('sin-grupo'); setGrupoFilterOpen(false) }}
                       />
-                      Sin grupo
+                      Sin diagnóstico
                     </label>
                     {grupos.map((g) => (
                       <label key={g.id}>
@@ -478,7 +541,7 @@ export default function PatientDetailPage({
               ) : null}
             </div>
             {canWriteClinical ? (
-              <button type="button" className="secondary-button" onClick={() => setGestionarGruposOpen(true)}>Ver grupos</button>
+              <button type="button" className="secondary-button" onClick={() => setGestionarGruposOpen(true)}>Ver diagnósticos</button>
             ) : null}
           </div>
         </div>
@@ -504,7 +567,7 @@ export default function PatientDetailPage({
             {evolucionesSinGrupo.length ? (
               <div className="evolutions-group-section">
                 <div className="evolutions-group-section-header">
-                  <strong>Sin grupo</strong>
+                  <strong>Sin diagnóstico</strong>
                   <span>{evolucionesSinGrupo.length} evolución{evolucionesSinGrupo.length === 1 ? '' : 'es'}</span>
                 </div>
                 <EvolutionTable evoluciones={evolucionesSinGrupo} {...evolutionTableCommonProps} />

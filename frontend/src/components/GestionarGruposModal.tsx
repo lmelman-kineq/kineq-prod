@@ -22,7 +22,7 @@ export default function GestionarGruposModal({ grupos, onClose, onEditGrupo, onN
         <div className="modal-header">
           <div className="modal-header-title">
             <div>
-              <h3>Gestionar grupos</h3>
+              <h3>Gestionar diagnósticos</h3>
               <p>Organización visual de evoluciones de este paciente.</p>
             </div>
           </div>
@@ -31,7 +31,7 @@ export default function GestionarGruposModal({ grupos, onClose, onEditGrupo, onN
 
         <div className="modal-body">
           {grupos.length === 0 ? (
-            <p className="patient-detail-note">Todavía no hay grupos creados para este paciente.</p>
+            <p className="patient-detail-note">Todavía no hay diagnósticos creados para este paciente.</p>
           ) : (
             <div className="antecedentes-list">
               {grupos.map((grupo) => (
@@ -40,10 +40,10 @@ export default function GestionarGruposModal({ grupos, onClose, onEditGrupo, onN
                     <GrupoChip grupo={grupo} />
                   </div>
                   <div className="config-row-actions">
-                    <button type="button" className="config-icon-button" aria-label={`Editar ${grupo.nombre}`} title="Editar grupo" onClick={() => onEditGrupo(grupo)}>
+                    <button type="button" className="config-icon-button" aria-label={`Editar ${grupo.nombre}`} title="Editar diagnóstico" onClick={() => onEditGrupo(grupo)}>
                       <EditIcon />
                     </button>
-                    <button type="button" className="config-icon-button config-icon-button--danger" aria-label={`Eliminar ${grupo.nombre}`} title="Eliminar grupo" onClick={() => onDeleteGrupo(grupo)}>
+                    <button type="button" className="config-icon-button config-icon-button--danger" aria-label={`Eliminar ${grupo.nombre}`} title="Eliminar diagnóstico" onClick={() => onDeleteGrupo(grupo)}>
                       <TrashIcon />
                     </button>
                   </div>
@@ -55,7 +55,7 @@ export default function GestionarGruposModal({ grupos, onClose, onEditGrupo, onN
 
         <div className="modal-actions">
           <button type="button" className="secondary-button" onClick={onClose}>Cerrar</button>
-          <button type="button" className="primary-button" onClick={onNuevoGrupo}>+ Nuevo grupo</button>
+          <button type="button" className="primary-button" onClick={onNuevoGrupo}>+ Nuevo diagnóstico</button>
         </div>
       </div>
     </div>

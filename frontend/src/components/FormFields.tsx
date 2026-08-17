@@ -27,6 +27,13 @@ export type SpecialtyOption = {
   color: string
 }
 
+export type NewPatientInput = {
+  nombre: string
+  apellido: string
+  documento?: string
+  telefono?: string
+}
+
 type DropdownName = 'patient' | 'professional' | 'specialty'
 type DropdownPosition = { top: number; left: number; width: number } | null
 
@@ -40,6 +47,7 @@ type TurnoFormFieldsProps = {
   professionals: Item[]
   specialties: SpecialtyOption[]
   onCreateSpecialty?: (name: string) => Promise<SpecialtyOption> | SpecialtyOption
+  onCreatePatient?: (patient: NewPatientInput) => Promise<Item>
 
   /*
    * Un usuario PROFESIONAL solo puede crear/editar turnos para sí mismo: el
@@ -79,6 +87,7 @@ export function TurnoFormFields({
   professionals,
   specialties,
   onCreateSpecialty,
+  onCreatePatient,
   hideProfessionalField = false,
 }: TurnoFormFieldsProps) {
   const [activeDropdown, setActiveDropdown] = useState<DropdownName | null>(null)
@@ -87,6 +96,10 @@ export function TurnoFormFields({
   const [professionalSearch, setProfessionalSearch] = useState('')
   const [addingSpecialty, setAddingSpecialty] = useState(false)
   const [newSpecialtyName, setNewSpecialtyName] = useState('')
+  const [addingPatient, setAddingPatient] = useState(false)
+  const [newPatient, setNewPatient] = useState<NewPatientInput>({ nombre: '', apellido: '', documento: '', telefono: '' })
+  const [creatingPatient, setCreatingPatient] = useState(false)
+  const [newPatientError, setNewPatientError] = useState<string | null>(null)
 
   const patientFieldRef = useRef<HTMLDivElement | null>(null)
   const professionalFieldRef = useRef<HTMLDivElement | null>(null)
@@ -144,6 +157,7 @@ export function TurnoFormFields({
       ) {
         setActiveDropdown(null)
         setAddingSpecialty(false)
+        setAddingPatient(false)
       }
     }
 
@@ -179,6 +193,32 @@ export function TurnoFormFields({
     setNewSpecialtyName('')
     setAddingSpecialty(false)
     setActiveDropdown(null)
+  }
+
+  const createPatient = async () => {
+    const nombre = newPatient.nombre.trim()
+    const apellido = newPatient.apellido.trim()
+    if (!nombre || !apellido || !onCreatePatient) return
+
+    setCreatingPatient(true)
+    setNewPatientError(null)
+    try {
+      const created = await onCreatePatient({
+        nombre,
+        apellido,
+        documento: newPatient.documento?.trim() || undefined,
+        telefono: newPatient.telefono?.trim() || undefined,
+      })
+      setPatientSearch(created.displayName)
+      updateValue({ patientId: created.id })
+      setNewPatient({ nombre: '', apellido: '', documento: '', telefono: '' })
+      setAddingPatient(false)
+      setActiveDropdown(null)
+    } catch (error) {
+      setNewPatientError(error instanceof Error && error.message.trim() ? error.message : 'No se pudo crear el paciente.')
+    } finally {
+      setCreatingPatient(false)
+    }
   }
 
 
@@ -384,19 +424,86 @@ export function TurnoFormFields({
             width: dropdownPosition.width,
           }}
         >
-          {activeDropdown === 'patient' && filteredPatients.map((patient) => (
-            <button
-              key={patient.id}
-              type="button"
-              onClick={() => {
-                setPatientSearch(patient.displayName)
-                updateValue({ patientId: patient.id })
-                setActiveDropdown(null)
-              }}
-            >
-              {patient.displayName}
-            </button>
-          ))}
+          {activeDropdown === 'patient' && (
+            <>
+              {filteredPatients.map((patient) => (
+                <button
+                  key={patient.id}
+                  type="button"
+                  onClick={() => {
+                    setPatientSearch(patient.displayName)
+                    updateValue({ patientId: patient.id })
+                    setActiveDropdown(null)
+                  }}
+                >
+                  {patient.displayName}
+                </button>
+              ))}
+
+              {onCreatePatient && (
+                !addingPatient ? (
+                  <div className="dropdown-footer">
+                    <button
+                      type="button"
+                      className="add-item-button"
+                      onClick={() => setAddingPatient(true)}
+                    >
+                      + Agregar paciente
+                    </button>
+                  </div>
+                ) : (
+                  <div className="dropdown-footer-edit dropdown-footer-edit--patient">
+                    <input
+                      autoFocus
+                      value={newPatient.nombre}
+                      placeholder="Nombre *"
+                      onChange={(event) => setNewPatient((current) => ({ ...current, nombre: event.target.value }))}
+                    />
+                    <input
+                      value={newPatient.apellido}
+                      placeholder="Apellido *"
+                      onChange={(event) => setNewPatient((current) => ({ ...current, apellido: event.target.value }))}
+                    />
+                    <input
+                      value={newPatient.documento}
+                      placeholder="Documento"
+                      onChange={(event) => setNewPatient((current) => ({ ...current, documento: event.target.value }))}
+                    />
+                    <input
+                      value={newPatient.telefono}
+                      placeholder="Teléfono"
+                      onChange={(event) => setNewPatient((current) => ({ ...current, telefono: event.target.value }))}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') createPatient()
+                      }}
+                    />
+                    {newPatientError ? <p className="evolution-form-error">{newPatientError}</p> : null}
+                    <div className="dropdown-footer-edit-actions">
+                      <button
+                        type="button"
+                        className="add-button"
+                        disabled={!newPatient.nombre.trim() || !newPatient.apellido.trim() || creatingPatient}
+                        onClick={createPatient}
+                      >
+                        {creatingPatient ? 'Creando...' : 'Agregar'}
+                      </button>
+                      <button
+                        type="button"
+                        className="cancel-button"
+                        onClick={() => {
+                          setNewPatient({ nombre: '', apellido: '', documento: '', telefono: '' })
+                          setNewPatientError(null)
+                          setAddingPatient(false)
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )
+              )}
+            </>
+          )}
 
           {activeDropdown === 'professional' && filteredProfessionals.map((professional) => (
             <button

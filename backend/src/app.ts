@@ -30,6 +30,30 @@ function filtroActivo(req: Request): { activo?: boolean } {
   return verTodos ? {} : { activo: true }
 }
 
+// Fuente única de verdad de "qué especialidad puede asignarse en este
+// consultorio": la misma regla que arma el listado de GET /api/especialidades
+// (global/default visible + custom propia, ambas activas). Antes, Profesional
+// y Turno validaban con `especialidad.consultorioId === consultorioId`, que
+// excluye a las globales (consultorioId: null) — por eso una especialidad
+// visible y seleccionable en el frontend podía rechazarse acá con "no
+// pertenece al consultorio". Centralizado para que las cuatro rutas que
+// asignan especialidad (Crear/Editar Profesional, Crear/Editar Turno) usen
+// siempre el mismo criterio.
+async function especialidadesInvalidasParaConsultorio(especialidadIds: number[], consultorioId: number): Promise<boolean> {
+  if (especialidadIds.length === 0) return false
+  const validas = await prisma.especialidad.count({
+    where: {
+      id: { in: especialidadIds },
+      activo: true,
+      OR: [
+        { consultorioId, esSistema: false },
+        { consultorioId: null, esSistema: true, ocultaPara: { none: { consultorioId } } },
+      ],
+    },
+  })
+  return validas !== especialidadIds.length
+}
+
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173'
 
 app.use(cors({ origin: FRONTEND_ORIGIN, credentials: true }))
@@ -136,17 +160,24 @@ app.post('/api/usuarios', requireRole(RolUsuario.ADMINISTRADOR), async (req, res
     }
 
     const passwordHash = await hashPassword(password)
-    const usuario = await prisma.usuario.create({
-      data: {
-        consultorioId,
-        nombre,
-        apellido,
-        email: normalizeEmail(String(email)),
-        passwordHash,
-        rol,
-        profesionalId: profesionalIdToLink,
-      },
-      select: USUARIO_LIST_SELECT,
+    const emailNormalizado = normalizeEmail(String(email))
+
+    // Un Usuario PROFESIONAL sin vínculo manual recibe un Profesional propio
+    // automáticamente (mismo nombre/apellido/email), para no requerir un
+    // segundo paso administrativo antes de poder recibir turnos o cargar
+    // evoluciones. Se crea en la misma transacción que el Usuario: si algo
+    // falla a mitad de camino, no queda ni un Usuario PROFESIONAL huérfano ni
+    // un Profesional duplicado.
+    const usuario = await prisma.$transaction(async (tx) => {
+      let profesionalId = profesionalIdToLink
+      if (profesionalId === null && rol === RolUsuario.PROFESIONAL) {
+        const creado = await tx.profesional.create({ data: { consultorioId, nombre, apellido, email: emailNormalizado } })
+        profesionalId = creado.id
+      }
+      return tx.usuario.create({
+        data: { consultorioId, nombre, apellido, email: emailNormalizado, passwordHash, rol, profesionalId },
+        select: USUARIO_LIST_SELECT,
+      })
     })
     res.status(201).json(usuario)
   } catch (err) {
@@ -198,8 +229,31 @@ app.patch('/api/usuarios/:usuarioId', requireRole(RolUsuario.ADMINISTRADOR), asy
     }
   }
 
+  // Solo la transición real de rol hacia PROFESIONAL dispara la creación
+  // automática (mismo criterio que el alta) — nunca un PATCH cualquiera
+  // sobre un usuario que ya era PROFESIONAL, porque ahí "profesionalId: null"
+  // puede ser una desvinculación manual explícita (con su propia protección
+  // de historial ya existente) y no debe revertirse solo. Cambio de
+  // PROFESIONAL hacia otro rol tampoco desvincula ni borra el Profesional acá
+  // — puede tener historial clínico (turnos, evoluciones) y se conserva.
+  const rolCambiaAProfesional = rol !== undefined && rol === RolUsuario.PROFESIONAL && usuario.rol !== RolUsuario.PROFESIONAL
+  const finalProfesionalId = profesionalIdProvided ? allowed.profesionalId : usuario.profesionalId
+  const necesitaProfesionalAutomatico = rolCambiaAProfesional && finalProfesionalId === null
+
   try {
-    const updated = await prisma.usuario.update({ where: { id: usuarioId }, data: allowed, select: USUARIO_LIST_SELECT })
+    const updated = necesitaProfesionalAutomatico
+      ? await prisma.$transaction(async (tx) => {
+          const creado = await tx.profesional.create({
+            data: {
+              consultorioId,
+              nombre: allowed.nombre ?? usuario.nombre,
+              apellido: allowed.apellido ?? usuario.apellido,
+              email: usuario.email,
+            },
+          })
+          return tx.usuario.update({ where: { id: usuarioId }, data: { ...allowed, profesionalId: creado.id }, select: USUARIO_LIST_SELECT })
+        })
+      : await prisma.usuario.update({ where: { id: usuarioId }, data: allowed, select: USUARIO_LIST_SELECT })
     res.json(updated)
   } catch (err) {
     if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
@@ -252,6 +306,9 @@ app.post('/api/pacientes', requireRole(...ADMIN_DATA_ROLES), async (req, res) =>
     })
     res.status(201).json(paciente)
   } catch (err) {
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
+      return res.status(409).json({ error: 'Ya existe un paciente con ese documento en este consultorio' })
+    }
     res.status(500).json({ error: 'failed to create paciente' })
   }
 })
@@ -273,6 +330,11 @@ app.patch(
     for (const f of fields) if (f in req.body) allowed[f] = req.body[f]
     if ('fechaNacimiento' in allowed) {
       allowed.fechaNacimiento = allowed.fechaNacimiento ? new Date(allowed.fechaNacimiento) : null
+    }
+    // Documento vacío se normaliza a null (nunca ''), para no chocar con el
+    // unique(consultorioId, documento) ni divergir de cómo lo guarda el POST.
+    if ('documento' in allowed) {
+      allowed.documento = allowed.documento || null
     }
 
     try {
@@ -313,6 +375,9 @@ app.patch(
 
       res.json(updated)
     } catch (err) {
+      if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
+        return res.status(409).json({ error: 'Ya existe un paciente con ese documento en este consultorio' })
+      }
       res.status(500).json({ error: 'failed to update paciente' })
     }
   },
@@ -339,36 +404,51 @@ const PROFESIONAL_INCLUDE = {
   _count: { select: { turnos: true, evoluciones: true } },
 } as const
 
+// El vínculo con Usuario también se puede establecer en el alta (antes solo
+// existía en la edición): mismo criterio 1:1 que PATCH — un usuario activo
+// del propio consultorio, sin otro profesional ya vinculado.
 app.post('/api/profesionales', requireRole(RolUsuario.ADMINISTRADOR), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
-  const { nombre, apellido, titulo, matricula, email, telefono, especialidadIds } = req.body
+  const { nombre, apellido, titulo, matricula, email, telefono, especialidadIds, usuarioId } = req.body
   if (!nombre || !apellido) return res.status(400).json({ error: 'nombre and apellido required' })
 
   const especialidadIdList: number[] = Array.isArray(especialidadIds) ? especialidadIds.map(Number) : []
 
   try {
-    if (especialidadIdList.length > 0) {
-      const validas = await prisma.especialidad.count({ where: { id: { in: especialidadIdList }, consultorioId } })
-      if (validas !== especialidadIdList.length) {
-        return res.status(404).json({ error: 'una o más especialidades no pertenecen al consultorio' })
-      }
+    if (await especialidadesInvalidasParaConsultorio(especialidadIdList, consultorioId)) {
+      return res.status(404).json({ error: 'una o más especialidades no pertenecen al consultorio' })
     }
 
-    const profesional = await prisma.profesional.create({
-      data: {
-        consultorioId,
-        nombre,
-        apellido,
-        titulo: titulo || null,
-        matricula: matricula || null,
-        email: email || null,
-        telefono: telefono || null,
-        especialidades: especialidadIdList.length
-          ? { create: especialidadIdList.map((especialidadId) => ({ consultorioId, especialidadId })) }
-          : undefined,
-      },
-      include: PROFESIONAL_INCLUDE,
+    let usuarioAVincular: { id: number } | null = null
+    if (usuarioId) {
+      const usuario = await prisma.usuario.findFirst({ where: { id: Number(usuarioId), consultorioId, activo: true } })
+      if (!usuario) return res.status(404).json({ error: 'usuario not found in consultorio' })
+      if (usuario.profesionalId) return res.status(409).json({ error: 'Ese usuario ya está vinculado a otro profesional' })
+      usuarioAVincular = usuario
+    }
+
+    const creadoId = await prisma.$transaction(async (tx) => {
+      const creado = await tx.profesional.create({
+        data: {
+          consultorioId,
+          nombre,
+          apellido,
+          titulo: titulo || null,
+          matricula: matricula || null,
+          email: email || null,
+          telefono: telefono || null,
+          especialidades: especialidadIdList.length
+            ? { create: especialidadIdList.map((especialidadId) => ({ consultorioId, especialidadId })) }
+            : undefined,
+        },
+      })
+      if (usuarioAVincular) {
+        await tx.usuario.update({ where: { id: usuarioAVincular.id }, data: { profesionalId: creado.id } })
+      }
+      return creado.id
     })
+
+    const profesional = await prisma.profesional.findUniqueOrThrow({ where: { id: creadoId }, include: PROFESIONAL_INCLUDE })
     res.status(201).json(profesional)
   } catch (err) {
     res.status(500).json({ error: 'failed to create profesional' })
@@ -397,11 +477,8 @@ app.patch('/api/profesionales/:profesionalId', requireRole(RolUsuario.ADMINISTRA
     const profesional = await prisma.profesional.findFirst({ where: { id: profesionalId, consultorioId } })
     if (!profesional) return res.status(404).json({ error: 'profesional not found' })
 
-    if (especialidadIdList) {
-      const validas = await prisma.especialidad.count({ where: { id: { in: especialidadIdList }, consultorioId } })
-      if (validas !== especialidadIdList.length) {
-        return res.status(404).json({ error: 'una o más especialidades no pertenecen al consultorio' })
-      }
+    if (especialidadIdList && await especialidadesInvalidasParaConsultorio(especialidadIdList, consultorioId)) {
+      return res.status(404).json({ error: 'una o más especialidades no pertenecen al consultorio' })
     }
 
     if (usuarioIdProvided && nextUsuarioId !== null) {
@@ -849,8 +926,9 @@ app.post('/api/turnos', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
     const profesional = await prisma.profesional.findFirst({ where: { id: profesionalId, consultorioId } })
     if (!profesional) return res.status(404).json({ error: 'profesional not found in consultorio' })
 
-    const especialidad = await prisma.especialidad.findFirst({ where: { id: especialidadId, consultorioId } })
-    if (!especialidad) return res.status(404).json({ error: 'especialidad not found in consultorio' })
+    if (await especialidadesInvalidasParaConsultorio([Number(especialidadId)], consultorioId)) {
+      return res.status(404).json({ error: 'especialidad not found in consultorio' })
+    }
 
     if (obraSocialId) {
       const obra = await prisma.obraSocial.findFirst({ where: { id: obraSocialId, consultorioId } })
@@ -904,6 +982,10 @@ app.patch(
 
       if (payload.inicio) payload.inicio = new Date(payload.inicio)
       if (payload.duracionMinutos) payload.duracionMinutos = Number(payload.duracionMinutos)
+
+      if (payload.especialidadId !== undefined && await especialidadesInvalidasParaConsultorio([Number(payload.especialidadId)], consultorioId)) {
+        return res.status(404).json({ error: 'especialidad not found in consultorio' })
+      }
 
       // business validations when changing scheduling/professional
       const newProfesionalId = payload.profesionalId ?? turno.profesionalId

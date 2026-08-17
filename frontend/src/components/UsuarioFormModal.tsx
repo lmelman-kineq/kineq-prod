@@ -160,8 +160,8 @@ export default function UsuarioFormModal({ usuario, profesionalesDisponibles, on
             </select>
           </label>
           {form.rol === 'PROFESIONAL' && !form.profesionalId ? (
-            <p className="evolution-form-error">
-              Sin profesional vinculado, este usuario no va a poder registrar evoluciones, ficha inicial ni estudios.
+            <p className="patient-detail-note patient-detail-note--inline">
+              Si no elegís un profesional existente, se va a crear uno automáticamente (mismo nombre y apellido) y quedar vinculado a este usuario.
             </p>
           ) : null}
           {!isCreate ? (

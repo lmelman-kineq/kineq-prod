@@ -6,6 +6,8 @@ Two new tables added for Estadísticas / alertas / grupos de evolución (migrati
 
 One more additive column, migration `20260814233921_add_evolucion_contenido_html`: `Evolucion.contenidoHtml` (nullable `@db.Text`) — sanitized rich-text HTML (bold/italic/underline only) for evolutions that used the formatting toolbar; `null` for every evolution created before this, which keep rendering as plain text via `Evolucion.contenido` unchanged. See "Formato básico en Evoluciones" in `docs/modules/clinical-history.md`.
 
+Migration `20260817123951_paciente_documento_unico`: `Paciente.documento` went from a plain index (`@@index([consultorioId, documento])`) to a real unique constraint (`@@unique([consultorioId, documento])`) — MySQL doesn't dedupe `NULL`s in a unique index, so any number of patients without a document (the normal case now that the field is optional) coexist fine within the same consultorio; only a repeated non-null document within the same consultorio is rejected. Verified no pre-existing duplicates before applying. All of `Paciente`'s other administrative fields (`documento`, `fechaNacimiento`, `telefono`, `email`, `direccion`, `obraSocialId`, `numeroAfiliado`) were already nullable in the schema — only `nombre`/`apellido` are required — so making the frontend/backend enforce "only Nombre and Apellido required" needed no further schema change. See `docs/modules/patients.md`.
+
 Main entities (original draft, generic names, not the real schema):
 
 - User

@@ -151,7 +151,10 @@ model Paciente {
 
   @@index([consultorioId, activo])
   @@index([consultorioId, apellido, nombre])
-  @@index([consultorioId, documento])
+  // Único por consultorio cuando hay documento — MySQL no deduplica NULLs,
+  // así que pacientes sin documento (el caso normal ahora que es opcional)
+  // no chocan entre sí.
+  @@unique([consultorioId, documento])
   @@index([obraSocialId])
 }
 

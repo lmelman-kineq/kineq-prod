@@ -275,6 +275,8 @@ Ejemplos:
 
 **Actualización (implementado) — especialidades legibles en Editar Profesional**: la checklist de especialidades de `ProfesionalFormModal.tsx` (`.config-checkbox-list`) ya no trunca los nombres con `text-overflow: ellipsis` — el texto hace wrap normal dentro de una grilla responsive (`minmax(200px, 1fr)`), con scroll vertical interno si hay muchas especialidades, sin generar scroll horizontal.
 
+**Actualización (implementado) — bug corregido: "Esta especialidad no pertenece al consultorio"**: `POST`/`PATCH /api/profesionales` y `POST`/`PATCH /api/turnos` validaban una especialidad asignada con `especialidad.consultorioId === consultorioId` — una comparación que **excluye** a las globales/default (`consultorioId: null`), aunque sean exactamente las que `GET /api/especialidades` ya ofrece como seleccionables para ese consultorio. Resultado: una especialidad visible y elegible en el frontend podía rechazarse en el backend con "una o más especialidades no pertenecen al consultorio" / "especialidad not found in consultorio". Se centralizó la regla en un único helper, `especialidadesInvalidasParaConsultorio()` (`backend/src/app.ts`), usado por las cuatro rutas (Crear/Editar Profesional, Crear/Editar Turno): una especialidad es válida si es **global/default visible para el consultorio** (no oculta) **o custom del propio consultorio**, y en ambos casos `activo: true` — exactamente el mismo criterio que ya arma el listado de `GET /api/especialidades`. `PATCH /api/turnos/:id` no validaba `especialidadId` en absoluto al cambiarlo; ahora también pasa por el mismo helper.
+
 ---
 
 ## Especialidades y portal de pacientes

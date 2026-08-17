@@ -6,7 +6,7 @@ import RichTextEditor from './RichTextEditor'
 import EvolucionContent from './EvolucionContent'
 
 export function GrupoChip({ grupo }: { grupo: GrupoEvolucion | null | undefined }) {
-  if (!grupo) return <span className="grupo-evolucion-chip grupo-evolucion-chip--none">Sin grupo</span>
+  if (!grupo) return <span className="grupo-evolucion-chip grupo-evolucion-chip--none">Sin diagnóstico</span>
   return (
     <span className="grupo-evolucion-chip">
       <span className="grupo-evolucion-dot" style={{ backgroundColor: grupo.color }} aria-hidden="true" />
@@ -103,7 +103,7 @@ export default function EvolutionTable({
           <tr>
             <th>Fecha</th>
             <th>Profesional</th>
-            <th>Grupo</th>
+            <th>Diagnóstico</th>
             <th>Resumen</th>
             <th aria-label="Acciones" />
           </tr>
@@ -132,7 +132,7 @@ export default function EvolutionTable({
                     {wasEdited ? <span className="evolution-edited-tag"> · editada</span> : null}
                   </td>
                   <td data-label="Profesional">{professionalName(evolucion.profesional)}</td>
-                  <td data-label="Grupo"><GrupoChip grupo={evolucion.grupo} /></td>
+                  <td data-label="Diagnóstico"><GrupoChip grupo={evolucion.grupo} /></td>
                   <td className="evolution-resumen-cell" data-label="Resumen"><span>{evolucion.contenido}</span></td>
                   <td className="turnos-actions-cell config-row-actions">
                     {canEdit(evolucion) ? (
@@ -185,12 +185,12 @@ export default function EvolutionTable({
                             )}
                             {onChangeEditingGrupoId ? (
                               <label className="ficha-field">
-                                <span>Grupo / problema</span>
+                                <span>Diagnóstico</span>
                                 <select
                                   value={editingGrupoId ?? ''}
                                   onChange={(event) => onChangeEditingGrupoId(event.target.value ? Number(event.target.value) : null)}
                                 >
-                                  <option value="">Sin grupo</option>
+                                  <option value="">Sin diagnóstico</option>
                                   {grupos.map((g) => (
                                     <option key={g.id} value={g.id}>{g.nombre}</option>
                                   ))}

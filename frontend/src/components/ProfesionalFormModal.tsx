@@ -88,10 +88,10 @@ export default function ProfesionalFormModal({ profesional, especialidades, usua
       email: form.email.trim() || null,
       telefono: form.telefono.trim() || null,
       especialidadIds: form.especialidadIds,
+      usuarioId: form.usuarioId ? Number(form.usuarioId) : null,
     }
     if (!isCreate) {
       payload.activo = form.activo
-      payload.usuarioId = form.usuarioId ? Number(form.usuarioId) : null
     }
 
     try {
@@ -167,19 +167,17 @@ export default function ProfesionalFormModal({ profesional, especialidades, usua
             )}
           </div>
 
-          {!isCreate ? (
-            <label>
-              Usuario vinculado
-              <select value={form.usuarioId} onChange={(event) => update({ usuarioId: event.target.value })}>
-                <option value="">Sin usuario vinculado</option>
-                {usuariosDisponibles.map((usuario) => (
-                  <option key={usuario.id} value={usuario.id}>
-                    {usuario.nombre} {usuario.apellido} · {usuario.email} · {ROL_LABELS[usuario.rol]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
+          <label>
+            Usuario vinculado
+            <select value={form.usuarioId} onChange={(event) => update({ usuarioId: event.target.value })}>
+              <option value="">Sin usuario vinculado</option>
+              {usuariosDisponibles.map((usuario) => (
+                <option key={usuario.id} value={usuario.id}>
+                  {usuario.nombre} {usuario.apellido} · {usuario.email} · {ROL_LABELS[usuario.rol]}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {!isCreate ? (
             <label className="checkbox-field">

@@ -57,15 +57,7 @@ Los datos administrativos son los datos básicos necesarios para identificar y c
 
 ### Campos obligatorios iniciales
 
-Al crear un paciente, los campos obligatorios deberían ser:
-
-- Nombre.
-- Apellido.
-- Documento.
-- Fecha de nacimiento.
-- Teléfono.
-
-Estos campos permiten identificar al paciente y operar el flujo básico de turnos.
+**Actualización (implementado)**: los únicos campos obligatorios para crear un paciente son **Nombre** y **Apellido**, tanto en frontend (`PatientFormModal.tsx`) como en backend (`POST`/`PATCH /api/pacientes`, `backend/src/app.ts`). Documento, fecha de nacimiento, teléfono, email, dirección, obra social, número de afiliado y observaciones son opcionales — el schema de Prisma (`Paciente`) ya los tenía como columnas nullable, así que no hizo falta ninguna migración para volverlos opcionales, solo sacar la validación extra que el frontend agregaba únicamente en el alta (`isCreate`). Un campo opcional vacío se guarda como `null`, nunca como `''` (ver "Documento / DNI" abajo). Esto también habilita el alta rápida de paciente desde Crear Turno (ver `docs/modules/appointments.md`), que solo pide Nombre y Apellido como obligatorios (más Documento/Teléfono opcionales).
 
 ### Campos opcionales o futuros
 
@@ -99,6 +91,8 @@ Regla clave:
 
 - Un consultorio no debe ver ni acceder a datos de pacientes cargados por otro consultorio.
 - Si el mismo paciente existe en dos consultorios, deben ser registros separados y aislados.
+
+**Actualización (implementado) — unicidad real por consultorio**: el schema tenía un índice simple (`@@index([consultorioId, documento])`), que no impedía duplicados. Se cambió a `@@unique([consultorioId, documento])` (migración `20260817123951_paciente_documento_unico`, aditiva — verificado antes de aplicarla que no existían duplicados en la base). MySQL no deduplica valores `NULL` en un índice único, así que cualquier cantidad de pacientes sin documento (el caso normal ahora que es opcional) conviven sin problema dentro del mismo consultorio; solo se rechaza un documento no nulo repetido. `POST`/`PATCH /api/pacientes` capturan la violación (`P2002`) y devuelven `409` con un mensaje claro en vez de un error genérico. El mismo documento puede repetirse sin problema entre dos consultorios distintos.
 
 ---
 

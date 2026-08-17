@@ -850,3 +850,97 @@ Cancelar no cambia nada en ninguna; click en el logo → Inicio; claro y
 oscuro en las zonas tocadas; altura de los buscadores de Configuración en
 Usuarios y Especialidades a 390px; acciones de "Editar turno" en una sola
 fila a 390px.
+
+---
+
+## Sesión: Usuario↔Profesional automático, bug de Especialidades, Paciente mínimo, altas rápidas, Diagnóstico, mobile Evoluciones, favicon
+
+Ronda incremental de 9 puntos independientes. Una migración de Prisma,
+`20260817123951_paciente_documento_unico` (aditiva — `Paciente.documento`
+pasó de índice simple a `@@unique([consultorioId, documento])`, verificado
+sin duplicados previos). `prisma migrate dev` detectó drift de checksum en
+migraciones viejas y ofreció un `migrate reset` — se rechazó (nunca resetear
+la DB) y se aplicó a mano (`prisma db execute` + `migrate resolve
+--applied`); `prisma migrate status` confirma sin drift para la nueva.
+Detalle técnico completo en `docs/tasks.md` (nueva sección, mismo nombre que
+este título) — acá el resumen ejecutivo.
+
+**Usuario → Profesional automático**: crear un `Usuario` `PROFESIONAL` sin
+`profesionalId` explícito crea y vincula un `Profesional` solo (mismo
+nombre/apellido/email), atómico (nested write de Prisma en el alta,
+`$transaction` en el cambio de rol). El auto-alta en `PATCH
+/api/usuarios/:id` solo dispara en la transición real hacia `PROFESIONAL`
+dentro del mismo request — no en cualquier PATCH de un usuario que ya era
+`PROFESIONAL`, porque eso hubiera revertido solo una desvinculación manual
+explícita (se detectó con un test existente que empezó a fallar). Cambiar de
+rol **desde** `PROFESIONAL` nunca toca el vínculo existente.
+`ProfesionalFormModal.tsx` ahora muestra "Usuario vinculado" también en el
+alta (antes solo edición); `POST /api/profesionales` acepta `usuarioId`.
+
+**Bug real corregido — "Esta especialidad no pertenece al consultorio"**:
+`POST`/`PATCH /api/profesionales` y `POST`/`PATCH /api/turnos` validaban con
+`especialidad.consultorioId === consultorioId`, que excluye a las
+especialidades globales/default (`consultorioId: null`) aunque sean
+exactamente las que el propio backend ofrece como seleccionables.
+Centralizado en `especialidadesInvalidasParaConsultorio()`
+(`backend/src/app.ts`), usado por las cuatro rutas. `PATCH /api/turnos/:id`
+ni siquiera validaba `especialidadId` al cambiarlo — ahora también.
+
+**Paciente: solo Nombre y Apellido obligatorios**: el schema ya tenía todo
+lo demás nullable y el backend ya normalizaba `documento || null` — el gap
+real era una validación extra solo en el frontend, en el alta. Se sacó. Se
+agregó lo que sí faltaba de verdad: unicidad real de `documento` por
+consultorio (antes solo un índice) + `409` legible en vez de `500`.
+
+**Alta rápida de Paciente desde Turno** y **alta rápida de Diagnóstico desde
+Nueva evolución**: mismo patrón visual que "+ Nueva Especialidad" ya
+existente — botón de ancho completo en el dropdown/selector, mini
+formulario inline, selección automática al crear, sin resetear el resto del
+formulario. Diagnóstico además asigna color automático (rotación sobre
+`SPECIALTY_COLOR_TOKENS`) para no exigir elegir color en el alta rápida.
+
+**"Grupo" de Evoluciones → "Diagnóstico"**: cambio de copy únicamente — el
+modelo (`GrupoEvolucion`, `grupoId`) y los nombres internos de componentes
+no se tocaron (ya tenía `pacienteId` propio, sin necesidad de migración). La
+gestión completa (crear con color a mano, editar, eliminar) sigue igual.
+
+**Evoluciones mobile**: layout en CSS Grid *scoped a `.evolution-table`*
+(no toca otras tablas) — fecha+acciones comparten la fila de arriba,
+Profesional/Diagnóstico/Resumen se apilan a ancho completo con su etiqueta
+arriba. Verificado con Playwright a 390/414/430px. Gap preexistente
+encontrado y **no corregido** (fuera de alcance, afecta toda la página, no
+solo Evoluciones): `.patient-detail-page` tiene un overflow horizontal de
+~30-45px reproducible también en Ficha inicial — ver `docs/tasks.md` →
+"Known gaps".
+
+**Favicon**: `frontend/public/favicon.svg` no usaba el branding real de
+Kineq (era un mark abstracto sin relación) — reemplazado por el isotipo
+real (`Kineq Isologo.svg`, el mismo que `KineqIsologo.tsx` ya usa en
+sidebar/boot screen).
+
+### Tests
+
+Backend: 19 tests nuevos en `app.test.ts`. Suite completa: 169 (antes 150).
+Frontend: sigue en 81 (mismo criterio de rondas anteriores — sin
+infraestructura de test de componentes, verificado con navegador real).
+`tsc -b`/`npm run build` limpios en ambos paquetes; el único error de lint
+sigue siendo el mismo preexistente de `AuthContext.tsx`.
+
+### Verificación manual
+
+Playwright (Chromium en el scratchpad de la sesión) contra los dos dev
+servers reales, con captura de las respuestas de red además de aserciones
+de DOM — necesario porque `ClinicalTabs` mantiene **todos** los paneles
+montados en el DOM (solo `hidden`), lo que puede hacer que un
+`getByText(...).first()` resuelva a un campo homónimo de otra tab oculta y
+reporte "no visible" aunque el real esté perfectamente visible; se resolvió
+acotando cada selector al `.modal-card`/`#tabpanel-*` correspondiente y
+leyendo directamente el body de las respuestas `POST` en los flujos más
+finos. Cubierto: alta de Usuario PROFESIONAL → Profesional auto-creado
+visible tras recargar; alta de Profesional con Usuario vinculado +
+especialidad global sin error; alta de Paciente solo con nombre/apellido;
+"+ Agregar paciente" desde Nuevo turno con selección automática; login como
+el profesional auto-vinculado y "+ Agregar diagnóstico" desde Nueva
+evolución con color automático y contenido intacto; sin copy "Grupo" viejo
+en Evoluciones; capturas mobile a 390/414/430px; favicon sirviendo el
+isotipo real.
