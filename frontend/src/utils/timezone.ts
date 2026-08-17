@@ -92,3 +92,13 @@ export function utcIsoToZonedParts(isoString: string, timeZone: string): { date:
   const pad = (value: number) => String(value).padStart(2, '0')
   return { date: `${year}-${pad(month)}-${pad(day)}`, time: `${pad(hour)}:${pad(minute)}` }
 }
+
+/**
+ * "Hoy" (YYYY-MM-DD) en la zona horaria del consultorio, nunca en la del
+ * navegador — mismo criterio que el resto de la app (turnos, mini
+ * calendario de Home): persistencia siempre en UTC, presentación siempre en
+ * la zona del consultorio.
+ */
+export function todayInTimeZone(timeZone: string): string {
+  return utcIsoToZonedParts(new Date().toISOString(), timeZone).date
+}

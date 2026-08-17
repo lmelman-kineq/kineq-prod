@@ -131,7 +131,7 @@ export default function ProfesionalFormModal({ profesional, especialidades, usua
           </label>
           <label>
             Título
-            <input type="text" value={form.titulo} onChange={(event) => update({ titulo: event.target.value })} placeholder="Lic. en Kinesiología" />
+            <input type="text" value={form.titulo} onChange={(event) => update({ titulo: event.target.value })} placeholder="Ej. Lic. en Kinesiología y Fisiatría" />
           </label>
           <label>
             Matrícula

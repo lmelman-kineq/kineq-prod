@@ -22,9 +22,13 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 type ConfiguracionUsuariosProps = {
   onRequestConfirm: (dialog: ConfirmDialogOptions) => void
+  // Crear/editar un Usuario con rol PROFESIONAL puede crear o relinkear un
+  // Profesional (ver backend) — sin esto, el selector de Profesional de
+  // Turnos (App.tsx) no se enteraba hasta un reload completo.
+  onProfesionalesChanged?: () => void
 }
 
-export default function ConfiguracionUsuarios({ onRequestConfirm }: ConfiguracionUsuariosProps) {
+export default function ConfiguracionUsuarios({ onRequestConfirm, onProfesionalesChanged }: ConfiguracionUsuariosProps) {
   const { refreshUser } = useAuth()
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [profesionales, setProfesionales] = useState<Profesional[]>([])
@@ -235,6 +239,7 @@ export default function ConfiguracionUsuarios({ onRequestConfirm }: Configuracio
             setFormOpen(false)
             setRefreshKey((key) => key + 1)
             void refreshUser()
+            onProfesionalesChanged?.()
           }}
         />
       ) : null}

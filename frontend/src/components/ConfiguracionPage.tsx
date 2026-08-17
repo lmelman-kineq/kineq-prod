@@ -9,6 +9,7 @@ import ConfiguracionObrasSociales from './ConfiguracionObrasSociales'
 
 type ConfiguracionPageProps = {
   onRequestConfirm: (dialog: ConfirmDialogOptions) => void
+  onProfesionalesChanged?: () => void
 }
 
 const TABS: ClinicalTab[] = [
@@ -19,13 +20,13 @@ const TABS: ClinicalTab[] = [
   { key: 'obras-sociales', label: 'Obras sociales' },
 ]
 
-export default function ConfiguracionPage({ onRequestConfirm }: ConfiguracionPageProps) {
+export default function ConfiguracionPage({ onRequestConfirm, onProfesionalesChanged }: ConfiguracionPageProps) {
   const [activeTab, setActiveTab] = useState('general')
 
   const panels: Record<string, ReactNode> = {
     general: <ConfiguracionGeneral />,
-    usuarios: <ConfiguracionUsuarios onRequestConfirm={onRequestConfirm} />,
-    profesionales: <ConfiguracionProfesionales onRequestConfirm={onRequestConfirm} />,
+    usuarios: <ConfiguracionUsuarios onRequestConfirm={onRequestConfirm} onProfesionalesChanged={onProfesionalesChanged} />,
+    profesionales: <ConfiguracionProfesionales onRequestConfirm={onRequestConfirm} onProfesionalesChanged={onProfesionalesChanged} />,
     especialidades: <ConfiguracionEspecialidades onRequestConfirm={onRequestConfirm} />,
     'obras-sociales': <ConfiguracionObrasSociales onRequestConfirm={onRequestConfirm} />,
   }

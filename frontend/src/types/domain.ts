@@ -123,10 +123,12 @@ export interface Turno {
   inicioAtencion?: string | null
   finAtencion?: string | null
   canceladoAt?: string | null
+  grupoId?: number | null
   paciente: Paciente
   profesional: Profesional
   especialidad: Especialidad
   obraSocial?: ObraSocial | null
+  grupo?: GrupoEvolucion | null
   createdAt?: string
   updatedAt?: string
 }
@@ -137,6 +139,11 @@ export interface GrupoEvolucion {
   pacienteId: number
   nombre: string
   color: string
+  // Sesiones totales previstas para este diagnóstico — opcional; con ella,
+  // los turnos asociados muestran/calculan "Sesión X de Y" (ver
+  // TurnoFormFields en FormFields.tsx). Sin ella, un grupo se comporta
+  // exactamente igual que antes.
+  cantidadSesionesPlanificadas?: number | null
   createdAt: string
   updatedAt: string
 }
@@ -433,6 +440,7 @@ export interface CreateTurnoInput {
   time: string
   duracionMinutos: number
   numeroSesion?: number
+  grupoId?: number | null
   notas?: string
   estado?: EstadoTurno
 }
@@ -463,7 +471,7 @@ export type EspecialidadInput = Partial<Pick<Especialidad, 'nombre' | 'color' | 
 
 export type ObraSocialInput = Partial<Pick<ObraSocial, 'nombre' | 'activo'>>
 
-export type GrupoEvolucionInput = { nombre: string; color: string }
+export type GrupoEvolucionInput = { nombre: string; color: string; cantidadSesionesPlanificadas?: number | null }
 
 // --- Estadísticas ---
 

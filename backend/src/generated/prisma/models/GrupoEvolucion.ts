@@ -30,12 +30,14 @@ export type GrupoEvolucionAvgAggregateOutputType = {
   id: number | null
   consultorioId: number | null
   pacienteId: number | null
+  cantidadSesionesPlanificadas: number | null
 }
 
 export type GrupoEvolucionSumAggregateOutputType = {
   id: number | null
   consultorioId: number | null
   pacienteId: number | null
+  cantidadSesionesPlanificadas: number | null
 }
 
 export type GrupoEvolucionMinAggregateOutputType = {
@@ -44,6 +46,7 @@ export type GrupoEvolucionMinAggregateOutputType = {
   pacienteId: number | null
   nombre: string | null
   color: string | null
+  cantidadSesionesPlanificadas: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -54,6 +57,7 @@ export type GrupoEvolucionMaxAggregateOutputType = {
   pacienteId: number | null
   nombre: string | null
   color: string | null
+  cantidadSesionesPlanificadas: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -64,6 +68,7 @@ export type GrupoEvolucionCountAggregateOutputType = {
   pacienteId: number
   nombre: number
   color: number
+  cantidadSesionesPlanificadas: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -74,12 +79,14 @@ export type GrupoEvolucionAvgAggregateInputType = {
   id?: true
   consultorioId?: true
   pacienteId?: true
+  cantidadSesionesPlanificadas?: true
 }
 
 export type GrupoEvolucionSumAggregateInputType = {
   id?: true
   consultorioId?: true
   pacienteId?: true
+  cantidadSesionesPlanificadas?: true
 }
 
 export type GrupoEvolucionMinAggregateInputType = {
@@ -88,6 +95,7 @@ export type GrupoEvolucionMinAggregateInputType = {
   pacienteId?: true
   nombre?: true
   color?: true
+  cantidadSesionesPlanificadas?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -98,6 +106,7 @@ export type GrupoEvolucionMaxAggregateInputType = {
   pacienteId?: true
   nombre?: true
   color?: true
+  cantidadSesionesPlanificadas?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -108,6 +117,7 @@ export type GrupoEvolucionCountAggregateInputType = {
   pacienteId?: true
   nombre?: true
   color?: true
+  cantidadSesionesPlanificadas?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -205,6 +215,7 @@ export type GrupoEvolucionGroupByOutputType = {
   pacienteId: number
   nombre: string
   color: string
+  cantidadSesionesPlanificadas: number | null
   createdAt: Date
   updatedAt: Date
   _count: GrupoEvolucionCountAggregateOutputType | null
@@ -238,11 +249,13 @@ export type GrupoEvolucionWhereInput = {
   pacienteId?: Prisma.IntFilter<"GrupoEvolucion"> | number
   nombre?: Prisma.StringFilter<"GrupoEvolucion"> | string
   color?: Prisma.StringFilter<"GrupoEvolucion"> | string
+  cantidadSesionesPlanificadas?: Prisma.IntNullableFilter<"GrupoEvolucion"> | number | null
   createdAt?: Prisma.DateTimeFilter<"GrupoEvolucion"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"GrupoEvolucion"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
   paciente?: Prisma.XOR<Prisma.PacienteScalarRelationFilter, Prisma.PacienteWhereInput>
   evoluciones?: Prisma.EvolucionListRelationFilter
+  turnos?: Prisma.TurnoListRelationFilter
 }
 
 export type GrupoEvolucionOrderByWithRelationInput = {
@@ -251,11 +264,13 @@ export type GrupoEvolucionOrderByWithRelationInput = {
   pacienteId?: Prisma.SortOrder
   nombre?: Prisma.SortOrder
   color?: Prisma.SortOrder
+  cantidadSesionesPlanificadas?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   consultorio?: Prisma.ConsultorioOrderByWithRelationInput
   paciente?: Prisma.PacienteOrderByWithRelationInput
   evoluciones?: Prisma.EvolucionOrderByRelationAggregateInput
+  turnos?: Prisma.TurnoOrderByRelationAggregateInput
   _relevance?: Prisma.GrupoEvolucionOrderByRelevanceInput
 }
 
@@ -269,11 +284,13 @@ export type GrupoEvolucionWhereUniqueInput = Prisma.AtLeast<{
   pacienteId?: Prisma.IntFilter<"GrupoEvolucion"> | number
   nombre?: Prisma.StringFilter<"GrupoEvolucion"> | string
   color?: Prisma.StringFilter<"GrupoEvolucion"> | string
+  cantidadSesionesPlanificadas?: Prisma.IntNullableFilter<"GrupoEvolucion"> | number | null
   createdAt?: Prisma.DateTimeFilter<"GrupoEvolucion"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"GrupoEvolucion"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
   paciente?: Prisma.XOR<Prisma.PacienteScalarRelationFilter, Prisma.PacienteWhereInput>
   evoluciones?: Prisma.EvolucionListRelationFilter
+  turnos?: Prisma.TurnoListRelationFilter
 }, "id" | "pacienteId_nombre">
 
 export type GrupoEvolucionOrderByWithAggregationInput = {
@@ -282,6 +299,7 @@ export type GrupoEvolucionOrderByWithAggregationInput = {
   pacienteId?: Prisma.SortOrder
   nombre?: Prisma.SortOrder
   color?: Prisma.SortOrder
+  cantidadSesionesPlanificadas?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.GrupoEvolucionCountOrderByAggregateInput
@@ -300,6 +318,7 @@ export type GrupoEvolucionScalarWhereWithAggregatesInput = {
   pacienteId?: Prisma.IntWithAggregatesFilter<"GrupoEvolucion"> | number
   nombre?: Prisma.StringWithAggregatesFilter<"GrupoEvolucion"> | string
   color?: Prisma.StringWithAggregatesFilter<"GrupoEvolucion"> | string
+  cantidadSesionesPlanificadas?: Prisma.IntNullableWithAggregatesFilter<"GrupoEvolucion"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"GrupoEvolucion"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"GrupoEvolucion"> | Date | string
 }
@@ -307,11 +326,13 @@ export type GrupoEvolucionScalarWhereWithAggregatesInput = {
 export type GrupoEvolucionCreateInput = {
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutGruposEvolucionInput
   paciente: Prisma.PacienteCreateNestedOneWithoutGruposEvolucionInput
   evoluciones?: Prisma.EvolucionCreateNestedManyWithoutGrupoInput
+  turnos?: Prisma.TurnoCreateNestedManyWithoutGrupoInput
 }
 
 export type GrupoEvolucionUncheckedCreateInput = {
@@ -320,19 +341,23 @@ export type GrupoEvolucionUncheckedCreateInput = {
   pacienteId: number
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutGrupoInput
+  turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutGrupoInput
 }
 
 export type GrupoEvolucionUpdateInput = {
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutGruposEvolucionNestedInput
   paciente?: Prisma.PacienteUpdateOneRequiredWithoutGruposEvolucionNestedInput
   evoluciones?: Prisma.EvolucionUpdateManyWithoutGrupoNestedInput
+  turnos?: Prisma.TurnoUpdateManyWithoutGrupoNestedInput
 }
 
 export type GrupoEvolucionUncheckedUpdateInput = {
@@ -341,9 +366,11 @@ export type GrupoEvolucionUncheckedUpdateInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutGrupoNestedInput
+  turnos?: Prisma.TurnoUncheckedUpdateManyWithoutGrupoNestedInput
 }
 
 export type GrupoEvolucionCreateManyInput = {
@@ -352,6 +379,7 @@ export type GrupoEvolucionCreateManyInput = {
   pacienteId: number
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -359,6 +387,7 @@ export type GrupoEvolucionCreateManyInput = {
 export type GrupoEvolucionUpdateManyMutationInput = {
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -369,6 +398,7 @@ export type GrupoEvolucionUncheckedUpdateManyInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -405,6 +435,7 @@ export type GrupoEvolucionCountOrderByAggregateInput = {
   pacienteId?: Prisma.SortOrder
   nombre?: Prisma.SortOrder
   color?: Prisma.SortOrder
+  cantidadSesionesPlanificadas?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -413,6 +444,7 @@ export type GrupoEvolucionAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   consultorioId?: Prisma.SortOrder
   pacienteId?: Prisma.SortOrder
+  cantidadSesionesPlanificadas?: Prisma.SortOrder
 }
 
 export type GrupoEvolucionMaxOrderByAggregateInput = {
@@ -421,6 +453,7 @@ export type GrupoEvolucionMaxOrderByAggregateInput = {
   pacienteId?: Prisma.SortOrder
   nombre?: Prisma.SortOrder
   color?: Prisma.SortOrder
+  cantidadSesionesPlanificadas?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -431,6 +464,7 @@ export type GrupoEvolucionMinOrderByAggregateInput = {
   pacienteId?: Prisma.SortOrder
   nombre?: Prisma.SortOrder
   color?: Prisma.SortOrder
+  cantidadSesionesPlanificadas?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -439,6 +473,7 @@ export type GrupoEvolucionSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   consultorioId?: Prisma.SortOrder
   pacienteId?: Prisma.SortOrder
+  cantidadSesionesPlanificadas?: Prisma.SortOrder
 }
 
 export type GrupoEvolucionCreateNestedManyWithoutConsultorioInput = {
@@ -525,6 +560,22 @@ export type GrupoEvolucionUncheckedUpdateManyWithoutPacienteNestedInput = {
   deleteMany?: Prisma.GrupoEvolucionScalarWhereInput | Prisma.GrupoEvolucionScalarWhereInput[]
 }
 
+export type GrupoEvolucionCreateNestedOneWithoutTurnosInput = {
+  create?: Prisma.XOR<Prisma.GrupoEvolucionCreateWithoutTurnosInput, Prisma.GrupoEvolucionUncheckedCreateWithoutTurnosInput>
+  connectOrCreate?: Prisma.GrupoEvolucionCreateOrConnectWithoutTurnosInput
+  connect?: Prisma.GrupoEvolucionWhereUniqueInput
+}
+
+export type GrupoEvolucionUpdateOneWithoutTurnosNestedInput = {
+  create?: Prisma.XOR<Prisma.GrupoEvolucionCreateWithoutTurnosInput, Prisma.GrupoEvolucionUncheckedCreateWithoutTurnosInput>
+  connectOrCreate?: Prisma.GrupoEvolucionCreateOrConnectWithoutTurnosInput
+  upsert?: Prisma.GrupoEvolucionUpsertWithoutTurnosInput
+  disconnect?: Prisma.GrupoEvolucionWhereInput | boolean
+  delete?: Prisma.GrupoEvolucionWhereInput | boolean
+  connect?: Prisma.GrupoEvolucionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.GrupoEvolucionUpdateToOneWithWhereWithoutTurnosInput, Prisma.GrupoEvolucionUpdateWithoutTurnosInput>, Prisma.GrupoEvolucionUncheckedUpdateWithoutTurnosInput>
+}
+
 export type GrupoEvolucionCreateNestedOneWithoutEvolucionesInput = {
   create?: Prisma.XOR<Prisma.GrupoEvolucionCreateWithoutEvolucionesInput, Prisma.GrupoEvolucionUncheckedCreateWithoutEvolucionesInput>
   connectOrCreate?: Prisma.GrupoEvolucionCreateOrConnectWithoutEvolucionesInput
@@ -544,10 +595,12 @@ export type GrupoEvolucionUpdateOneWithoutEvolucionesNestedInput = {
 export type GrupoEvolucionCreateWithoutConsultorioInput = {
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   paciente: Prisma.PacienteCreateNestedOneWithoutGruposEvolucionInput
   evoluciones?: Prisma.EvolucionCreateNestedManyWithoutGrupoInput
+  turnos?: Prisma.TurnoCreateNestedManyWithoutGrupoInput
 }
 
 export type GrupoEvolucionUncheckedCreateWithoutConsultorioInput = {
@@ -555,9 +608,11 @@ export type GrupoEvolucionUncheckedCreateWithoutConsultorioInput = {
   pacienteId: number
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutGrupoInput
+  turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutGrupoInput
 }
 
 export type GrupoEvolucionCreateOrConnectWithoutConsultorioInput = {
@@ -595,6 +650,7 @@ export type GrupoEvolucionScalarWhereInput = {
   pacienteId?: Prisma.IntFilter<"GrupoEvolucion"> | number
   nombre?: Prisma.StringFilter<"GrupoEvolucion"> | string
   color?: Prisma.StringFilter<"GrupoEvolucion"> | string
+  cantidadSesionesPlanificadas?: Prisma.IntNullableFilter<"GrupoEvolucion"> | number | null
   createdAt?: Prisma.DateTimeFilter<"GrupoEvolucion"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"GrupoEvolucion"> | Date | string
 }
@@ -602,10 +658,12 @@ export type GrupoEvolucionScalarWhereInput = {
 export type GrupoEvolucionCreateWithoutPacienteInput = {
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutGruposEvolucionInput
   evoluciones?: Prisma.EvolucionCreateNestedManyWithoutGrupoInput
+  turnos?: Prisma.TurnoCreateNestedManyWithoutGrupoInput
 }
 
 export type GrupoEvolucionUncheckedCreateWithoutPacienteInput = {
@@ -613,9 +671,11 @@ export type GrupoEvolucionUncheckedCreateWithoutPacienteInput = {
   consultorioId: number
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutGrupoInput
+  turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutGrupoInput
 }
 
 export type GrupoEvolucionCreateOrConnectWithoutPacienteInput = {
@@ -644,13 +704,77 @@ export type GrupoEvolucionUpdateManyWithWhereWithoutPacienteInput = {
   data: Prisma.XOR<Prisma.GrupoEvolucionUpdateManyMutationInput, Prisma.GrupoEvolucionUncheckedUpdateManyWithoutPacienteInput>
 }
 
-export type GrupoEvolucionCreateWithoutEvolucionesInput = {
+export type GrupoEvolucionCreateWithoutTurnosInput = {
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutGruposEvolucionInput
   paciente: Prisma.PacienteCreateNestedOneWithoutGruposEvolucionInput
+  evoluciones?: Prisma.EvolucionCreateNestedManyWithoutGrupoInput
+}
+
+export type GrupoEvolucionUncheckedCreateWithoutTurnosInput = {
+  id?: number
+  consultorioId: number
+  pacienteId: number
+  nombre: string
+  color: string
+  cantidadSesionesPlanificadas?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutGrupoInput
+}
+
+export type GrupoEvolucionCreateOrConnectWithoutTurnosInput = {
+  where: Prisma.GrupoEvolucionWhereUniqueInput
+  create: Prisma.XOR<Prisma.GrupoEvolucionCreateWithoutTurnosInput, Prisma.GrupoEvolucionUncheckedCreateWithoutTurnosInput>
+}
+
+export type GrupoEvolucionUpsertWithoutTurnosInput = {
+  update: Prisma.XOR<Prisma.GrupoEvolucionUpdateWithoutTurnosInput, Prisma.GrupoEvolucionUncheckedUpdateWithoutTurnosInput>
+  create: Prisma.XOR<Prisma.GrupoEvolucionCreateWithoutTurnosInput, Prisma.GrupoEvolucionUncheckedCreateWithoutTurnosInput>
+  where?: Prisma.GrupoEvolucionWhereInput
+}
+
+export type GrupoEvolucionUpdateToOneWithWhereWithoutTurnosInput = {
+  where?: Prisma.GrupoEvolucionWhereInput
+  data: Prisma.XOR<Prisma.GrupoEvolucionUpdateWithoutTurnosInput, Prisma.GrupoEvolucionUncheckedUpdateWithoutTurnosInput>
+}
+
+export type GrupoEvolucionUpdateWithoutTurnosInput = {
+  nombre?: Prisma.StringFieldUpdateOperationsInput | string
+  color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutGruposEvolucionNestedInput
+  paciente?: Prisma.PacienteUpdateOneRequiredWithoutGruposEvolucionNestedInput
+  evoluciones?: Prisma.EvolucionUpdateManyWithoutGrupoNestedInput
+}
+
+export type GrupoEvolucionUncheckedUpdateWithoutTurnosInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
+  pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
+  nombre?: Prisma.StringFieldUpdateOperationsInput | string
+  color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutGrupoNestedInput
+}
+
+export type GrupoEvolucionCreateWithoutEvolucionesInput = {
+  nombre: string
+  color: string
+  cantidadSesionesPlanificadas?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  consultorio: Prisma.ConsultorioCreateNestedOneWithoutGruposEvolucionInput
+  paciente: Prisma.PacienteCreateNestedOneWithoutGruposEvolucionInput
+  turnos?: Prisma.TurnoCreateNestedManyWithoutGrupoInput
 }
 
 export type GrupoEvolucionUncheckedCreateWithoutEvolucionesInput = {
@@ -659,8 +783,10 @@ export type GrupoEvolucionUncheckedCreateWithoutEvolucionesInput = {
   pacienteId: number
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutGrupoInput
 }
 
 export type GrupoEvolucionCreateOrConnectWithoutEvolucionesInput = {
@@ -682,10 +808,12 @@ export type GrupoEvolucionUpdateToOneWithWhereWithoutEvolucionesInput = {
 export type GrupoEvolucionUpdateWithoutEvolucionesInput = {
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutGruposEvolucionNestedInput
   paciente?: Prisma.PacienteUpdateOneRequiredWithoutGruposEvolucionNestedInput
+  turnos?: Prisma.TurnoUpdateManyWithoutGrupoNestedInput
 }
 
 export type GrupoEvolucionUncheckedUpdateWithoutEvolucionesInput = {
@@ -694,8 +822,10 @@ export type GrupoEvolucionUncheckedUpdateWithoutEvolucionesInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  turnos?: Prisma.TurnoUncheckedUpdateManyWithoutGrupoNestedInput
 }
 
 export type GrupoEvolucionCreateManyConsultorioInput = {
@@ -703,6 +833,7 @@ export type GrupoEvolucionCreateManyConsultorioInput = {
   pacienteId: number
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -710,10 +841,12 @@ export type GrupoEvolucionCreateManyConsultorioInput = {
 export type GrupoEvolucionUpdateWithoutConsultorioInput = {
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   paciente?: Prisma.PacienteUpdateOneRequiredWithoutGruposEvolucionNestedInput
   evoluciones?: Prisma.EvolucionUpdateManyWithoutGrupoNestedInput
+  turnos?: Prisma.TurnoUpdateManyWithoutGrupoNestedInput
 }
 
 export type GrupoEvolucionUncheckedUpdateWithoutConsultorioInput = {
@@ -721,9 +854,11 @@ export type GrupoEvolucionUncheckedUpdateWithoutConsultorioInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutGrupoNestedInput
+  turnos?: Prisma.TurnoUncheckedUpdateManyWithoutGrupoNestedInput
 }
 
 export type GrupoEvolucionUncheckedUpdateManyWithoutConsultorioInput = {
@@ -731,6 +866,7 @@ export type GrupoEvolucionUncheckedUpdateManyWithoutConsultorioInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -740,6 +876,7 @@ export type GrupoEvolucionCreateManyPacienteInput = {
   consultorioId: number
   nombre: string
   color: string
+  cantidadSesionesPlanificadas?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -747,10 +884,12 @@ export type GrupoEvolucionCreateManyPacienteInput = {
 export type GrupoEvolucionUpdateWithoutPacienteInput = {
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutGruposEvolucionNestedInput
   evoluciones?: Prisma.EvolucionUpdateManyWithoutGrupoNestedInput
+  turnos?: Prisma.TurnoUpdateManyWithoutGrupoNestedInput
 }
 
 export type GrupoEvolucionUncheckedUpdateWithoutPacienteInput = {
@@ -758,9 +897,11 @@ export type GrupoEvolucionUncheckedUpdateWithoutPacienteInput = {
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutGrupoNestedInput
+  turnos?: Prisma.TurnoUncheckedUpdateManyWithoutGrupoNestedInput
 }
 
 export type GrupoEvolucionUncheckedUpdateManyWithoutPacienteInput = {
@@ -768,6 +909,7 @@ export type GrupoEvolucionUncheckedUpdateManyWithoutPacienteInput = {
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   nombre?: Prisma.StringFieldUpdateOperationsInput | string
   color?: Prisma.StringFieldUpdateOperationsInput | string
+  cantidadSesionesPlanificadas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -779,10 +921,12 @@ export type GrupoEvolucionUncheckedUpdateManyWithoutPacienteInput = {
 
 export type GrupoEvolucionCountOutputType = {
   evoluciones: number
+  turnos: number
 }
 
 export type GrupoEvolucionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   evoluciones?: boolean | GrupoEvolucionCountOutputTypeCountEvolucionesArgs
+  turnos?: boolean | GrupoEvolucionCountOutputTypeCountTurnosArgs
 }
 
 /**
@@ -802,6 +946,13 @@ export type GrupoEvolucionCountOutputTypeCountEvolucionesArgs<ExtArgs extends ru
   where?: Prisma.EvolucionWhereInput
 }
 
+/**
+ * GrupoEvolucionCountOutputType without action
+ */
+export type GrupoEvolucionCountOutputTypeCountTurnosArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TurnoWhereInput
+}
+
 
 export type GrupoEvolucionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -809,11 +960,13 @@ export type GrupoEvolucionSelect<ExtArgs extends runtime.Types.Extensions.Intern
   pacienteId?: boolean
   nombre?: boolean
   color?: boolean
+  cantidadSesionesPlanificadas?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
   paciente?: boolean | Prisma.PacienteDefaultArgs<ExtArgs>
   evoluciones?: boolean | Prisma.GrupoEvolucion$evolucionesArgs<ExtArgs>
+  turnos?: boolean | Prisma.GrupoEvolucion$turnosArgs<ExtArgs>
   _count?: boolean | Prisma.GrupoEvolucionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["grupoEvolucion"]>
 
@@ -825,15 +978,17 @@ export type GrupoEvolucionSelectScalar = {
   pacienteId?: boolean
   nombre?: boolean
   color?: boolean
+  cantidadSesionesPlanificadas?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type GrupoEvolucionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "pacienteId" | "nombre" | "color" | "createdAt" | "updatedAt", ExtArgs["result"]["grupoEvolucion"]>
+export type GrupoEvolucionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "pacienteId" | "nombre" | "color" | "cantidadSesionesPlanificadas" | "createdAt" | "updatedAt", ExtArgs["result"]["grupoEvolucion"]>
 export type GrupoEvolucionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
   paciente?: boolean | Prisma.PacienteDefaultArgs<ExtArgs>
   evoluciones?: boolean | Prisma.GrupoEvolucion$evolucionesArgs<ExtArgs>
+  turnos?: boolean | Prisma.GrupoEvolucion$turnosArgs<ExtArgs>
   _count?: boolean | Prisma.GrupoEvolucionCountOutputTypeDefaultArgs<ExtArgs>
 }
 
@@ -843,6 +998,7 @@ export type $GrupoEvolucionPayload<ExtArgs extends runtime.Types.Extensions.Inte
     consultorio: Prisma.$ConsultorioPayload<ExtArgs>
     paciente: Prisma.$PacientePayload<ExtArgs>
     evoluciones: Prisma.$EvolucionPayload<ExtArgs>[]
+    turnos: Prisma.$TurnoPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -850,6 +1006,7 @@ export type $GrupoEvolucionPayload<ExtArgs extends runtime.Types.Extensions.Inte
     pacienteId: number
     nombre: string
     color: string
+    cantidadSesionesPlanificadas: number | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["grupoEvolucion"]>
@@ -1195,6 +1352,7 @@ export interface Prisma__GrupoEvolucionClient<T, Null = never, ExtArgs extends r
   consultorio<T extends Prisma.ConsultorioDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ConsultorioDefaultArgs<ExtArgs>>): Prisma.Prisma__ConsultorioClient<runtime.Types.Result.GetResult<Prisma.$ConsultorioPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   paciente<T extends Prisma.PacienteDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PacienteDefaultArgs<ExtArgs>>): Prisma.Prisma__PacienteClient<runtime.Types.Result.GetResult<Prisma.$PacientePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   evoluciones<T extends Prisma.GrupoEvolucion$evolucionesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.GrupoEvolucion$evolucionesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvolucionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  turnos<T extends Prisma.GrupoEvolucion$turnosArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.GrupoEvolucion$turnosArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TurnoPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1229,6 +1387,7 @@ export interface GrupoEvolucionFieldRefs {
   readonly pacienteId: Prisma.FieldRef<"GrupoEvolucion", 'Int'>
   readonly nombre: Prisma.FieldRef<"GrupoEvolucion", 'String'>
   readonly color: Prisma.FieldRef<"GrupoEvolucion", 'String'>
+  readonly cantidadSesionesPlanificadas: Prisma.FieldRef<"GrupoEvolucion", 'Int'>
   readonly createdAt: Prisma.FieldRef<"GrupoEvolucion", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"GrupoEvolucion", 'DateTime'>
 }
@@ -1600,6 +1759,30 @@ export type GrupoEvolucion$evolucionesArgs<ExtArgs extends runtime.Types.Extensi
   take?: number
   skip?: number
   distinct?: Prisma.EvolucionScalarFieldEnum | Prisma.EvolucionScalarFieldEnum[]
+}
+
+/**
+ * GrupoEvolucion.turnos
+ */
+export type GrupoEvolucion$turnosArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Turno
+   */
+  select?: Prisma.TurnoSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Turno
+   */
+  omit?: Prisma.TurnoOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TurnoInclude<ExtArgs> | null
+  where?: Prisma.TurnoWhereInput
+  orderBy?: Prisma.TurnoOrderByWithRelationInput | Prisma.TurnoOrderByWithRelationInput[]
+  cursor?: Prisma.TurnoWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TurnoScalarFieldEnum | Prisma.TurnoScalarFieldEnum[]
 }
 
 /**

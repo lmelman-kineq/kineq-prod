@@ -1,5 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import DateInput from './DateInput'
+import DiagnosticoSelect from './DiagnosticoSelect'
+import type { GrupoEvolucion } from '../types/domain'
 
 export type TurnoStatus =
   | 'Asignado'
@@ -17,6 +19,7 @@ export type TurnoFormValue = {
   specialtyId: number
   socialWorkId?: number | null
   sessionNumber: number
+  grupoId: number | null
   status: TurnoStatus
   duration: number
 }
@@ -33,6 +36,13 @@ export type NewPatientInput = {
   telefono?: string
 }
 
+export type NewProfessionalInput = {
+  nombreCompleto: string
+  titulo?: string
+  matricula?: string
+  usuarioId?: number
+}
+
 type DropdownName = 'patient' | 'professional' | 'specialty'
 type DropdownPosition = { top: number; left: number; width: number } | null
 
@@ -47,6 +57,25 @@ type TurnoFormFieldsProps = {
   specialties: SpecialtyOption[]
   onCreateSpecialty?: (name: string) => Promise<SpecialtyOption> | SpecialtyOption
   onCreatePatient?: (patient: NewPatientInput) => Promise<Item>
+  onCreateProfessional?: (profesional: NewProfessionalInput) => Promise<Item>
+  // Usuarios del consultorio sin profesional vinculado todavía — para el
+  // campo opcional "Usuario vinculado" del alta rápida de Profesional.
+  vinculableUsers?: Item[]
+
+  /*
+   * Diagnóstico ("Sesión X de Y"): solo se ofrece cuando el rol puede ver
+   * contenido clínico (mismo gate que Evoluciones/Ficha Inicial) — no se
+   * amplía el alcance de quién ve Diagnósticos. Sin `grupos`/`onChangeGrupo`,
+   * el campo directamente no se muestra (compatibilidad con el turno sin
+   * diagnóstico de siempre).
+   */
+  grupos?: GrupoEvolucion[]
+  onCreateGrupo?: (nombre: string) => Promise<GrupoEvolucion>
+  // Pide al backend la próxima "Sesión X" real para un diagnóstico (ver
+  // GET /api/grupos-evolucion/:id/proxima-sesion) — FormFields no llama a
+  // la API directamente, se mantiene "tonto"/controlado por props como el
+  // resto del formulario.
+  onFetchProximaSesion?: (grupoId: number) => Promise<number>
 
   /*
    * Un usuario PROFESIONAL solo puede crear/editar turnos para sí mismo: el
@@ -87,6 +116,11 @@ export function TurnoFormFields({
   specialties,
   onCreateSpecialty,
   onCreatePatient,
+  onCreateProfessional,
+  vinculableUsers = [],
+  grupos,
+  onCreateGrupo,
+  onFetchProximaSesion,
   hideProfessionalField = false,
 }: TurnoFormFieldsProps) {
   const [activeDropdown, setActiveDropdown] = useState<DropdownName | null>(null)
@@ -95,10 +129,21 @@ export function TurnoFormFields({
   const [professionalSearch, setProfessionalSearch] = useState('')
   const [addingSpecialty, setAddingSpecialty] = useState(false)
   const [newSpecialtyName, setNewSpecialtyName] = useState('')
-  const [addingPatient, setAddingPatient] = useState(false)
+
+  // Alta rápida de Paciente/Profesional: los campos viven FUERA del panel
+  // del dropdown (una sección propia del formulario del turno) — el
+  // dropdown solo tiene el botón que la abre y se cierra al abrirla.
+  const [newPatientSectionOpen, setNewPatientSectionOpen] = useState(false)
   const [newPatient, setNewPatient] = useState<NewPatientInput>({ nombreCompleto: '', documento: '', telefono: '' })
   const [creatingPatient, setCreatingPatient] = useState(false)
   const [newPatientError, setNewPatientError] = useState<string | null>(null)
+
+  const [newProfessionalSectionOpen, setNewProfessionalSectionOpen] = useState(false)
+  const [newProfessional, setNewProfessional] = useState<NewProfessionalInput>({ nombreCompleto: '', titulo: '', matricula: '', usuarioId: undefined })
+  const [creatingProfessional, setCreatingProfessional] = useState(false)
+  const [newProfessionalError, setNewProfessionalError] = useState<string | null>(null)
+
+  const [proximaSesionLoading, setProximaSesionLoading] = useState(false)
 
   const patientFieldRef = useRef<HTMLDivElement | null>(null)
   const professionalFieldRef = useRef<HTMLDivElement | null>(null)
@@ -156,7 +201,6 @@ export function TurnoFormFields({
       ) {
         setActiveDropdown(null)
         setAddingSpecialty(false)
-        setAddingPatient(false)
       }
     }
 
@@ -194,6 +238,12 @@ export function TurnoFormFields({
     setActiveDropdown(null)
   }
 
+  const cancelNewPatient = () => {
+    setNewPatient({ nombreCompleto: '', documento: '', telefono: '' })
+    setNewPatientError(null)
+    setNewPatientSectionOpen(false)
+  }
+
   const createPatient = async () => {
     const nombreCompleto = newPatient.nombreCompleto.trim()
     if (!nombreCompleto || !onCreatePatient) return
@@ -206,11 +256,9 @@ export function TurnoFormFields({
         documento: newPatient.documento?.trim() || undefined,
         telefono: newPatient.telefono?.trim() || undefined,
       })
-      setPatientSearch(created.displayName)
       updateValue({ patientId: created.id })
       setNewPatient({ nombreCompleto: '', documento: '', telefono: '' })
-      setAddingPatient(false)
-      setActiveDropdown(null)
+      setNewPatientSectionOpen(false)
     } catch (error) {
       setNewPatientError(error instanceof Error && error.message.trim() ? error.message : 'No se pudo crear el paciente.')
     } finally {
@@ -218,6 +266,55 @@ export function TurnoFormFields({
     }
   }
 
+  const cancelNewProfessional = () => {
+    setNewProfessional({ nombreCompleto: '', titulo: '', matricula: '', usuarioId: undefined })
+    setNewProfessionalError(null)
+    setNewProfessionalSectionOpen(false)
+  }
+
+  const createProfessional = async () => {
+    const nombreCompleto = newProfessional.nombreCompleto.trim()
+    if (!nombreCompleto || !onCreateProfessional) return
+
+    setCreatingProfessional(true)
+    setNewProfessionalError(null)
+    try {
+      const created = await onCreateProfessional({
+        nombreCompleto,
+        titulo: newProfessional.titulo?.trim() || undefined,
+        matricula: newProfessional.matricula?.trim() || undefined,
+        usuarioId: newProfessional.usuarioId,
+      })
+      updateValue({ professionalId: created.id })
+      setNewProfessional({ nombreCompleto: '', titulo: '', matricula: '', usuarioId: undefined })
+      setNewProfessionalSectionOpen(false)
+    } catch (error) {
+      setNewProfessionalError(error instanceof Error && error.message.trim() ? error.message : 'No se pudo crear el profesional.')
+    } finally {
+      setCreatingProfessional(false)
+    }
+  }
+
+  const selectedGrupo = grupos?.find((grupo) => grupo.id === value.grupoId) ?? null
+
+  const changeGrupo = (grupoId: number | '') => {
+    if (grupoId === '' || !onFetchProximaSesion) {
+      updateValue({ grupoId: grupoId === '' ? null : grupoId })
+      return
+    }
+    updateValue({ grupoId })
+    const grupo = grupos?.find((g) => g.id === grupoId)
+    // Solo se pide/pisa el número si el diagnóstico tiene sesiones
+    // planificadas — sin eso, "Sesión X de Y" no aplica y el campo sigue
+    // siendo el número manual de siempre.
+    if (!grupo?.cantidadSesionesPlanificadas) return
+
+    setProximaSesionLoading(true)
+    onFetchProximaSesion(grupoId)
+      .then((numeroSesion) => updateValue({ grupoId, sessionNumber: numeroSesion }))
+      .catch(() => {})
+      .finally(() => setProximaSesionLoading(false))
+  }
 
   const selectedPatient = patients.find((patient) => patient.id === value.patientId)
   const selectedProfessional = professionals.find((professional) => professional.id === value.professionalId)
@@ -270,7 +367,10 @@ export function TurnoFormFields({
             placeholder="Buscar paciente..."
             onFocus={() => {
               if (disabled) return
-              setPatientSearch(selectedPatient?.displayName ?? '')
+              // Vacío (no el nombre ya elegido): al abrir, se ve la lista
+              // completa — el paciente seleccionado sigue en la lista,
+              // marcado con un check, nunca "escondido" por el buscador.
+              setPatientSearch('')
               setActiveDropdown('patient')
             }}
             onChange={(event) => {
@@ -297,6 +397,43 @@ export function TurnoFormFields({
         </div>
       </div>
 
+      {!disabled && newPatientSectionOpen ? (
+        <div className="quick-create-section">
+          <p className="quick-create-title">Nuevo paciente</p>
+          <input
+            autoFocus
+            value={newPatient.nombreCompleto}
+            placeholder="Nombre completo *"
+            onChange={(event) => setNewPatient((current) => ({ ...current, nombreCompleto: event.target.value }))}
+          />
+          <input
+            value={newPatient.documento}
+            placeholder="Documento"
+            onChange={(event) => setNewPatient((current) => ({ ...current, documento: event.target.value }))}
+          />
+          <input
+            value={newPatient.telefono}
+            placeholder="Teléfono"
+            onChange={(event) => setNewPatient((current) => ({ ...current, telefono: event.target.value }))}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') createPatient()
+            }}
+          />
+          {newPatientError ? <p className="evolution-form-error">{newPatientError}</p> : null}
+          <div className="quick-create-actions">
+            <button type="button" className="secondary-button" onClick={cancelNewPatient}>Cancelar</button>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={!newPatient.nombreCompleto.trim() || creatingPatient}
+              onClick={createPatient}
+            >
+              {creatingPatient ? 'Creando...' : '+ Agregar'}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {hideProfessionalField ? null : (
         <div className="dropdown-field">
           <label>Profesional</label>
@@ -307,7 +444,7 @@ export function TurnoFormFields({
               placeholder="Buscar profesional..."
               onFocus={() => {
                 if (disabled) return
-                setProfessionalSearch(selectedProfessional?.displayName ?? '')
+                setProfessionalSearch('')
                 setActiveDropdown('professional')
               }}
               onChange={(event) => {
@@ -334,6 +471,51 @@ export function TurnoFormFields({
           </div>
         </div>
       )}
+
+      {!disabled && !hideProfessionalField && newProfessionalSectionOpen ? (
+        <div className="quick-create-section">
+          <p className="quick-create-title">Nuevo profesional</p>
+          <input
+            autoFocus
+            value={newProfessional.nombreCompleto}
+            placeholder="Nombre completo *"
+            onChange={(event) => setNewProfessional((current) => ({ ...current, nombreCompleto: event.target.value }))}
+          />
+          <input
+            value={newProfessional.titulo}
+            placeholder="Ej. Lic. en Kinesiología y Fisiatría"
+            onChange={(event) => setNewProfessional((current) => ({ ...current, titulo: event.target.value }))}
+          />
+          <input
+            value={newProfessional.matricula}
+            placeholder="Matrícula"
+            onChange={(event) => setNewProfessional((current) => ({ ...current, matricula: event.target.value }))}
+          />
+          {vinculableUsers.length > 0 ? (
+            <select
+              value={newProfessional.usuarioId ?? ''}
+              onChange={(event) => setNewProfessional((current) => ({ ...current, usuarioId: event.target.value ? Number(event.target.value) : undefined }))}
+            >
+              <option value="">Usuario vinculado (opcional)</option>
+              {vinculableUsers.map((usuario) => (
+                <option key={usuario.id} value={usuario.id}>{usuario.displayName}</option>
+              ))}
+            </select>
+          ) : null}
+          {newProfessionalError ? <p className="evolution-form-error">{newProfessionalError}</p> : null}
+          <div className="quick-create-actions">
+            <button type="button" className="secondary-button" onClick={cancelNewProfessional}>Cancelar</button>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={!newProfessional.nombreCompleto.trim() || creatingProfessional}
+              onClick={createProfessional}
+            >
+              {creatingProfessional ? 'Creando...' : '+ Agregar'}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="dropdown-field">
         <label>Especialidad</label>
@@ -374,15 +556,25 @@ export function TurnoFormFields({
 
 
 
+      {grupos && onCreateGrupo ? (
+        <DiagnosticoSelect
+          grupos={grupos}
+          value={value.grupoId ?? ''}
+          onChange={changeGrupo}
+          onCreate={onCreateGrupo}
+          disabled={disabled || !value.patientId}
+        />
+      ) : null}
+
       <label>
-        Nro. de sesión
+        {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
         <input
           type="number"
           className="narrow-input"
           min={1}
           value={value.sessionNumber}
           onChange={(event) => updateValue({ sessionNumber: Number(event.target.value) })}
-          disabled={disabled}
+          disabled={disabled || proximaSesionLoading}
         />
       </label>
 
@@ -399,7 +591,7 @@ export function TurnoFormFields({
         </select>
       </label>
 
-      <label>
+      <label className="appointment-form-full-row">
         Duración (min)
         <input
           type="number"
@@ -423,109 +615,100 @@ export function TurnoFormFields({
         >
           {activeDropdown === 'patient' && (
             <>
-              {filteredPatients.map((patient) => (
-                <button
-                  key={patient.id}
-                  type="button"
-                  onClick={() => {
-                    setPatientSearch(patient.displayName)
-                    updateValue({ patientId: patient.id })
-                    setActiveDropdown(null)
-                  }}
-                >
-                  {patient.displayName}
-                </button>
-              ))}
+              {filteredPatients.map((patient) => {
+                const isSelected = patient.id === value.patientId
+                return (
+                  <button
+                    key={patient.id}
+                    type="button"
+                    className={isSelected ? 'dropdown-option--selected' : undefined}
+                    onClick={() => {
+                      setPatientSearch('')
+                      updateValue({ patientId: patient.id })
+                      setActiveDropdown(null)
+                    }}
+                  >
+                    {isSelected ? <span className="dropdown-option-check" aria-hidden="true">✓</span> : null}
+                    {patient.displayName}
+                  </button>
+                )
+              })}
 
               {onCreatePatient && (
-                !addingPatient ? (
-                  <div className="dropdown-footer">
-                    <button
-                      type="button"
-                      className="add-item-button"
-                      onClick={() => setAddingPatient(true)}
-                    >
-                      + Agregar paciente
-                    </button>
-                  </div>
-                ) : (
-                  <div className="dropdown-footer-edit dropdown-footer-edit--patient">
-                    <input
-                      autoFocus
-                      value={newPatient.nombreCompleto}
-                      placeholder="Nombre completo *"
-                      onChange={(event) => setNewPatient((current) => ({ ...current, nombreCompleto: event.target.value }))}
-                    />
-                    <input
-                      value={newPatient.documento}
-                      placeholder="Documento"
-                      onChange={(event) => setNewPatient((current) => ({ ...current, documento: event.target.value }))}
-                    />
-                    <input
-                      value={newPatient.telefono}
-                      placeholder="Teléfono"
-                      onChange={(event) => setNewPatient((current) => ({ ...current, telefono: event.target.value }))}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') createPatient()
-                      }}
-                    />
-                    {newPatientError ? <p className="evolution-form-error">{newPatientError}</p> : null}
-                    <div className="dropdown-footer-edit-actions">
-                      <button
-                        type="button"
-                        className="add-button"
-                        disabled={!newPatient.nombreCompleto.trim() || creatingPatient}
-                        onClick={createPatient}
-                      >
-                        {creatingPatient ? 'Creando...' : 'Agregar'}
-                      </button>
-                      <button
-                        type="button"
-                        className="cancel-button"
-                        onClick={() => {
-                          setNewPatient({ nombreCompleto: '', documento: '', telefono: '' })
-                          setNewPatientError(null)
-                          setAddingPatient(false)
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                )
+                <div className="dropdown-footer">
+                  <button
+                    type="button"
+                    className="add-item-button"
+                    onClick={() => {
+                      setActiveDropdown(null)
+                      setNewPatientSectionOpen(true)
+                    }}
+                  >
+                    + Agregar paciente
+                  </button>
+                </div>
               )}
             </>
           )}
 
-          {activeDropdown === 'professional' && filteredProfessionals.map((professional) => (
-            <button
-              key={professional.id}
-              type="button"
-              onClick={() => {
-                setProfessionalSearch(professional.displayName)
-                updateValue({ professionalId: professional.id })
-                setActiveDropdown(null)
-              }}
-            >
-              {professional.displayName}
-            </button>
-          ))}
+          {activeDropdown === 'professional' && (
+            <>
+              {filteredProfessionals.map((professional) => {
+                const isSelected = professional.id === value.professionalId
+                return (
+                  <button
+                    key={professional.id}
+                    type="button"
+                    className={isSelected ? 'dropdown-option--selected' : undefined}
+                    onClick={() => {
+                      setProfessionalSearch('')
+                      updateValue({ professionalId: professional.id })
+                      setActiveDropdown(null)
+                    }}
+                  >
+                    {isSelected ? <span className="dropdown-option-check" aria-hidden="true">✓</span> : null}
+                    {professional.displayName}
+                  </button>
+                )
+              })}
+
+              {onCreateProfessional && (
+                <div className="dropdown-footer">
+                  <button
+                    type="button"
+                    className="add-item-button"
+                    onClick={() => {
+                      setActiveDropdown(null)
+                      setNewProfessionalSectionOpen(true)
+                    }}
+                  >
+                    + Agregar profesional
+                  </button>
+                </div>
+              )}
+            </>
+          )}
 
           {activeDropdown === 'specialty' && (
             <>
-              {specialties.map((specialty) => (
-                <button
-                  key={specialty.id}
-                  type="button"
-                  onClick={() => {
-                    updateValue({ specialtyId: specialty.id })
-                    setActiveDropdown(null)
-                  }}
-                >
-                  <span className="turnos-specialty-dot" style={{ backgroundColor: specialty.color }} aria-hidden="true" />
-                  {specialty.name}
-                </button>
-              ))}
+              {specialties.map((specialty) => {
+                const isSelected = specialty.id === value.specialtyId
+                return (
+                  <button
+                    key={specialty.id}
+                    type="button"
+                    className={isSelected ? 'dropdown-option--selected' : undefined}
+                    onClick={() => {
+                      updateValue({ specialtyId: specialty.id })
+                      setActiveDropdown(null)
+                    }}
+                  >
+                    <span className="turnos-specialty-dot" style={{ backgroundColor: specialty.color }} aria-hidden="true" />
+                    {specialty.name}
+                    {isSelected ? <span className="dropdown-option-check" aria-hidden="true">✓</span> : null}
+                  </button>
+                )
+              })}
 
               {onCreateSpecialty && (
                 !addingSpecialty ? (

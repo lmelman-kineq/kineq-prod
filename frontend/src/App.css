@@ -1130,12 +1130,15 @@ body,
   gap: 18px 20px;
 }
 
-/* Fecha+Hora quedan en pareja; Paciente, Profesional y Especialidad ocupan
-   todo el ancho (son campos de búsqueda); Duración cierra el formulario. */
-.appointment-form > *:nth-child(3),
-.appointment-form > *:nth-child(4),
-.appointment-form > *:nth-child(5),
-.appointment-form > *:nth-child(8) {
+/* Fecha+Hora quedan en pareja (default 2 columnas); Paciente, Profesional,
+   Especialidad y Diagnóstico ocupan todo el ancho (son campos de
+   búsqueda/combobox) vía clase, no por posición — con las secciones de alta
+   rápida insertándose condicionalmente entre medio, contar posiciones con
+   nth-child se rompía apenas se abría una. Duración usa la misma clase
+   explícita (`.appointment-form-full-row`) para cerrar el formulario a
+   ancho completo, mismo motivo. */
+.appointment-form .dropdown-field,
+.appointment-form-full-row {
   grid-column: 1 / -1;
 }
 
@@ -1283,25 +1286,52 @@ body,
   filter: brightness(0.98);
 }
 
-/* Alta rápida de paciente desde Crear Turno: 4 campos, no entran en la fila
-   única que usa el resto de .dropdown-footer-edit (pensada para 1 input). */
-.dropdown-footer-edit--patient {
-  flex-direction: column;
-  align-items: stretch;
+/* Opción marcada en un dropdown (Paciente/Profesional/Especialidad/
+   Diagnóstico): nunca se saca la opción elegida de la lista, se resalta con
+   un check — ver corrección en FormFields.tsx/DiagnosticoSelect.tsx. */
+.dropdown-option--selected {
+  font-weight: 600;
+  color: var(--color-primary);
 }
 
-.dropdown-footer-edit--patient input {
+.dropdown-option-check {
+  color: var(--color-primary);
+}
+
+/* Alta rápida de Paciente/Profesional desde Crear Turno: sección propia del
+   formulario, nunca dentro del panel del dropdown (que solo tiene el botón
+   que la abre) — ver FormFields.tsx. */
+.quick-create-section {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface-muted);
+}
+
+.quick-create-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.quick-create-section input,
+.quick-create-section select {
   width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
 }
 
-.dropdown-footer-edit-actions {
+.quick-create-actions {
   display: flex;
   gap: 8px;
-}
-
-.dropdown-footer-edit-actions .add-button,
-.dropdown-footer-edit-actions .cancel-button {
-  flex: 1 1 0;
+  justify-content: flex-end;
 }
 
 .dropdown-input-row {

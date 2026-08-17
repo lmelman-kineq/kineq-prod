@@ -21,7 +21,7 @@ import AuthorizedImg from './components/AuthorizedImg'
 import ConfiguracionPage from './components/ConfiguracionPage'
 import EstadisticasPage from './components/EstadisticasPage'
 import * as api from './services/api'
-import type { Turno as ApiTurno, Paciente, Profesional, Especialidad, ObraSocial, EstadoTurno } from './types/domain'
+import type { Turno as ApiTurno, Paciente, Profesional, Especialidad, ObraSocial, EstadoTurno, GrupoEvolucion } from './types/domain'
 import { useAuth } from './auth/AuthContext'
 import LoginPage from './auth/LoginPage'
 import RegisterPage from './auth/RegisterPage'
@@ -31,11 +31,11 @@ import BootScreen from './components/BootScreen'
 import { useBootPhase } from './components/useBootPhase'
 import { WAITING_ALERT_MINUTES, formatMinutesAgo, getElapsedMinutes } from './utils/turnoTimers'
 import { mapEstadoToStatus, statusClass } from './utils/turnoStatus'
-import { getSpecialtyColor } from './utils/specialtyColors'
+import { getSpecialtyColor, SPECIALTY_COLOR_TOKENS } from './utils/specialtyColors'
 import { layoutTurnos } from './utils/turnoLayout'
 import { patientFullName } from './utils/patient'
 import { professionalName } from './utils/professional'
-import { utcIsoToZonedParts } from './utils/timezone'
+import { utcIsoToZonedParts, todayInTimeZone } from './utils/timezone'
 
 export type Turno = TurnosPageItem & {
   socialWorkId?: number | null
@@ -295,10 +295,24 @@ function Dashboard() {
   const [attentionReturnPage, setAttentionReturnPage] = useState<AppPage>('home')
   const [selectedTurnoId, setSelectedTurnoId] = useState<number>(0)
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date())
-  const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()))
+  // "Hoy" en la zona horaria del consultorio, no la del navegador — antes
+  // de que cargue el consultorio real, api.getConsultorioTimeZone() ya
+  // devuelve el default (Buenos Aires), razonable para el primer render.
+  const [selectedDate, setSelectedDate] = useState<string>(() => todayInTimeZone(api.getConsultorioTimeZone()))
   const [turnosState, setTurnosState] = useState<Turno[]>([])
   const [pacientesState, setPacientesState] = useState<{id:number;displayName:string}[]>([])
   const [profesionalesState, setProfesionalesState] = useState<{id:number;displayName:string}[]>([])
+  // Diagnósticos del paciente elegido en el turno que esté abierto (nuevo o
+  // edición) — para el selector "Sesión X de Y" en TurnoFormFields. Solo se
+  // ofrece a roles con acceso clínico (mismo gate que Evoluciones/Ficha
+  // Inicial); RECEPCION/SUPERVISOR siguen viendo el campo "Nro. de sesión"
+  // manual de siempre, nunca Diagnósticos (dato clínico).
+  const [turnoGruposState, setTurnoGruposState] = useState<GrupoEvolucion[]>([])
+  // Usuarios sin profesional vinculado, para "Usuario vinculado" en el alta
+  // rápida de Profesional — GET /api/usuarios es solo ADMINISTRADOR, así
+  // que para el resto de los roles queda vacío (el campo directamente no
+  // se muestra, ver FormFields.tsx).
+  const [vinculableUsuariosState, setVinculableUsuariosState] = useState<{id:number;displayName:string}[]>([])
   const [obrasSocialesState, setObrasSocialesState] = useState<string[]>([])
   const [filters, setFilters] = useState({
     specialtyIds: [] as number[],
@@ -335,6 +349,7 @@ function Dashboard() {
     professionalId: null,
     specialtyId: 0,
     sessionNumber: 1,
+    grupoId: null,
     status: 'Asignado',
     duration: 60,
   })
@@ -399,6 +414,7 @@ function Dashboard() {
       socialWorkId: t.obraSocial?.id ?? null,
       socialWorkDisplay: t.paciente.obraSocial?.nombre ?? patientSocialWorkById[t.paciente.id] ?? t.obraSocial?.nombre ?? null,
       sessionNumber: t.numeroSesion ?? undefined,
+      grupoId: t.grupoId ?? null,
       notes: t.notas ?? undefined,
       status: mapEstadoToStatus(t.estado),
       startAttention: t.inicioAtencion ?? null,
@@ -415,6 +431,7 @@ function Dashboard() {
       professionalId: turno.professionalId ?? null,
       specialtyId: turno.specialtyId ?? 0,
       sessionNumber: turno.sessionNumber ?? 1,
+      grupoId: turno.grupoId ?? null,
       status: turno.status,
       duration: turno.duration,
     }
@@ -744,6 +761,7 @@ function Dashboard() {
       professionalId: user?.rol === 'PROFESIONAL' ? user.profesionalId ?? null : null,
       specialtyId: specialtiesState[0]?.id ?? 0,
       sessionNumber: 1,
+      grupoId: null,
       status: 'Asignado',
       duration: 60,
     })
@@ -790,6 +808,87 @@ function Dashboard() {
     return next
   }
 
+  // Alta rápida de Profesional desde Crear/Editar Turno: mismo patrón que
+  // createPatientQuick — "Nombre completo" en un solo campo (mismo criterio
+  // que Paciente: se guarda entero en `nombre`, `apellido` queda ''; ver
+  // utils/patient.ts). No repite el campo Especialidad acá: son datos
+  // administrativos mínimos para poder agendarlo ya mismo, la ficha
+  // completa (especialidades, email, teléfono) se termina de cargar
+  // después desde Configuración → Profesionales.
+  const createProfesionalQuick = async (data: { nombreCompleto: string; titulo?: string; matricula?: string; usuarioId?: number }) => {
+    const created = await api.createProfesional({
+      nombre: data.nombreCompleto,
+      apellido: '',
+      titulo: data.titulo || null,
+      matricula: data.matricula || null,
+      usuarioId: data.usuarioId ?? null,
+    })
+    const next = { id: created.id, displayName: professionalName(created) }
+    setProfesionalesState((s) => [...s, next])
+    return next
+  }
+
+  const canSeeDiagnostico = user?.rol === 'ADMINISTRADOR' || user?.rol === 'PROFESIONAL'
+
+  // Diagnósticos del paciente del turno abierto (nuevo o edición) — se
+  // recarga cada vez que cambia el paciente elegido en cualquiera de los
+  // dos formularios, mientras ese modal esté abierto.
+  useEffect(() => {
+    const patientId = showNewTurno ? newTurnoForm.patientId : (showViewTurno ? editingTurnoForm?.patientId ?? null : null)
+    if (!patientId || !canSeeDiagnostico) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTurnoGruposState([])
+      return
+    }
+    let cancelled = false
+    api.getGruposEvolucion(patientId).then((grupos) => {
+      if (!cancelled) setTurnoGruposState(grupos)
+    }).catch(() => {
+      if (!cancelled) setTurnoGruposState([])
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [showNewTurno, showViewTurno, newTurnoForm.patientId, editingTurnoForm?.patientId, canSeeDiagnostico])
+
+  // Usuarios sin profesional vinculado, para el alta rápida de Profesional
+  // — solo se cargan una vez que hace falta (al abrir esa sección), y solo
+  // si el rol puede verlos (GET /api/usuarios es ADMINISTRADOR-only).
+  const loadVinculableUsuarios = async () => {
+    if (user?.rol !== 'ADMINISTRADOR') return
+    try {
+      const usuarios = await api.getUsuarios()
+      setVinculableUsuariosState(
+        usuarios
+          .filter((u) => u.activo !== false && !u.profesionalId)
+          .map((u) => ({ id: u.id, displayName: `${u.nombre} ${u.apellido} · ${u.email}` })),
+      )
+    } catch {
+      // Sección opcional del alta rápida — si falla, el campo "Usuario
+      // vinculado" simplemente no aparece, no bloquea crear el profesional.
+    }
+  }
+
+  // Alta rápida de Diagnóstico desde el propio dropdown del turno — mismo
+  // patrón que PatientDetailPage.tsx: único campo obligatorio es el
+  // nombre, color por rotación de paleta.
+  const createDiagnosticoInlineParaTurno = async (nombre: string): Promise<GrupoEvolucion> => {
+    const patientId = showNewTurno ? newTurnoForm.patientId : editingTurnoForm?.patientId
+    if (!patientId) throw new Error('Elegí un paciente primero.')
+    const color = SPECIALTY_COLOR_TOKENS[turnoGruposState.length % SPECIALTY_COLOR_TOKENS.length]
+    const created = await api.createGrupoEvolucion(patientId, { nombre, color })
+    setTurnoGruposState((current) => [created, ...current])
+    return created
+  }
+
+  const fetchProximaSesion = (grupoId: number) => api.getProximaSesion(grupoId)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (showNewTurno || showViewTurno) void loadVinculableUsuarios()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNewTurno, showViewTurno])
+
   const saveNewTurno = async () => {
     if (!newTurnoForm.patientId || !newTurnoForm.professionalId || newTurnoForm.specialtyId === 0) return
     try {
@@ -801,6 +900,7 @@ function Dashboard() {
         time: newTurnoForm.time,
         duracionMinutos: newTurnoForm.duration,
         numeroSesion: newTurnoForm.sessionNumber,
+        grupoId: newTurnoForm.grupoId,
         estado: mapUiStatusToApi(newTurnoForm.status),
       })
       const mapped = mapApiTurnoToUi(created)
@@ -1031,6 +1131,7 @@ function Dashboard() {
         time: editingTurnoForm.time,
         duracionMinutos: editingTurnoForm.duration,
         numeroSesion: editingTurnoForm.sessionNumber,
+        grupoId: editingTurnoForm.grupoId,
         estado: mapUiStatusToApi(editingTurnoForm.status),
       })
 
@@ -1053,6 +1154,9 @@ function Dashboard() {
 
   // compute month grid based on currentMonthDate
   const monthDays = useMemo(() => getMonthDays(currentMonthDate), [currentMonthDate])
+  // "Hoy" para resaltar el día actual en el mini calendario — zona horaria
+  // del consultorio, nunca la del navegador (ver todayInTimeZone).
+  const todayEnZonaConsultorio = todayInTimeZone(api.getConsultorioTimeZone())
 
   const selectedTurno =
     turnosState.find((turno) => turno.id === selectedTurnoId) ??
@@ -1646,14 +1750,13 @@ function Dashboard() {
                       e.preventDefault()
                       e.stopPropagation()
 
+                      // "Ver Historia Clínica" siempre está disponible (solo
+                      // navega, no cambia estado) — el menú ya no se
+                      // suprime solo porque no haya acciones de estado para
+                      // este rol/turno.
                       const actions = getTurnoQuickActions(turno)
-                      if (actions.length === 0) {
-                        setContextMenu(null)
-                        return
-                      }
-
                       const menuWidth = 190
-                      const menuHeight = actions.length * 40 + 12
+                      const menuHeight = (actions.length + 1) * 40 + 12
                       setContextMenu({
                         turnoId: turno.id,
                         x: Math.max(8, Math.min(e.clientX, window.innerWidth - menuWidth - 8)),
@@ -1729,7 +1832,7 @@ function Dashboard() {
         ) : activePage === 'estadisticas' ? (
           <EstadisticasPage />
         ) : activePage === 'configuracion' ? (
-          <ConfiguracionPage onRequestConfirm={setConfirmDialog} />
+          <ConfiguracionPage onRequestConfirm={setConfirmDialog} onProfesionalesChanged={() => setReloadKey((key) => key + 1)} />
         ) : (
           <PatientsPage
             refreshKey={turnosPageRefreshKey}
@@ -1769,6 +1872,11 @@ function Dashboard() {
                 specialties={specialtiesState}
                 onCreateSpecialty={user?.rol === 'ADMINISTRADOR' ? createSpecialty : undefined}
                 onCreatePatient={createPatientQuick}
+                onCreateProfessional={user?.rol === 'PROFESIONAL' ? undefined : createProfesionalQuick}
+                vinculableUsers={vinculableUsuariosState}
+                grupos={canSeeDiagnostico ? turnoGruposState : undefined}
+                onCreateGrupo={canSeeDiagnostico ? createDiagnosticoInlineParaTurno : undefined}
+                onFetchProximaSesion={fetchProximaSesion}
                 hideProfessionalField={user?.rol === 'PROFESIONAL'}
               />
 
@@ -1867,6 +1975,11 @@ function Dashboard() {
                 specialties={specialtiesState}
                 onCreateSpecialty={user?.rol === 'ADMINISTRADOR' ? createSpecialty : undefined}
                 onCreatePatient={createPatientQuick}
+                onCreateProfessional={user?.rol === 'PROFESIONAL' ? undefined : createProfesionalQuick}
+                vinculableUsers={vinculableUsuariosState}
+                grupos={canSeeDiagnostico ? turnoGruposState : undefined}
+                onCreateGrupo={canSeeDiagnostico ? createDiagnosticoInlineParaTurno : undefined}
+                onFetchProximaSesion={fetchProximaSesion}
                 hideProfessionalField={user?.rol === 'PROFESIONAL'}
               />
 
@@ -1927,6 +2040,18 @@ function Dashboard() {
                   {action.label}
                 </button>
               ))}
+              {menuTurno ? (
+                <button
+                  type="button"
+                  className="context-menu-item"
+                  onClick={() => {
+                    setContextMenu(null)
+                    openPatientDetail(menuTurno.patientId)
+                  }}
+                >
+                  Ver Historia Clínica
+                </button>
+              ) : null}
             </div>
           )
         })() : null}
@@ -1980,11 +2105,8 @@ function Dashboard() {
           </div>
           <div className="month-grid">
             {monthDays.map((day, index) => {
-              const isToday =
-                day === new Date().getDate() &&
-                currentMonthDate.getMonth() === new Date().getMonth() &&
-                currentMonthDate.getFullYear() === new Date().getFullYear()
               const dayStr = day ? formatDate(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), day)) : null
+              const isToday = dayStr !== null && dayStr === todayEnZonaConsultorio
               const selectedClass = dayStr === selectedDate ? 'selected' : ''
               return (
                 <div

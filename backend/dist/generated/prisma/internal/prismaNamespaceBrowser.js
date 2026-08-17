@@ -210,6 +210,7 @@ exports.TurnoScalarFieldEnum = {
     profesionalId: 'profesionalId',
     especialidadId: 'especialidadId',
     obraSocialId: 'obraSocialId',
+    grupoId: 'grupoId',
     inicio: 'inicio',
     duracionMinutos: 'duracionMinutos',
     numeroSesion: 'numeroSesion',
@@ -251,6 +252,7 @@ exports.GrupoEvolucionScalarFieldEnum = {
     pacienteId: 'pacienteId',
     nombre: 'nombre',
     color: 'color',
+    cantidadSesionesPlanificadas: 'cantidadSesionesPlanificadas',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
 };

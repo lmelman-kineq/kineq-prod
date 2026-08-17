@@ -458,6 +458,11 @@ export function deleteGrupoEvolucion(id: number): Promise<void> {
   return request(`/api/grupos-evolucion/${id}`, { method: 'DELETE' })
 }
 
+export async function getProximaSesion(grupoId: number): Promise<number> {
+  const result = await request<{ numeroSesion: number }>(`/api/grupos-evolucion/${grupoId}/proxima-sesion`)
+  return result.numeroSesion
+}
+
 export function getFichaInicial(pacienteId: number): Promise<FichaInicial | null> {
   return request(`/api/pacientes/${pacienteId}/ficha-inicial`)
 }

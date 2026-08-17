@@ -128,16 +128,30 @@ export default function DiagnosticoSelect({ grupos, value, onChange, onCreate, d
           ref={dropdownRef}
           style={{ top: position.top, left: position.left, width: position.width }}
         >
-          <button type="button" onClick={() => { onChange(''); setOpen(false) }}>
+          <button
+            type="button"
+            className={value === '' ? 'dropdown-option--selected' : undefined}
+            onClick={() => { onChange(''); setOpen(false) }}
+          >
             Sin diagnóstico
+            {value === '' ? <span className="dropdown-option-check" aria-hidden="true">✓</span> : null}
           </button>
 
-          {grupos.map((grupo) => (
-            <button key={grupo.id} type="button" onClick={() => { onChange(grupo.id); setOpen(false) }}>
-              <span className="grupo-evolucion-dot" style={{ backgroundColor: grupo.color }} aria-hidden="true" />
-              {grupo.nombre}
-            </button>
-          ))}
+          {grupos.map((grupo) => {
+            const isSelected = grupo.id === value
+            return (
+              <button
+                key={grupo.id}
+                type="button"
+                className={isSelected ? 'dropdown-option--selected' : undefined}
+                onClick={() => { onChange(grupo.id); setOpen(false) }}
+              >
+                <span className="grupo-evolucion-dot" style={{ backgroundColor: grupo.color }} aria-hidden="true" />
+                {grupo.nombre}
+                {isSelected ? <span className="dropdown-option-check" aria-hidden="true">✓</span> : null}
+              </button>
+            )
+          })}
 
           {!adding ? (
             <div className="dropdown-footer">

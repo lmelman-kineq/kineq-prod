@@ -187,6 +187,8 @@ Sin embargo, no debe ser restrictivo.
 
 El usuario debe poder modificar manualmente el número de sesión en caso de ser necesario.
 
+**Actualización (implementado) — "Sesión X de Y" ligada a un Diagnóstico**: `GrupoEvolucion` ("Diagnóstico", ver `docs/modules/clinical-history.md`) ganó un campo opcional `cantidadSesionesPlanificadas` — un Diagnóstico sin este campo se comporta exactamente igual que antes (agrupación puramente visual). `Turno` ganó `grupoId` (FK opcional a `GrupoEvolucion`, `onDelete: SetNull`): al elegir un Diagnóstico con sesiones planificadas en el formulario de Turno, el campo "Nro. de sesión" pasa a mostrarse como "Sesión (de Y)" y se autocompleta con el próximo número real (`GET /api/grupos-evolucion/:id/proxima-sesion`) — pero **sigue siendo un input editable normal**, nunca de solo lectura; corregirlo a mano es tan válido como el valor sugerido. El cálculo automático (mismo criterio en el backend como default en `POST`/`PATCH /api/turnos` si el cliente no manda `numeroSesion` explícito) es `count(turnos FINALIZADO del mismo paciente+diagnóstico) + 1` — **nunca** `count(Evolucion)+1`, que se desincroniza fácil (una evolución puede cargarse sin turno asociado, o un turno puede terminar con más de una evolución). Un `numeroSesion` explícito enviado por el cliente nunca se pisa con el cálculo automático. Solo se ofrece el selector de Diagnóstico a roles con acceso clínico (`ADMINISTRADOR`/`PROFESIONAL`, mismo criterio que Evoluciones/Ficha Inicial) — `RECEPCION`/`SUPERVISOR` siguen viendo el campo "Nro. de sesión" manual de siempre, sin Diagnóstico (dato clínico). Ver "Diagnóstico con sesiones planificadas" en `docs/modules/clinical-history.md` para el detalle del modelo y los estados que cuentan.
+
 ### Obra social
 
 La obra social debe copiarse desde el paciente.
@@ -204,6 +206,8 @@ Cuando un turno se cancela, el horario queda disponible.
 Cuando un turno se marca como ausente, cuenta como sesión consumida.
 
 Esto se diferencia de una cancelación o reprogramación.
+
+**Aclaración (no ambigua a partir de esta implementación)**: "sesión consumida" acá es un concepto administrativo/de cobertura (el horario se usó, más allá de si hubo atención) — es un concepto distinto de "Sesión X de Y" (arriba), que es progreso real del tratamiento. `AUSENTE` **no** incrementa "Sesión X de Y" (solo `FINALIZADO` cuenta ahí), mismo criterio que ya usa `estadisticasService.ts` para `sesionesRealizadas`/ausentismo — ver `docs/modules/statistics.md`. `CANCELADO` tampoco cuenta en ninguno de los dos sentidos.
 
 ---
 

@@ -814,6 +814,175 @@ describe('auth, roles y aislamiento por consultorio', () => {
     })
   })
 
+  describe('Diagnóstico con sesiones planificadas y "Sesión X de Y" en Turnos', () => {
+    it('crea un grupo con cantidadSesionesPlanificadas', async () => {
+      const res = await request(app)
+        .post(`/api/pacientes/${pacienteAId}/grupos-evolucion`)
+        .set('Cookie', cookies.profesionalA)
+        .send({ nombre: `Cervicalgia ${RUN_ID}`, color: 'var(--appointment-purple)', cantidadSesionesPlanificadas: 10 })
+      expect(res.status).toBe(201)
+      expect(res.body.cantidadSesionesPlanificadas).toBe(10)
+
+      await prisma.grupoEvolucion.delete({ where: { id: res.body.id } })
+    })
+
+    it('un grupo sin cantidadSesionesPlanificadas sigue funcionando (null)', async () => {
+      const res = await request(app)
+        .post(`/api/pacientes/${pacienteAId}/grupos-evolucion`)
+        .set('Cookie', cookies.profesionalA)
+        .send({ nombre: `Sin plan ${RUN_ID}`, color: 'var(--appointment-teal)' })
+      expect(res.status).toBe(201)
+      expect(res.body.cantidadSesionesPlanificadas).toBeNull()
+
+      await prisma.grupoEvolucion.delete({ where: { id: res.body.id } })
+    })
+
+    it('rechaza cantidadSesionesPlanificadas no positiva', async () => {
+      const res = await request(app)
+        .post(`/api/pacientes/${pacienteAId}/grupos-evolucion`)
+        .set('Cookie', cookies.profesionalA)
+        .send({ nombre: `Inválido ${RUN_ID}`, color: 'var(--appointment-teal)', cantidadSesionesPlanificadas: 0 })
+      expect(res.status).toBe(400)
+    })
+
+    it('primer turno de un diagnóstico calcula automáticamente "sesión 1"', async () => {
+      const grupo = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Lumbalgia ${RUN_ID}`, color: 'var(--appointment-purple)', cantidadSesionesPlanificadas: 5 },
+      })
+
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId,
+          profesionalId: otroProfesionalAId,
+          especialidadId: especialidadAId,
+          inicio: '2026-09-01T14:00:00.000Z',
+          duracionMinutos: 30,
+          grupoId: grupo.id,
+        })
+      expect(res.status).toBe(201)
+      expect(res.body.numeroSesion).toBe(1)
+      expect(res.body.grupoId).toBe(grupo.id)
+      expect(res.body.grupo.nombre).toBe(grupo.nombre)
+
+      await prisma.turno.delete({ where: { id: res.body.id } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
+    })
+
+    it('el próximo turno cuenta solo los FINALIZADO previos (no ASIGNADO/CANCELADO/AUSENTE)', async () => {
+      const grupo = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Rodilla ${RUN_ID}`, color: 'var(--appointment-sky)', cantidadSesionesPlanificadas: 8 },
+      })
+
+      const finalizado = await prisma.turno.create({
+        data: {
+          consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          grupoId: grupo.id, inicio: new Date('2026-09-02T14:00:00.000Z'), duracionMinutos: 30, estado: 'FINALIZADO', numeroSesion: 1,
+        },
+      })
+      const cancelado = await prisma.turno.create({
+        data: {
+          consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          grupoId: grupo.id, inicio: new Date('2026-09-03T14:00:00.000Z'), duracionMinutos: 30, estado: 'CANCELADO', numeroSesion: 2,
+        },
+      })
+      const ausente = await prisma.turno.create({
+        data: {
+          consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          grupoId: grupo.id, inicio: new Date('2026-09-04T14:00:00.000Z'), duracionMinutos: 30, estado: 'AUSENTE', numeroSesion: 2,
+        },
+      })
+
+      const proxima = await request(app).get(`/api/grupos-evolucion/${grupo.id}/proxima-sesion`).set('Cookie', cookies.adminA)
+      expect(proxima.status).toBe(200)
+      expect(proxima.body.numeroSesion).toBe(2)
+
+      const nuevo = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          inicio: '2026-09-05T14:00:00.000Z', duracionMinutos: 30, grupoId: grupo.id,
+        })
+      expect(nuevo.status).toBe(201)
+      expect(nuevo.body.numeroSesion).toBe(2)
+
+      await prisma.turno.deleteMany({ where: { id: { in: [finalizado.id, cancelado.id, ausente.id, nuevo.body.id] } } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
+    })
+
+    it('numeroSesion explícito del cliente nunca se pisa con el cálculo automático', async () => {
+      const grupo = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Hombro ${RUN_ID}`, color: 'var(--appointment-pink)', cantidadSesionesPlanificadas: 6 },
+      })
+
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          inicio: '2026-09-06T14:00:00.000Z', duracionMinutos: 30, grupoId: grupo.id, numeroSesion: 4,
+        })
+      expect(res.status).toBe(201)
+      expect(res.body.numeroSesion).toBe(4)
+
+      // Editable a mano después, aunque sea "automático" por default.
+      const patch = await request(app)
+        .patch(`/api/turnos/${res.body.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ numeroSesion: 99 })
+      expect(patch.status).toBe(200)
+      expect(patch.body.numeroSesion).toBe(99)
+
+      await prisma.turno.delete({ where: { id: res.body.id } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
+    })
+
+    it('turno sin diagnóstico sigue funcionando exactamente igual (numeroSesion manual, sin grupo)', async () => {
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          inicio: '2026-09-07T14:00:00.000Z', duracionMinutos: 30, numeroSesion: 3,
+        })
+      expect(res.status).toBe(201)
+      expect(res.body.numeroSesion).toBe(3)
+      expect(res.body.grupoId).toBeNull()
+
+      await prisma.turno.delete({ where: { id: res.body.id } })
+    })
+
+    it('no permite asignar un diagnóstico de otro paciente al turno (cross-paciente)', async () => {
+      const grupoDeB = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioBId, pacienteId: pacienteBId, nombre: `Grupo B turno ${RUN_ID}`, color: 'var(--appointment-red)' },
+      })
+
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          inicio: '2026-09-08T14:00:00.000Z', duracionMinutos: 30, grupoId: grupoDeB.id,
+        })
+      expect(res.status).toBe(404)
+
+      await prisma.grupoEvolucion.delete({ where: { id: grupoDeB.id } })
+    })
+
+    it('no permite pedir la próxima sesión de un diagnóstico de otro consultorio', async () => {
+      const grupoDeB = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioBId, pacienteId: pacienteBId, nombre: `Otro consultorio sesion ${RUN_ID}`, color: 'var(--appointment-red)' },
+      })
+
+      const res = await request(app).get(`/api/grupos-evolucion/${grupoDeB.id}/proxima-sesion`).set('Cookie', cookies.adminA)
+      expect(res.status).toBe(404)
+
+      await prisma.grupoEvolucion.delete({ where: { id: grupoDeB.id } })
+    })
+  })
+
   describe('evoluciones: contenido largo (regresión — VARCHAR(191) por default)', () => {
     // `contenido` era `String` sin `@db.Text` en el schema (VARCHAR(191) por
     // default de Prisma en MySQL) — una nota clínica real de más de 191

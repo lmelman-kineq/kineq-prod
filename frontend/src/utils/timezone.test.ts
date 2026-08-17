@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   DEFAULT_TIMEZONE,
   TIMEZONE_OPTIONS,
@@ -6,6 +6,7 @@ import {
   isValidTimeZone,
   zonedTimeToUtcIso,
   utcIsoToZonedParts,
+  todayInTimeZone,
 } from './timezone'
 
 describe('TIMEZONE_OPTIONS', () => {
@@ -70,5 +71,33 @@ describe('zonedTimeToUtcIso / utcIsoToZonedParts', () => {
     expect(iso).toBe('2026-08-07T02:30:00.000Z')
     const parts = utcIsoToZonedParts(iso, 'America/Argentina/Buenos_Aires')
     expect(parts).toEqual({ date: '2026-08-06', time: '23:30' })
+  })
+})
+
+describe('todayInTimeZone', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('domingo 23:30 hora Argentina sigue siendo domingo (aunque en UTC ya sea lunes)', () => {
+    // 2026-08-09 es domingo. 23:30 ART = 2026-08-10T02:30:00Z (lunes en UTC)
+    // — el bug era mostrar "lunes" en el mini calendario de Home usando
+    // getters locales del navegador (o UTC) en vez de la zona del consultorio.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-10T02:30:00.000Z'))
+    expect(todayInTimeZone('America/Argentina/Buenos_Aires')).toBe('2026-08-09')
+  })
+
+  it('lunes 00:30 hora Argentina ya es lunes', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-10T03:30:00.000Z')) // 00:30 ART del lunes
+    expect(todayInTimeZone('America/Argentina/Buenos_Aires')).toBe('2026-08-10')
+  })
+
+  it('el mismo instante da un día distinto en una zona horaria distinta', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-10T02:30:00.000Z'))
+    expect(todayInTimeZone('Asia/Tokyo')).toBe('2026-08-10')
+    expect(todayInTimeZone('America/Argentina/Buenos_Aires')).toBe('2026-08-09')
   })
 })

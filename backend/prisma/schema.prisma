@@ -300,6 +300,12 @@ model Turno {
   profesionalId   Int
   especialidadId  Int
   obraSocialId    Int?
+  // Diagnóstico (GrupoEvolucion) al que pertenece este turno, opcional. Con
+  // un diagnóstico que tiene `cantidadSesionesPlanificadas`, habilita el
+  // cálculo automático de `numeroSesion` como "sesión completada + 1" —
+  // ver `sesionAutomaticaParaGrupo()` en app.ts. Nunca obligatorio: un
+  // turno sin diagnóstico sigue funcionando exactamente igual que antes.
+  grupoId         Int?
   inicio          DateTime
   duracionMinutos Int         @default(60)
   numeroSesion    Int?
@@ -311,11 +317,12 @@ model Turno {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
-  paciente     Paciente     @relation(fields: [pacienteId], references: [id])
-  profesional  Profesional  @relation(fields: [profesionalId], references: [id])
-  especialidad Especialidad @relation(fields: [especialidadId], references: [id])
-  obraSocial   ObraSocial?  @relation(fields: [obraSocialId], references: [id])
+  consultorio  Consultorio     @relation(fields: [consultorioId], references: [id])
+  paciente     Paciente        @relation(fields: [pacienteId], references: [id])
+  profesional  Profesional     @relation(fields: [profesionalId], references: [id])
+  especialidad Especialidad    @relation(fields: [especialidadId], references: [id])
+  obraSocial   ObraSocial?     @relation(fields: [obraSocialId], references: [id])
+  grupo        GrupoEvolucion? @relation(fields: [grupoId], references: [id], onDelete: SetNull)
   evoluciones  Evolucion[]
 
   @@index([consultorioId, inicio])
@@ -324,6 +331,7 @@ model Turno {
   @@index([consultorioId, estado, inicio])
   @@index([especialidadId])
   @@index([obraSocialId])
+  @@index([grupoId])
 }
 
 model Evolucion {
@@ -390,23 +398,28 @@ model EvolucionImagen {
   @@index([pacienteId])
 }
 
-// Agrupación puramente visual/organizativa de evoluciones (ej. "Lumbalgia").
-// No es una entidad clínica formal: no tiene diagnóstico, plan ni severidad.
-// Eliminar un grupo nunca borra evoluciones: la FK grupoId de Evolucion usa
-// onDelete: SetNull, así que las evoluciones ya asignadas quedan "Sin grupo"
-// automáticamente y conservan todo su contenido.
+// Agrupación de evoluciones/turnos (ej. "Lumbalgia") — no es una entidad
+// clínica formal completa: no tiene severidad, objetivos por sesión ni alta
+// médica. `cantidadSesionesPlanificadas` es lo único que se le agregó de
+// "plan": opcional, habilita mostrar/calcular "Sesión X de Y" en los turnos
+// asociados (ver `sesionAutomaticaParaGrupo()` en app.ts) — sin ella, un
+// grupo se comporta exactamente como antes. Eliminar un grupo nunca borra
+// evoluciones ni turnos: ambas FKs (`Evolucion.grupoId`, `Turno.grupoId`)
+// usan onDelete: SetNull, quedan "Sin diagnóstico" y conservan su contenido.
 model GrupoEvolucion {
-  id            Int      @id @default(autoincrement())
-  consultorioId Int
-  pacienteId    Int
-  nombre        String
-  color         String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                           Int      @id @default(autoincrement())
+  consultorioId                Int
+  pacienteId                   Int
+  nombre                       String
+  color                        String
+  cantidadSesionesPlanificadas Int?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
 
   consultorio Consultorio @relation(fields: [consultorioId], references: [id])
   paciente    Paciente    @relation(fields: [pacienteId], references: [id])
   evoluciones Evolucion[]
+  turnos      Turno[]
 
   @@unique([pacienteId, nombre])
   @@index([consultorioId, pacienteId])

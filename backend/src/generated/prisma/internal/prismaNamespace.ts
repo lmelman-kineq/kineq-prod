@@ -2002,6 +2002,7 @@ export const TurnoScalarFieldEnum = {
   profesionalId: 'profesionalId',
   especialidadId: 'especialidadId',
   obraSocialId: 'obraSocialId',
+  grupoId: 'grupoId',
   inicio: 'inicio',
   duracionMinutos: 'duracionMinutos',
   numeroSesion: 'numeroSesion',
@@ -2055,6 +2056,7 @@ export const GrupoEvolucionScalarFieldEnum = {
   pacienteId: 'pacienteId',
   nombre: 'nombre',
   color: 'color',
+  cantidadSesionesPlanificadas: 'cantidadSesionesPlanificadas',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

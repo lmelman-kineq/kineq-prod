@@ -14,9 +14,13 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 type ConfiguracionProfesionalesProps = {
   onRequestConfirm: (dialog: ConfirmDialogOptions) => void
+  // Sin esto, un profesional recién creado/editado/eliminado acá no se
+  // reflejaba en el selector de Profesional de Turnos (App.tsx) hasta un
+  // reload completo de la página.
+  onProfesionalesChanged?: () => void
 }
 
-export default function ConfiguracionProfesionales({ onRequestConfirm }: ConfiguracionProfesionalesProps) {
+export default function ConfiguracionProfesionales({ onRequestConfirm, onProfesionalesChanged }: ConfiguracionProfesionalesProps) {
   const { refreshUser } = useAuth()
   const [profesionales, setProfesionales] = useState<Profesional[]>([])
   const [especialidades, setEspecialidades] = useState<Especialidad[]>([])
@@ -123,6 +127,7 @@ export default function ConfiguracionProfesionales({ onRequestConfirm }: Configu
           try {
             await api.deleteProfesional(profesional.id)
             setRefreshKey((key) => key + 1)
+            onProfesionalesChanged?.()
           } catch (deleteError) {
             setError(getErrorMessage(deleteError, 'No se pudo eliminar el profesional.'))
           }
@@ -227,6 +232,7 @@ export default function ConfiguracionProfesionales({ onRequestConfirm }: Configu
             setFormOpen(false)
             setRefreshKey((key) => key + 1)
             void refreshUser()
+            onProfesionalesChanged?.()
           }}
         />
       ) : null}

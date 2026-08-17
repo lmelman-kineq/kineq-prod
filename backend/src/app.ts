@@ -888,7 +888,7 @@ app.get('/api/turnos', async (req, res) => {
   if (obraSocialId) where.obraSocialId = Number(obraSocialId)
   if (estado) where.estado = String(estado)
 
-  const turnos = await prisma.turno.findMany({ where, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true } })
+  const turnos = await prisma.turno.findMany({ where, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true } })
   res.json(turnos)
 })
 
@@ -914,7 +914,7 @@ function overlapExists(consultorioId: number, profesionalId: number, inicio: Dat
 
 app.post('/api/turnos', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
-  const { pacienteId, especialidadId, obraSocialId, inicio, duracionMinutos = 60, numeroSesion, notas } = req.body
+  const { pacienteId, especialidadId, obraSocialId, inicio, duracionMinutos = 60, numeroSesion, notas, grupoId } = req.body
 
   // Un profesional solo puede crear turnos para sí mismo: se ignora cualquier
   // profesionalId enviado por el cliente y se usa el vínculo de sesión.
@@ -959,13 +959,27 @@ app.post('/api/turnos', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
     // filtros/configuración, nunca una restricción de agenda. Las únicas
     // validaciones que quedan son consultorio/aislamiento (arriba).
 
+    let resolvedGrupoId: number | null = null
+    if (grupoId) {
+      const check = await resolveGrupoParaAsignar(consultorioId, pacienteId, Number(grupoId))
+      if (!check.ok) return res.status(check.status).json({ error: check.error })
+      resolvedGrupoId = Number(grupoId)
+    }
+
+    // `numeroSesion` explícito del cliente siempre gana — el cálculo
+    // automático es solo un default cuando no se mandó nada.
+    let resolvedNumeroSesion = numeroSesion ? Number(numeroSesion) : null
+    if (resolvedGrupoId && !resolvedNumeroSesion) {
+      resolvedNumeroSesion = await sesionAutomaticaParaGrupo(consultorioId, pacienteId, resolvedGrupoId)
+    }
+
     // chequear solapamientos
     const conflict = await overlapExists(consultorioId, profesionalId, inicioDate, Number(duracionMinutos))
     if (conflict) return res.status(409).json({ error: 'overlap with existing turno' })
 
-    const turno = await prisma.turno.create({ data: { consultorioId, pacienteId, profesionalId, especialidadId, obraSocialId: obraSocialId || null, inicio: inicioDate, duracionMinutos: Number(duracionMinutos), numeroSesion: numeroSesion || null, notas: notas || null } })
+    const turno = await prisma.turno.create({ data: { consultorioId, pacienteId, profesionalId, especialidadId, obraSocialId: obraSocialId || null, grupoId: resolvedGrupoId, inicio: inicioDate, duracionMinutos: Number(duracionMinutos), numeroSesion: resolvedNumeroSesion, notas: notas || null } })
 
-    const result = await prisma.turno.findUnique({ where: { id: turno.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true } })
+    const result = await prisma.turno.findUnique({ where: { id: turno.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true } })
     res.status(201).json(result)
   } catch (err) {
     res.status(500).json({ error: 'failed to create turno' })
@@ -997,7 +1011,7 @@ app.patch(
       }
 
       const payload: any = {}
-      const fields = ['pacienteId', ...(esProfesional ? [] : ['profesionalId']), 'especialidadId', 'obraSocialId', 'inicio', 'duracionMinutos', 'numeroSesion', 'notas', 'estado']
+      const fields = ['pacienteId', ...(esProfesional ? [] : ['profesionalId']), 'especialidadId', 'obraSocialId', 'grupoId', 'inicio', 'duracionMinutos', 'numeroSesion', 'notas', 'estado']
       for (const f of fields) if (f in req.body) payload[f] = req.body[f]
 
       if (payload.inicio) payload.inicio = new Date(payload.inicio)
@@ -1005,6 +1019,23 @@ app.patch(
 
       if (payload.especialidadId !== undefined && await especialidadesInvalidasParaConsultorio([Number(payload.especialidadId)], consultorioId)) {
         return res.status(404).json({ error: 'especialidad not found in consultorio' })
+      }
+
+      if ('grupoId' in payload) {
+        const targetPacienteId = payload.pacienteId ?? turno.pacienteId
+        if (payload.grupoId) {
+          const check = await resolveGrupoParaAsignar(consultorioId, targetPacienteId, Number(payload.grupoId))
+          if (!check.ok) return res.status(check.status).json({ error: check.error })
+          payload.grupoId = Number(payload.grupoId)
+          // Mismo criterio que el POST: si el cliente no mandó numeroSesion
+          // en el mismo request, se recalcula como default al cambiar de
+          // diagnóstico — nunca pisa un numeroSesion que sí vino explícito.
+          if (!('numeroSesion' in req.body)) {
+            payload.numeroSesion = await sesionAutomaticaParaGrupo(consultorioId, targetPacienteId, payload.grupoId, turnoId)
+          }
+        } else {
+          payload.grupoId = null
+        }
       }
 
       // business validations when changing scheduling/professional
@@ -1028,7 +1059,7 @@ app.patch(
       }
 
       const updated = await prisma.turno.update({ where: { id: turnoId }, data: payload })
-      const result = await prisma.turno.findUnique({ where: { id: updated.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true } })
+      const result = await prisma.turno.findUnique({ where: { id: updated.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true } })
       res.json(result)
     } catch (err) {
       res.status(500).json({ error: 'failed to update turno' })
@@ -1057,6 +1088,28 @@ async function resolveGrupoParaAsignar(consultorioId: number, pacienteId: number
   const grupo = await prisma.grupoEvolucion.findFirst({ where: { id: grupoId, consultorioId, pacienteId } })
   if (!grupo) return { ok: false, status: 404, error: 'grupo not found for this paciente' }
   return { ok: true }
+}
+
+// "Sesión X de Y": X es siempre count(turnos FINALIZADO del mismo paciente+
+// grupo, sin contar el propio turno si se está editando) + 1 — nunca
+// count(Evolucion)+1, que se desincroniza fácil (una evolución puede
+// cargarse sin turno, o un turno puede tener más de una evolución). Ni
+// CANCELADO ni AUSENTE cuentan como sesión realizada: mismo criterio que
+// `sesionesRealizadas` en estadisticasService.ts (solo FINALIZADO). Es un
+// valor prospectivo/default al crear o cambiar de diagnóstico — queda
+// guardado en `numeroSesion` y sigue siendo editable a mano después,
+// nunca recalculado por detrás sin que el usuario lo pida.
+async function sesionAutomaticaParaGrupo(consultorioId: number, pacienteId: number, grupoId: number, excludeTurnoId?: number): Promise<number> {
+  const completados = await prisma.turno.count({
+    where: {
+      consultorioId,
+      pacienteId,
+      grupoId,
+      estado: 'FINALIZADO',
+      NOT: excludeTurnoId ? { id: excludeTurnoId } : undefined,
+    },
+  })
+  return completados + 1
 }
 
 app.post('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) => {
@@ -1234,11 +1287,21 @@ app.post('/api/pacientes/:pacienteId/grupos-evolucion', requireRole(...CLINICAL_
   if (!nombre) return res.status(400).json({ error: 'nombre es requerido' })
   if (!GRUPO_EVOLUCION_COLOR_TOKENS.includes(color)) return res.status(400).json({ error: 'color inválido' })
 
+  // Cantidad de sesiones planificadas: opcional, entero positivo. Sin ella
+  // (caso normal, comportamiento sin cambios) el grupo sigue siendo una
+  // agrupación puramente visual, sin "Sesión X de Y" en ningún turno.
+  let cantidadSesionesPlanificadas: number | null = null
+  if (req.body.cantidadSesionesPlanificadas !== undefined && req.body.cantidadSesionesPlanificadas !== null && req.body.cantidadSesionesPlanificadas !== '') {
+    const cantidad = Number(req.body.cantidadSesionesPlanificadas)
+    if (!Number.isInteger(cantidad) || cantidad <= 0) return res.status(400).json({ error: 'cantidadSesionesPlanificadas debe ser un entero positivo' })
+    cantidadSesionesPlanificadas = cantidad
+  }
+
   const paciente = await prisma.paciente.findFirst({ where: { id: pacienteId, consultorioId, activo: true } })
   if (!paciente) return res.status(404).json({ error: 'paciente not found in consultorio' })
 
   try {
-    const grupo = await prisma.grupoEvolucion.create({ data: { consultorioId, pacienteId, nombre, color } })
+    const grupo = await prisma.grupoEvolucion.create({ data: { consultorioId, pacienteId, nombre, color, cantidadSesionesPlanificadas } })
     res.status(201).json(grupo)
   } catch (err) {
     if (isPrismaUniqueViolation(err)) return res.status(409).json({ error: 'Ya existe un grupo con ese nombre para este paciente' })
@@ -1264,6 +1327,15 @@ app.patch('/api/grupos-evolucion/:id', requireRole(...CLINICAL_ROLES), async (re
     if (!GRUPO_EVOLUCION_COLOR_TOKENS.includes(req.body.color)) return res.status(400).json({ error: 'color inválido' })
     payload.color = req.body.color
   }
+  if (req.body.cantidadSesionesPlanificadas !== undefined) {
+    if (req.body.cantidadSesionesPlanificadas === null || req.body.cantidadSesionesPlanificadas === '') {
+      payload.cantidadSesionesPlanificadas = null
+    } else {
+      const cantidad = Number(req.body.cantidadSesionesPlanificadas)
+      if (!Number.isInteger(cantidad) || cantidad <= 0) return res.status(400).json({ error: 'cantidadSesionesPlanificadas debe ser un entero positivo' })
+      payload.cantidadSesionesPlanificadas = cantidad
+    }
+  }
 
   try {
     const updated = await prisma.grupoEvolucion.update({ where: { id }, data: payload })
@@ -1287,6 +1359,22 @@ app.delete('/api/grupos-evolucion/:id', requireRole(...CLINICAL_ROLES), async (r
 
   await prisma.grupoEvolucion.delete({ where: { id } })
   res.status(204).end()
+})
+
+// Próxima "Sesión X" para este diagnóstico — el frontend la pide al elegir
+// un Diagnóstico en el formulario de Turno, para mostrar el número real de
+// una (en vez de un placeholder) antes de guardar. Mismo cálculo que usa el
+// backend como default en POST/PATCH /api/turnos — ver sesionAutomaticaParaGrupo.
+app.get('/api/grupos-evolucion/:id/proxima-sesion', requireRole(...CLINICAL_ROLES), async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const id = Number(req.params.id)
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'invalid id' })
+
+  const grupo = await prisma.grupoEvolucion.findFirst({ where: { id, consultorioId } })
+  if (!grupo) return res.status(404).json({ error: 'grupo not found in consultorio' })
+
+  const numeroSesion = await sesionAutomaticaParaGrupo(consultorioId, grupo.pacienteId, id)
+  res.json({ numeroSesion })
 })
 
 // FICHA INICIAL

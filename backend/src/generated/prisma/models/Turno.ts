@@ -33,6 +33,7 @@ export type TurnoAvgAggregateOutputType = {
   profesionalId: number | null
   especialidadId: number | null
   obraSocialId: number | null
+  grupoId: number | null
   duracionMinutos: number | null
   numeroSesion: number | null
 }
@@ -44,6 +45,7 @@ export type TurnoSumAggregateOutputType = {
   profesionalId: number | null
   especialidadId: number | null
   obraSocialId: number | null
+  grupoId: number | null
   duracionMinutos: number | null
   numeroSesion: number | null
 }
@@ -55,6 +57,7 @@ export type TurnoMinAggregateOutputType = {
   profesionalId: number | null
   especialidadId: number | null
   obraSocialId: number | null
+  grupoId: number | null
   inicio: Date | null
   duracionMinutos: number | null
   numeroSesion: number | null
@@ -74,6 +77,7 @@ export type TurnoMaxAggregateOutputType = {
   profesionalId: number | null
   especialidadId: number | null
   obraSocialId: number | null
+  grupoId: number | null
   inicio: Date | null
   duracionMinutos: number | null
   numeroSesion: number | null
@@ -93,6 +97,7 @@ export type TurnoCountAggregateOutputType = {
   profesionalId: number
   especialidadId: number
   obraSocialId: number
+  grupoId: number
   inicio: number
   duracionMinutos: number
   numeroSesion: number
@@ -114,6 +119,7 @@ export type TurnoAvgAggregateInputType = {
   profesionalId?: true
   especialidadId?: true
   obraSocialId?: true
+  grupoId?: true
   duracionMinutos?: true
   numeroSesion?: true
 }
@@ -125,6 +131,7 @@ export type TurnoSumAggregateInputType = {
   profesionalId?: true
   especialidadId?: true
   obraSocialId?: true
+  grupoId?: true
   duracionMinutos?: true
   numeroSesion?: true
 }
@@ -136,6 +143,7 @@ export type TurnoMinAggregateInputType = {
   profesionalId?: true
   especialidadId?: true
   obraSocialId?: true
+  grupoId?: true
   inicio?: true
   duracionMinutos?: true
   numeroSesion?: true
@@ -155,6 +163,7 @@ export type TurnoMaxAggregateInputType = {
   profesionalId?: true
   especialidadId?: true
   obraSocialId?: true
+  grupoId?: true
   inicio?: true
   duracionMinutos?: true
   numeroSesion?: true
@@ -174,6 +183,7 @@ export type TurnoCountAggregateInputType = {
   profesionalId?: true
   especialidadId?: true
   obraSocialId?: true
+  grupoId?: true
   inicio?: true
   duracionMinutos?: true
   numeroSesion?: true
@@ -280,6 +290,7 @@ export type TurnoGroupByOutputType = {
   profesionalId: number
   especialidadId: number
   obraSocialId: number | null
+  grupoId: number | null
   inicio: Date
   duracionMinutos: number
   numeroSesion: number | null
@@ -322,6 +333,7 @@ export type TurnoWhereInput = {
   profesionalId?: Prisma.IntFilter<"Turno"> | number
   especialidadId?: Prisma.IntFilter<"Turno"> | number
   obraSocialId?: Prisma.IntNullableFilter<"Turno"> | number | null
+  grupoId?: Prisma.IntNullableFilter<"Turno"> | number | null
   inicio?: Prisma.DateTimeFilter<"Turno"> | Date | string
   duracionMinutos?: Prisma.IntFilter<"Turno"> | number
   numeroSesion?: Prisma.IntNullableFilter<"Turno"> | number | null
@@ -337,6 +349,7 @@ export type TurnoWhereInput = {
   profesional?: Prisma.XOR<Prisma.ProfesionalScalarRelationFilter, Prisma.ProfesionalWhereInput>
   especialidad?: Prisma.XOR<Prisma.EspecialidadScalarRelationFilter, Prisma.EspecialidadWhereInput>
   obraSocial?: Prisma.XOR<Prisma.ObraSocialNullableScalarRelationFilter, Prisma.ObraSocialWhereInput> | null
+  grupo?: Prisma.XOR<Prisma.GrupoEvolucionNullableScalarRelationFilter, Prisma.GrupoEvolucionWhereInput> | null
   evoluciones?: Prisma.EvolucionListRelationFilter
 }
 
@@ -347,6 +360,7 @@ export type TurnoOrderByWithRelationInput = {
   profesionalId?: Prisma.SortOrder
   especialidadId?: Prisma.SortOrder
   obraSocialId?: Prisma.SortOrderInput | Prisma.SortOrder
+  grupoId?: Prisma.SortOrderInput | Prisma.SortOrder
   inicio?: Prisma.SortOrder
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -362,6 +376,7 @@ export type TurnoOrderByWithRelationInput = {
   profesional?: Prisma.ProfesionalOrderByWithRelationInput
   especialidad?: Prisma.EspecialidadOrderByWithRelationInput
   obraSocial?: Prisma.ObraSocialOrderByWithRelationInput
+  grupo?: Prisma.GrupoEvolucionOrderByWithRelationInput
   evoluciones?: Prisma.EvolucionOrderByRelationAggregateInput
   _relevance?: Prisma.TurnoOrderByRelevanceInput
 }
@@ -376,6 +391,7 @@ export type TurnoWhereUniqueInput = Prisma.AtLeast<{
   profesionalId?: Prisma.IntFilter<"Turno"> | number
   especialidadId?: Prisma.IntFilter<"Turno"> | number
   obraSocialId?: Prisma.IntNullableFilter<"Turno"> | number | null
+  grupoId?: Prisma.IntNullableFilter<"Turno"> | number | null
   inicio?: Prisma.DateTimeFilter<"Turno"> | Date | string
   duracionMinutos?: Prisma.IntFilter<"Turno"> | number
   numeroSesion?: Prisma.IntNullableFilter<"Turno"> | number | null
@@ -391,6 +407,7 @@ export type TurnoWhereUniqueInput = Prisma.AtLeast<{
   profesional?: Prisma.XOR<Prisma.ProfesionalScalarRelationFilter, Prisma.ProfesionalWhereInput>
   especialidad?: Prisma.XOR<Prisma.EspecialidadScalarRelationFilter, Prisma.EspecialidadWhereInput>
   obraSocial?: Prisma.XOR<Prisma.ObraSocialNullableScalarRelationFilter, Prisma.ObraSocialWhereInput> | null
+  grupo?: Prisma.XOR<Prisma.GrupoEvolucionNullableScalarRelationFilter, Prisma.GrupoEvolucionWhereInput> | null
   evoluciones?: Prisma.EvolucionListRelationFilter
 }, "id">
 
@@ -401,6 +418,7 @@ export type TurnoOrderByWithAggregationInput = {
   profesionalId?: Prisma.SortOrder
   especialidadId?: Prisma.SortOrder
   obraSocialId?: Prisma.SortOrderInput | Prisma.SortOrder
+  grupoId?: Prisma.SortOrderInput | Prisma.SortOrder
   inicio?: Prisma.SortOrder
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -428,6 +446,7 @@ export type TurnoScalarWhereWithAggregatesInput = {
   profesionalId?: Prisma.IntWithAggregatesFilter<"Turno"> | number
   especialidadId?: Prisma.IntWithAggregatesFilter<"Turno"> | number
   obraSocialId?: Prisma.IntNullableWithAggregatesFilter<"Turno"> | number | null
+  grupoId?: Prisma.IntNullableWithAggregatesFilter<"Turno"> | number | null
   inicio?: Prisma.DateTimeWithAggregatesFilter<"Turno"> | Date | string
   duracionMinutos?: Prisma.IntWithAggregatesFilter<"Turno"> | number
   numeroSesion?: Prisma.IntNullableWithAggregatesFilter<"Turno"> | number | null
@@ -456,6 +475,7 @@ export type TurnoCreateInput = {
   profesional: Prisma.ProfesionalCreateNestedOneWithoutTurnosInput
   especialidad: Prisma.EspecialidadCreateNestedOneWithoutTurnosInput
   obraSocial?: Prisma.ObraSocialCreateNestedOneWithoutTurnosInput
+  grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutTurnosInput
   evoluciones?: Prisma.EvolucionCreateNestedManyWithoutTurnoInput
 }
 
@@ -466,6 +486,7 @@ export type TurnoUncheckedCreateInput = {
   profesionalId: number
   especialidadId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -495,6 +516,7 @@ export type TurnoUpdateInput = {
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutTurnosNestedInput
   especialidad?: Prisma.EspecialidadUpdateOneRequiredWithoutTurnosNestedInput
   obraSocial?: Prisma.ObraSocialUpdateOneWithoutTurnosNestedInput
+  grupo?: Prisma.GrupoEvolucionUpdateOneWithoutTurnosNestedInput
   evoluciones?: Prisma.EvolucionUpdateManyWithoutTurnoNestedInput
 }
 
@@ -505,6 +527,7 @@ export type TurnoUncheckedUpdateInput = {
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -525,6 +548,7 @@ export type TurnoCreateManyInput = {
   profesionalId: number
   especialidadId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -557,6 +581,7 @@ export type TurnoUncheckedUpdateManyInput = {
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -592,6 +617,7 @@ export type TurnoCountOrderByAggregateInput = {
   profesionalId?: Prisma.SortOrder
   especialidadId?: Prisma.SortOrder
   obraSocialId?: Prisma.SortOrder
+  grupoId?: Prisma.SortOrder
   inicio?: Prisma.SortOrder
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrder
@@ -611,6 +637,7 @@ export type TurnoAvgOrderByAggregateInput = {
   profesionalId?: Prisma.SortOrder
   especialidadId?: Prisma.SortOrder
   obraSocialId?: Prisma.SortOrder
+  grupoId?: Prisma.SortOrder
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrder
 }
@@ -622,6 +649,7 @@ export type TurnoMaxOrderByAggregateInput = {
   profesionalId?: Prisma.SortOrder
   especialidadId?: Prisma.SortOrder
   obraSocialId?: Prisma.SortOrder
+  grupoId?: Prisma.SortOrder
   inicio?: Prisma.SortOrder
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrder
@@ -641,6 +669,7 @@ export type TurnoMinOrderByAggregateInput = {
   profesionalId?: Prisma.SortOrder
   especialidadId?: Prisma.SortOrder
   obraSocialId?: Prisma.SortOrder
+  grupoId?: Prisma.SortOrder
   inicio?: Prisma.SortOrder
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrder
@@ -660,6 +689,7 @@ export type TurnoSumOrderByAggregateInput = {
   profesionalId?: Prisma.SortOrder
   especialidadId?: Prisma.SortOrder
   obraSocialId?: Prisma.SortOrder
+  grupoId?: Prisma.SortOrder
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrder
 }
@@ -899,6 +929,48 @@ export type TurnoUpdateOneWithoutEvolucionesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TurnoUpdateToOneWithWhereWithoutEvolucionesInput, Prisma.TurnoUpdateWithoutEvolucionesInput>, Prisma.TurnoUncheckedUpdateWithoutEvolucionesInput>
 }
 
+export type TurnoCreateNestedManyWithoutGrupoInput = {
+  create?: Prisma.XOR<Prisma.TurnoCreateWithoutGrupoInput, Prisma.TurnoUncheckedCreateWithoutGrupoInput> | Prisma.TurnoCreateWithoutGrupoInput[] | Prisma.TurnoUncheckedCreateWithoutGrupoInput[]
+  connectOrCreate?: Prisma.TurnoCreateOrConnectWithoutGrupoInput | Prisma.TurnoCreateOrConnectWithoutGrupoInput[]
+  createMany?: Prisma.TurnoCreateManyGrupoInputEnvelope
+  connect?: Prisma.TurnoWhereUniqueInput | Prisma.TurnoWhereUniqueInput[]
+}
+
+export type TurnoUncheckedCreateNestedManyWithoutGrupoInput = {
+  create?: Prisma.XOR<Prisma.TurnoCreateWithoutGrupoInput, Prisma.TurnoUncheckedCreateWithoutGrupoInput> | Prisma.TurnoCreateWithoutGrupoInput[] | Prisma.TurnoUncheckedCreateWithoutGrupoInput[]
+  connectOrCreate?: Prisma.TurnoCreateOrConnectWithoutGrupoInput | Prisma.TurnoCreateOrConnectWithoutGrupoInput[]
+  createMany?: Prisma.TurnoCreateManyGrupoInputEnvelope
+  connect?: Prisma.TurnoWhereUniqueInput | Prisma.TurnoWhereUniqueInput[]
+}
+
+export type TurnoUpdateManyWithoutGrupoNestedInput = {
+  create?: Prisma.XOR<Prisma.TurnoCreateWithoutGrupoInput, Prisma.TurnoUncheckedCreateWithoutGrupoInput> | Prisma.TurnoCreateWithoutGrupoInput[] | Prisma.TurnoUncheckedCreateWithoutGrupoInput[]
+  connectOrCreate?: Prisma.TurnoCreateOrConnectWithoutGrupoInput | Prisma.TurnoCreateOrConnectWithoutGrupoInput[]
+  upsert?: Prisma.TurnoUpsertWithWhereUniqueWithoutGrupoInput | Prisma.TurnoUpsertWithWhereUniqueWithoutGrupoInput[]
+  createMany?: Prisma.TurnoCreateManyGrupoInputEnvelope
+  set?: Prisma.TurnoWhereUniqueInput | Prisma.TurnoWhereUniqueInput[]
+  disconnect?: Prisma.TurnoWhereUniqueInput | Prisma.TurnoWhereUniqueInput[]
+  delete?: Prisma.TurnoWhereUniqueInput | Prisma.TurnoWhereUniqueInput[]
+  connect?: Prisma.TurnoWhereUniqueInput | Prisma.TurnoWhereUniqueInput[]
+  update?: Prisma.TurnoUpdateWithWhereUniqueWithoutGrupoInput | Prisma.TurnoUpdateWithWhereUniqueWithoutGrupoInput[]
+  updateMany?: Prisma.TurnoUpdateManyWithWhereWithoutGrupoInput | Prisma.TurnoUpdateManyWithWhereWithoutGrupoInput[]
+  deleteMany?: Prisma.TurnoScalarWhereInput | Prisma.TurnoScalarWhereInput[]
+}
+
+export type TurnoUncheckedUpdateManyWithoutGrupoNestedInput = {
+  create?: Prisma.XOR<Prisma.TurnoCreateWithoutGrupoInput, Prisma.TurnoUncheckedCreateWithoutGrupoInput> | Prisma.TurnoCreateWithoutGrupoInput[] | Prisma.TurnoUncheckedCreateWithoutGrupoInput[]
+  connectOrCreate?: Prisma.TurnoCreateOrConnectWithoutGrupoInput | Prisma.TurnoCreateOrConnectWithoutGrupoInput[]
+  upsert?: Prisma.TurnoUpsertWithWhereUniqueWithoutGrupoInput | Prisma.TurnoUpsertWithWhereUniqueWithoutGrupoInput[]
+  createMany?: Prisma.TurnoCreateManyGrupoInputEnvelope
+  set?: Prisma.TurnoWhereUniqueInput | Prisma.TurnoWhereUniqueInput[]
+  disconnect?: Prisma.TurnoWhereUniqueInput | Prisma.TurnoWhereUniqueInput[]
+  delete?: Prisma.TurnoWhereUniqueInput | Prisma.TurnoWhereUniqueInput[]
+  connect?: Prisma.TurnoWhereUniqueInput | Prisma.TurnoWhereUniqueInput[]
+  update?: Prisma.TurnoUpdateWithWhereUniqueWithoutGrupoInput | Prisma.TurnoUpdateWithWhereUniqueWithoutGrupoInput[]
+  updateMany?: Prisma.TurnoUpdateManyWithWhereWithoutGrupoInput | Prisma.TurnoUpdateManyWithWhereWithoutGrupoInput[]
+  deleteMany?: Prisma.TurnoScalarWhereInput | Prisma.TurnoScalarWhereInput[]
+}
+
 export type TurnoCreateWithoutConsultorioInput = {
   inicio: Date | string
   duracionMinutos?: number
@@ -914,6 +986,7 @@ export type TurnoCreateWithoutConsultorioInput = {
   profesional: Prisma.ProfesionalCreateNestedOneWithoutTurnosInput
   especialidad: Prisma.EspecialidadCreateNestedOneWithoutTurnosInput
   obraSocial?: Prisma.ObraSocialCreateNestedOneWithoutTurnosInput
+  grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutTurnosInput
   evoluciones?: Prisma.EvolucionCreateNestedManyWithoutTurnoInput
 }
 
@@ -923,6 +996,7 @@ export type TurnoUncheckedCreateWithoutConsultorioInput = {
   profesionalId: number
   especialidadId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -972,6 +1046,7 @@ export type TurnoScalarWhereInput = {
   profesionalId?: Prisma.IntFilter<"Turno"> | number
   especialidadId?: Prisma.IntFilter<"Turno"> | number
   obraSocialId?: Prisma.IntNullableFilter<"Turno"> | number | null
+  grupoId?: Prisma.IntNullableFilter<"Turno"> | number | null
   inicio?: Prisma.DateTimeFilter<"Turno"> | Date | string
   duracionMinutos?: Prisma.IntFilter<"Turno"> | number
   numeroSesion?: Prisma.IntNullableFilter<"Turno"> | number | null
@@ -999,6 +1074,7 @@ export type TurnoCreateWithoutPacienteInput = {
   profesional: Prisma.ProfesionalCreateNestedOneWithoutTurnosInput
   especialidad: Prisma.EspecialidadCreateNestedOneWithoutTurnosInput
   obraSocial?: Prisma.ObraSocialCreateNestedOneWithoutTurnosInput
+  grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutTurnosInput
   evoluciones?: Prisma.EvolucionCreateNestedManyWithoutTurnoInput
 }
 
@@ -1008,6 +1084,7 @@ export type TurnoUncheckedCreateWithoutPacienteInput = {
   profesionalId: number
   especialidadId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -1062,6 +1139,7 @@ export type TurnoCreateWithoutProfesionalInput = {
   paciente: Prisma.PacienteCreateNestedOneWithoutTurnosInput
   especialidad: Prisma.EspecialidadCreateNestedOneWithoutTurnosInput
   obraSocial?: Prisma.ObraSocialCreateNestedOneWithoutTurnosInput
+  grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutTurnosInput
   evoluciones?: Prisma.EvolucionCreateNestedManyWithoutTurnoInput
 }
 
@@ -1071,6 +1149,7 @@ export type TurnoUncheckedCreateWithoutProfesionalInput = {
   pacienteId: number
   especialidadId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -1125,6 +1204,7 @@ export type TurnoCreateWithoutEspecialidadInput = {
   paciente: Prisma.PacienteCreateNestedOneWithoutTurnosInput
   profesional: Prisma.ProfesionalCreateNestedOneWithoutTurnosInput
   obraSocial?: Prisma.ObraSocialCreateNestedOneWithoutTurnosInput
+  grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutTurnosInput
   evoluciones?: Prisma.EvolucionCreateNestedManyWithoutTurnoInput
 }
 
@@ -1134,6 +1214,7 @@ export type TurnoUncheckedCreateWithoutEspecialidadInput = {
   pacienteId: number
   profesionalId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -1188,6 +1269,7 @@ export type TurnoCreateWithoutObraSocialInput = {
   paciente: Prisma.PacienteCreateNestedOneWithoutTurnosInput
   profesional: Prisma.ProfesionalCreateNestedOneWithoutTurnosInput
   especialidad: Prisma.EspecialidadCreateNestedOneWithoutTurnosInput
+  grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutTurnosInput
   evoluciones?: Prisma.EvolucionCreateNestedManyWithoutTurnoInput
 }
 
@@ -1197,6 +1279,7 @@ export type TurnoUncheckedCreateWithoutObraSocialInput = {
   pacienteId: number
   profesionalId: number
   especialidadId: number
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -1252,6 +1335,7 @@ export type TurnoCreateWithoutEvolucionesInput = {
   profesional: Prisma.ProfesionalCreateNestedOneWithoutTurnosInput
   especialidad: Prisma.EspecialidadCreateNestedOneWithoutTurnosInput
   obraSocial?: Prisma.ObraSocialCreateNestedOneWithoutTurnosInput
+  grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutTurnosInput
 }
 
 export type TurnoUncheckedCreateWithoutEvolucionesInput = {
@@ -1261,6 +1345,7 @@ export type TurnoUncheckedCreateWithoutEvolucionesInput = {
   profesionalId: number
   especialidadId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -1305,6 +1390,7 @@ export type TurnoUpdateWithoutEvolucionesInput = {
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutTurnosNestedInput
   especialidad?: Prisma.EspecialidadUpdateOneRequiredWithoutTurnosNestedInput
   obraSocial?: Prisma.ObraSocialUpdateOneWithoutTurnosNestedInput
+  grupo?: Prisma.GrupoEvolucionUpdateOneWithoutTurnosNestedInput
 }
 
 export type TurnoUncheckedUpdateWithoutEvolucionesInput = {
@@ -1314,6 +1400,7 @@ export type TurnoUncheckedUpdateWithoutEvolucionesInput = {
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1326,12 +1413,78 @@ export type TurnoUncheckedUpdateWithoutEvolucionesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type TurnoCreateWithoutGrupoInput = {
+  inicio: Date | string
+  duracionMinutos?: number
+  numeroSesion?: number | null
+  notas?: string | null
+  estado?: $Enums.EstadoTurno
+  inicioAtencion?: Date | string | null
+  finAtencion?: Date | string | null
+  canceladoAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  consultorio: Prisma.ConsultorioCreateNestedOneWithoutTurnosInput
+  paciente: Prisma.PacienteCreateNestedOneWithoutTurnosInput
+  profesional: Prisma.ProfesionalCreateNestedOneWithoutTurnosInput
+  especialidad: Prisma.EspecialidadCreateNestedOneWithoutTurnosInput
+  obraSocial?: Prisma.ObraSocialCreateNestedOneWithoutTurnosInput
+  evoluciones?: Prisma.EvolucionCreateNestedManyWithoutTurnoInput
+}
+
+export type TurnoUncheckedCreateWithoutGrupoInput = {
+  id?: number
+  consultorioId: number
+  pacienteId: number
+  profesionalId: number
+  especialidadId: number
+  obraSocialId?: number | null
+  inicio: Date | string
+  duracionMinutos?: number
+  numeroSesion?: number | null
+  notas?: string | null
+  estado?: $Enums.EstadoTurno
+  inicioAtencion?: Date | string | null
+  finAtencion?: Date | string | null
+  canceladoAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutTurnoInput
+}
+
+export type TurnoCreateOrConnectWithoutGrupoInput = {
+  where: Prisma.TurnoWhereUniqueInput
+  create: Prisma.XOR<Prisma.TurnoCreateWithoutGrupoInput, Prisma.TurnoUncheckedCreateWithoutGrupoInput>
+}
+
+export type TurnoCreateManyGrupoInputEnvelope = {
+  data: Prisma.TurnoCreateManyGrupoInput | Prisma.TurnoCreateManyGrupoInput[]
+  skipDuplicates?: boolean
+}
+
+export type TurnoUpsertWithWhereUniqueWithoutGrupoInput = {
+  where: Prisma.TurnoWhereUniqueInput
+  update: Prisma.XOR<Prisma.TurnoUpdateWithoutGrupoInput, Prisma.TurnoUncheckedUpdateWithoutGrupoInput>
+  create: Prisma.XOR<Prisma.TurnoCreateWithoutGrupoInput, Prisma.TurnoUncheckedCreateWithoutGrupoInput>
+}
+
+export type TurnoUpdateWithWhereUniqueWithoutGrupoInput = {
+  where: Prisma.TurnoWhereUniqueInput
+  data: Prisma.XOR<Prisma.TurnoUpdateWithoutGrupoInput, Prisma.TurnoUncheckedUpdateWithoutGrupoInput>
+}
+
+export type TurnoUpdateManyWithWhereWithoutGrupoInput = {
+  where: Prisma.TurnoScalarWhereInput
+  data: Prisma.XOR<Prisma.TurnoUpdateManyMutationInput, Prisma.TurnoUncheckedUpdateManyWithoutGrupoInput>
+}
+
 export type TurnoCreateManyConsultorioInput = {
   id?: number
   pacienteId: number
   profesionalId: number
   especialidadId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -1359,6 +1512,7 @@ export type TurnoUpdateWithoutConsultorioInput = {
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutTurnosNestedInput
   especialidad?: Prisma.EspecialidadUpdateOneRequiredWithoutTurnosNestedInput
   obraSocial?: Prisma.ObraSocialUpdateOneWithoutTurnosNestedInput
+  grupo?: Prisma.GrupoEvolucionUpdateOneWithoutTurnosNestedInput
   evoluciones?: Prisma.EvolucionUpdateManyWithoutTurnoNestedInput
 }
 
@@ -1368,6 +1522,7 @@ export type TurnoUncheckedUpdateWithoutConsultorioInput = {
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1387,6 +1542,7 @@ export type TurnoUncheckedUpdateManyWithoutConsultorioInput = {
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1405,6 +1561,7 @@ export type TurnoCreateManyPacienteInput = {
   profesionalId: number
   especialidadId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -1432,6 +1589,7 @@ export type TurnoUpdateWithoutPacienteInput = {
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutTurnosNestedInput
   especialidad?: Prisma.EspecialidadUpdateOneRequiredWithoutTurnosNestedInput
   obraSocial?: Prisma.ObraSocialUpdateOneWithoutTurnosNestedInput
+  grupo?: Prisma.GrupoEvolucionUpdateOneWithoutTurnosNestedInput
   evoluciones?: Prisma.EvolucionUpdateManyWithoutTurnoNestedInput
 }
 
@@ -1441,6 +1599,7 @@ export type TurnoUncheckedUpdateWithoutPacienteInput = {
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1460,6 +1619,7 @@ export type TurnoUncheckedUpdateManyWithoutPacienteInput = {
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1478,6 +1638,7 @@ export type TurnoCreateManyProfesionalInput = {
   pacienteId: number
   especialidadId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -1505,6 +1666,7 @@ export type TurnoUpdateWithoutProfesionalInput = {
   paciente?: Prisma.PacienteUpdateOneRequiredWithoutTurnosNestedInput
   especialidad?: Prisma.EspecialidadUpdateOneRequiredWithoutTurnosNestedInput
   obraSocial?: Prisma.ObraSocialUpdateOneWithoutTurnosNestedInput
+  grupo?: Prisma.GrupoEvolucionUpdateOneWithoutTurnosNestedInput
   evoluciones?: Prisma.EvolucionUpdateManyWithoutTurnoNestedInput
 }
 
@@ -1514,6 +1676,7 @@ export type TurnoUncheckedUpdateWithoutProfesionalInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1533,6 +1696,7 @@ export type TurnoUncheckedUpdateManyWithoutProfesionalInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1551,6 +1715,7 @@ export type TurnoCreateManyEspecialidadInput = {
   pacienteId: number
   profesionalId: number
   obraSocialId?: number | null
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -1578,6 +1743,7 @@ export type TurnoUpdateWithoutEspecialidadInput = {
   paciente?: Prisma.PacienteUpdateOneRequiredWithoutTurnosNestedInput
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutTurnosNestedInput
   obraSocial?: Prisma.ObraSocialUpdateOneWithoutTurnosNestedInput
+  grupo?: Prisma.GrupoEvolucionUpdateOneWithoutTurnosNestedInput
   evoluciones?: Prisma.EvolucionUpdateManyWithoutTurnoNestedInput
 }
 
@@ -1587,6 +1753,7 @@ export type TurnoUncheckedUpdateWithoutEspecialidadInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1606,6 +1773,7 @@ export type TurnoUncheckedUpdateManyWithoutEspecialidadInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1624,6 +1792,7 @@ export type TurnoCreateManyObraSocialInput = {
   pacienteId: number
   profesionalId: number
   especialidadId: number
+  grupoId?: number | null
   inicio: Date | string
   duracionMinutos?: number
   numeroSesion?: number | null
@@ -1651,6 +1820,7 @@ export type TurnoUpdateWithoutObraSocialInput = {
   paciente?: Prisma.PacienteUpdateOneRequiredWithoutTurnosNestedInput
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutTurnosNestedInput
   especialidad?: Prisma.EspecialidadUpdateOneRequiredWithoutTurnosNestedInput
+  grupo?: Prisma.GrupoEvolucionUpdateOneWithoutTurnosNestedInput
   evoluciones?: Prisma.EvolucionUpdateManyWithoutTurnoNestedInput
 }
 
@@ -1660,6 +1830,7 @@ export type TurnoUncheckedUpdateWithoutObraSocialInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1679,6 +1850,84 @@ export type TurnoUncheckedUpdateManyWithoutObraSocialInput = {
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
   especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
+  numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
+  inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type TurnoCreateManyGrupoInput = {
+  id?: number
+  consultorioId: number
+  pacienteId: number
+  profesionalId: number
+  especialidadId: number
+  obraSocialId?: number | null
+  inicio: Date | string
+  duracionMinutos?: number
+  numeroSesion?: number | null
+  notas?: string | null
+  estado?: $Enums.EstadoTurno
+  inicioAtencion?: Date | string | null
+  finAtencion?: Date | string | null
+  canceladoAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type TurnoUpdateWithoutGrupoInput = {
+  inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
+  numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
+  inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutTurnosNestedInput
+  paciente?: Prisma.PacienteUpdateOneRequiredWithoutTurnosNestedInput
+  profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutTurnosNestedInput
+  especialidad?: Prisma.EspecialidadUpdateOneRequiredWithoutTurnosNestedInput
+  obraSocial?: Prisma.ObraSocialUpdateOneWithoutTurnosNestedInput
+  evoluciones?: Prisma.EvolucionUpdateManyWithoutTurnoNestedInput
+}
+
+export type TurnoUncheckedUpdateWithoutGrupoInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
+  pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
+  profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
+  especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
+  obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
+  numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
+  inicioAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finAtencion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceladoAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutTurnoNestedInput
+}
+
+export type TurnoUncheckedUpdateManyWithoutGrupoInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
+  pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
+  profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
+  especialidadId?: Prisma.IntFieldUpdateOperationsInput | number
+  obraSocialId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   inicio?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1729,6 +1978,7 @@ export type TurnoSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   profesionalId?: boolean
   especialidadId?: boolean
   obraSocialId?: boolean
+  grupoId?: boolean
   inicio?: boolean
   duracionMinutos?: boolean
   numeroSesion?: boolean
@@ -1744,6 +1994,7 @@ export type TurnoSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   profesional?: boolean | Prisma.ProfesionalDefaultArgs<ExtArgs>
   especialidad?: boolean | Prisma.EspecialidadDefaultArgs<ExtArgs>
   obraSocial?: boolean | Prisma.Turno$obraSocialArgs<ExtArgs>
+  grupo?: boolean | Prisma.Turno$grupoArgs<ExtArgs>
   evoluciones?: boolean | Prisma.Turno$evolucionesArgs<ExtArgs>
   _count?: boolean | Prisma.TurnoCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["turno"]>
@@ -1757,6 +2008,7 @@ export type TurnoSelectScalar = {
   profesionalId?: boolean
   especialidadId?: boolean
   obraSocialId?: boolean
+  grupoId?: boolean
   inicio?: boolean
   duracionMinutos?: boolean
   numeroSesion?: boolean
@@ -1769,13 +2021,14 @@ export type TurnoSelectScalar = {
   updatedAt?: boolean
 }
 
-export type TurnoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "pacienteId" | "profesionalId" | "especialidadId" | "obraSocialId" | "inicio" | "duracionMinutos" | "numeroSesion" | "notas" | "estado" | "inicioAtencion" | "finAtencion" | "canceladoAt" | "createdAt" | "updatedAt", ExtArgs["result"]["turno"]>
+export type TurnoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "pacienteId" | "profesionalId" | "especialidadId" | "obraSocialId" | "grupoId" | "inicio" | "duracionMinutos" | "numeroSesion" | "notas" | "estado" | "inicioAtencion" | "finAtencion" | "canceladoAt" | "createdAt" | "updatedAt", ExtArgs["result"]["turno"]>
 export type TurnoInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
   paciente?: boolean | Prisma.PacienteDefaultArgs<ExtArgs>
   profesional?: boolean | Prisma.ProfesionalDefaultArgs<ExtArgs>
   especialidad?: boolean | Prisma.EspecialidadDefaultArgs<ExtArgs>
   obraSocial?: boolean | Prisma.Turno$obraSocialArgs<ExtArgs>
+  grupo?: boolean | Prisma.Turno$grupoArgs<ExtArgs>
   evoluciones?: boolean | Prisma.Turno$evolucionesArgs<ExtArgs>
   _count?: boolean | Prisma.TurnoCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -1788,6 +2041,7 @@ export type $TurnoPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     profesional: Prisma.$ProfesionalPayload<ExtArgs>
     especialidad: Prisma.$EspecialidadPayload<ExtArgs>
     obraSocial: Prisma.$ObraSocialPayload<ExtArgs> | null
+    grupo: Prisma.$GrupoEvolucionPayload<ExtArgs> | null
     evoluciones: Prisma.$EvolucionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1797,6 +2051,7 @@ export type $TurnoPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     profesionalId: number
     especialidadId: number
     obraSocialId: number | null
+    grupoId: number | null
     inicio: Date
     duracionMinutos: number
     numeroSesion: number | null
@@ -2152,6 +2407,7 @@ export interface Prisma__TurnoClient<T, Null = never, ExtArgs extends runtime.Ty
   profesional<T extends Prisma.ProfesionalDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProfesionalDefaultArgs<ExtArgs>>): Prisma.Prisma__ProfesionalClient<runtime.Types.Result.GetResult<Prisma.$ProfesionalPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   especialidad<T extends Prisma.EspecialidadDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EspecialidadDefaultArgs<ExtArgs>>): Prisma.Prisma__EspecialidadClient<runtime.Types.Result.GetResult<Prisma.$EspecialidadPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   obraSocial<T extends Prisma.Turno$obraSocialArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Turno$obraSocialArgs<ExtArgs>>): Prisma.Prisma__ObraSocialClient<runtime.Types.Result.GetResult<Prisma.$ObraSocialPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  grupo<T extends Prisma.Turno$grupoArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Turno$grupoArgs<ExtArgs>>): Prisma.Prisma__GrupoEvolucionClient<runtime.Types.Result.GetResult<Prisma.$GrupoEvolucionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   evoluciones<T extends Prisma.Turno$evolucionesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Turno$evolucionesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvolucionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -2188,6 +2444,7 @@ export interface TurnoFieldRefs {
   readonly profesionalId: Prisma.FieldRef<"Turno", 'Int'>
   readonly especialidadId: Prisma.FieldRef<"Turno", 'Int'>
   readonly obraSocialId: Prisma.FieldRef<"Turno", 'Int'>
+  readonly grupoId: Prisma.FieldRef<"Turno", 'Int'>
   readonly inicio: Prisma.FieldRef<"Turno", 'DateTime'>
   readonly duracionMinutos: Prisma.FieldRef<"Turno", 'Int'>
   readonly numeroSesion: Prisma.FieldRef<"Turno", 'Int'>
@@ -2562,6 +2819,25 @@ export type Turno$obraSocialArgs<ExtArgs extends runtime.Types.Extensions.Intern
    */
   include?: Prisma.ObraSocialInclude<ExtArgs> | null
   where?: Prisma.ObraSocialWhereInput
+}
+
+/**
+ * Turno.grupo
+ */
+export type Turno$grupoArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GrupoEvolucion
+   */
+  select?: Prisma.GrupoEvolucionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GrupoEvolucion
+   */
+  omit?: Prisma.GrupoEvolucionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GrupoEvolucionInclude<ExtArgs> | null
+  where?: Prisma.GrupoEvolucionWhereInput
 }
 
 /**
