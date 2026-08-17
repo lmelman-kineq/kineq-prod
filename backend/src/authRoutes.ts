@@ -22,6 +22,7 @@ function toPublicUsuario(usuario: {
   rol: RolUsuario
   consultorioId: number
   profesionalId: number | null
+  fotoPathname?: string | null
 }) {
   return {
     id: usuario.id,
@@ -31,6 +32,7 @@ function toPublicUsuario(usuario: {
     rol: usuario.rol,
     consultorioId: usuario.consultorioId,
     profesionalId: usuario.profesionalId,
+    fotoUrl: usuario.fotoPathname ? '/api/usuarios/me/foto/contenido' : null,
   }
 }
 

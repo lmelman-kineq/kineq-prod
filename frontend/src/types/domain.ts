@@ -19,6 +19,9 @@ export interface Usuario {
   activo?: boolean
   createdAt?: string
   profesional?: { id: number; nombre: string; apellido: string } | null
+  // Ruta propia que sirve la foto (nunca la URL de Vercel Blob) — null si
+  // todavía no cargó ninguna. Ver services/api.ts uploadUsuarioFoto().
+  fotoUrl?: string | null
 }
 
 export interface Consultorio {
@@ -65,6 +68,9 @@ export interface Paciente {
   obraSocial?: ObraSocial | null
   createdAt?: string
   updatedAt?: string
+  // Ruta propia que sirve la foto (nunca la URL de Vercel Blob) — null si
+  // todavía no cargó ninguna. Ver services/api.ts uploadPacienteFoto().
+  fotoUrl?: string | null
 }
 
 export interface Especialidad {
@@ -137,9 +143,9 @@ export interface GrupoEvolucion {
 
 export interface EvolucionImagen {
   id: number
-  consultorioId: number
-  pacienteId: number
   evolucionId: number
+  // Ruta propia del backend que sirve el contenido (nunca la URL de Vercel
+  // Blob, que es privada) — ver services/api.ts uploadEvolucionImagenes().
   url: string
   nombreOriginal: string
   mimeType: string
@@ -249,6 +255,13 @@ export interface FichaEstudioComplementario {
   activo: boolean
   createdAt: string
   updatedAt: string
+  // Archivo adjunto (PDF o imagen) — `archivoUrl` es la ruta propia que
+  // sirve el contenido (nunca la URL de Vercel Blob), null si no hay
+  // archivo cargado. Ver services/api.ts uploadEstudioArchivo().
+  archivoUrl?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
 }
 
 export type SeccionFicha = 'MOTIVO' | 'ANTECEDENTES' | 'SEGURIDAD' | 'HABITOS' | 'DOLOR_FUNCION' | 'ESTUDIOS'

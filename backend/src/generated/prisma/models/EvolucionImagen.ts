@@ -47,7 +47,6 @@ export type EvolucionImagenMinAggregateOutputType = {
   consultorioId: number | null
   pacienteId: number | null
   evolucionId: number | null
-  url: string | null
   pathname: string | null
   nombreOriginal: string | null
   mimeType: string | null
@@ -60,7 +59,6 @@ export type EvolucionImagenMaxAggregateOutputType = {
   consultorioId: number | null
   pacienteId: number | null
   evolucionId: number | null
-  url: string | null
   pathname: string | null
   nombreOriginal: string | null
   mimeType: string | null
@@ -73,7 +71,6 @@ export type EvolucionImagenCountAggregateOutputType = {
   consultorioId: number
   pacienteId: number
   evolucionId: number
-  url: number
   pathname: number
   nombreOriginal: number
   mimeType: number
@@ -104,7 +101,6 @@ export type EvolucionImagenMinAggregateInputType = {
   consultorioId?: true
   pacienteId?: true
   evolucionId?: true
-  url?: true
   pathname?: true
   nombreOriginal?: true
   mimeType?: true
@@ -117,7 +113,6 @@ export type EvolucionImagenMaxAggregateInputType = {
   consultorioId?: true
   pacienteId?: true
   evolucionId?: true
-  url?: true
   pathname?: true
   nombreOriginal?: true
   mimeType?: true
@@ -130,7 +125,6 @@ export type EvolucionImagenCountAggregateInputType = {
   consultorioId?: true
   pacienteId?: true
   evolucionId?: true
-  url?: true
   pathname?: true
   nombreOriginal?: true
   mimeType?: true
@@ -230,7 +224,6 @@ export type EvolucionImagenGroupByOutputType = {
   consultorioId: number
   pacienteId: number
   evolucionId: number
-  url: string
   pathname: string
   nombreOriginal: string
   mimeType: string
@@ -266,7 +259,6 @@ export type EvolucionImagenWhereInput = {
   consultorioId?: Prisma.IntFilter<"EvolucionImagen"> | number
   pacienteId?: Prisma.IntFilter<"EvolucionImagen"> | number
   evolucionId?: Prisma.IntFilter<"EvolucionImagen"> | number
-  url?: Prisma.StringFilter<"EvolucionImagen"> | string
   pathname?: Prisma.StringFilter<"EvolucionImagen"> | string
   nombreOriginal?: Prisma.StringFilter<"EvolucionImagen"> | string
   mimeType?: Prisma.StringFilter<"EvolucionImagen"> | string
@@ -280,7 +272,6 @@ export type EvolucionImagenOrderByWithRelationInput = {
   consultorioId?: Prisma.SortOrder
   pacienteId?: Prisma.SortOrder
   evolucionId?: Prisma.SortOrder
-  url?: Prisma.SortOrder
   pathname?: Prisma.SortOrder
   nombreOriginal?: Prisma.SortOrder
   mimeType?: Prisma.SortOrder
@@ -298,7 +289,6 @@ export type EvolucionImagenWhereUniqueInput = Prisma.AtLeast<{
   consultorioId?: Prisma.IntFilter<"EvolucionImagen"> | number
   pacienteId?: Prisma.IntFilter<"EvolucionImagen"> | number
   evolucionId?: Prisma.IntFilter<"EvolucionImagen"> | number
-  url?: Prisma.StringFilter<"EvolucionImagen"> | string
   pathname?: Prisma.StringFilter<"EvolucionImagen"> | string
   nombreOriginal?: Prisma.StringFilter<"EvolucionImagen"> | string
   mimeType?: Prisma.StringFilter<"EvolucionImagen"> | string
@@ -312,7 +302,6 @@ export type EvolucionImagenOrderByWithAggregationInput = {
   consultorioId?: Prisma.SortOrder
   pacienteId?: Prisma.SortOrder
   evolucionId?: Prisma.SortOrder
-  url?: Prisma.SortOrder
   pathname?: Prisma.SortOrder
   nombreOriginal?: Prisma.SortOrder
   mimeType?: Prisma.SortOrder
@@ -333,7 +322,6 @@ export type EvolucionImagenScalarWhereWithAggregatesInput = {
   consultorioId?: Prisma.IntWithAggregatesFilter<"EvolucionImagen"> | number
   pacienteId?: Prisma.IntWithAggregatesFilter<"EvolucionImagen"> | number
   evolucionId?: Prisma.IntWithAggregatesFilter<"EvolucionImagen"> | number
-  url?: Prisma.StringWithAggregatesFilter<"EvolucionImagen"> | string
   pathname?: Prisma.StringWithAggregatesFilter<"EvolucionImagen"> | string
   nombreOriginal?: Prisma.StringWithAggregatesFilter<"EvolucionImagen"> | string
   mimeType?: Prisma.StringWithAggregatesFilter<"EvolucionImagen"> | string
@@ -344,7 +332,6 @@ export type EvolucionImagenScalarWhereWithAggregatesInput = {
 export type EvolucionImagenCreateInput = {
   consultorioId: number
   pacienteId: number
-  url: string
   pathname: string
   nombreOriginal: string
   mimeType: string
@@ -358,7 +345,6 @@ export type EvolucionImagenUncheckedCreateInput = {
   consultorioId: number
   pacienteId: number
   evolucionId: number
-  url: string
   pathname: string
   nombreOriginal: string
   mimeType: string
@@ -369,7 +355,6 @@ export type EvolucionImagenUncheckedCreateInput = {
 export type EvolucionImagenUpdateInput = {
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
-  url?: Prisma.StringFieldUpdateOperationsInput | string
   pathname?: Prisma.StringFieldUpdateOperationsInput | string
   nombreOriginal?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
@@ -383,7 +368,6 @@ export type EvolucionImagenUncheckedUpdateInput = {
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   evolucionId?: Prisma.IntFieldUpdateOperationsInput | number
-  url?: Prisma.StringFieldUpdateOperationsInput | string
   pathname?: Prisma.StringFieldUpdateOperationsInput | string
   nombreOriginal?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
@@ -396,7 +380,6 @@ export type EvolucionImagenCreateManyInput = {
   consultorioId: number
   pacienteId: number
   evolucionId: number
-  url: string
   pathname: string
   nombreOriginal: string
   mimeType: string
@@ -407,7 +390,6 @@ export type EvolucionImagenCreateManyInput = {
 export type EvolucionImagenUpdateManyMutationInput = {
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
-  url?: Prisma.StringFieldUpdateOperationsInput | string
   pathname?: Prisma.StringFieldUpdateOperationsInput | string
   nombreOriginal?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
@@ -420,7 +402,6 @@ export type EvolucionImagenUncheckedUpdateManyInput = {
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
   evolucionId?: Prisma.IntFieldUpdateOperationsInput | number
-  url?: Prisma.StringFieldUpdateOperationsInput | string
   pathname?: Prisma.StringFieldUpdateOperationsInput | string
   nombreOriginal?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
@@ -449,7 +430,6 @@ export type EvolucionImagenCountOrderByAggregateInput = {
   consultorioId?: Prisma.SortOrder
   pacienteId?: Prisma.SortOrder
   evolucionId?: Prisma.SortOrder
-  url?: Prisma.SortOrder
   pathname?: Prisma.SortOrder
   nombreOriginal?: Prisma.SortOrder
   mimeType?: Prisma.SortOrder
@@ -470,7 +450,6 @@ export type EvolucionImagenMaxOrderByAggregateInput = {
   consultorioId?: Prisma.SortOrder
   pacienteId?: Prisma.SortOrder
   evolucionId?: Prisma.SortOrder
-  url?: Prisma.SortOrder
   pathname?: Prisma.SortOrder
   nombreOriginal?: Prisma.SortOrder
   mimeType?: Prisma.SortOrder
@@ -483,7 +462,6 @@ export type EvolucionImagenMinOrderByAggregateInput = {
   consultorioId?: Prisma.SortOrder
   pacienteId?: Prisma.SortOrder
   evolucionId?: Prisma.SortOrder
-  url?: Prisma.SortOrder
   pathname?: Prisma.SortOrder
   nombreOriginal?: Prisma.SortOrder
   mimeType?: Prisma.SortOrder
@@ -544,7 +522,6 @@ export type EvolucionImagenUncheckedUpdateManyWithoutEvolucionNestedInput = {
 export type EvolucionImagenCreateWithoutEvolucionInput = {
   consultorioId: number
   pacienteId: number
-  url: string
   pathname: string
   nombreOriginal: string
   mimeType: string
@@ -556,7 +533,6 @@ export type EvolucionImagenUncheckedCreateWithoutEvolucionInput = {
   id?: number
   consultorioId: number
   pacienteId: number
-  url: string
   pathname: string
   nombreOriginal: string
   mimeType: string
@@ -598,7 +574,6 @@ export type EvolucionImagenScalarWhereInput = {
   consultorioId?: Prisma.IntFilter<"EvolucionImagen"> | number
   pacienteId?: Prisma.IntFilter<"EvolucionImagen"> | number
   evolucionId?: Prisma.IntFilter<"EvolucionImagen"> | number
-  url?: Prisma.StringFilter<"EvolucionImagen"> | string
   pathname?: Prisma.StringFilter<"EvolucionImagen"> | string
   nombreOriginal?: Prisma.StringFilter<"EvolucionImagen"> | string
   mimeType?: Prisma.StringFilter<"EvolucionImagen"> | string
@@ -610,7 +585,6 @@ export type EvolucionImagenCreateManyEvolucionInput = {
   id?: number
   consultorioId: number
   pacienteId: number
-  url: string
   pathname: string
   nombreOriginal: string
   mimeType: string
@@ -621,7 +595,6 @@ export type EvolucionImagenCreateManyEvolucionInput = {
 export type EvolucionImagenUpdateWithoutEvolucionInput = {
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
-  url?: Prisma.StringFieldUpdateOperationsInput | string
   pathname?: Prisma.StringFieldUpdateOperationsInput | string
   nombreOriginal?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
@@ -633,7 +606,6 @@ export type EvolucionImagenUncheckedUpdateWithoutEvolucionInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
-  url?: Prisma.StringFieldUpdateOperationsInput | string
   pathname?: Prisma.StringFieldUpdateOperationsInput | string
   nombreOriginal?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
@@ -645,7 +617,6 @@ export type EvolucionImagenUncheckedUpdateManyWithoutEvolucionInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
-  url?: Prisma.StringFieldUpdateOperationsInput | string
   pathname?: Prisma.StringFieldUpdateOperationsInput | string
   nombreOriginal?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
@@ -660,7 +631,6 @@ export type EvolucionImagenSelect<ExtArgs extends runtime.Types.Extensions.Inter
   consultorioId?: boolean
   pacienteId?: boolean
   evolucionId?: boolean
-  url?: boolean
   pathname?: boolean
   nombreOriginal?: boolean
   mimeType?: boolean
@@ -676,7 +646,6 @@ export type EvolucionImagenSelectScalar = {
   consultorioId?: boolean
   pacienteId?: boolean
   evolucionId?: boolean
-  url?: boolean
   pathname?: boolean
   nombreOriginal?: boolean
   mimeType?: boolean
@@ -684,7 +653,7 @@ export type EvolucionImagenSelectScalar = {
   createdAt?: boolean
 }
 
-export type EvolucionImagenOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "pacienteId" | "evolucionId" | "url" | "pathname" | "nombreOriginal" | "mimeType" | "sizeBytes" | "createdAt", ExtArgs["result"]["evolucionImagen"]>
+export type EvolucionImagenOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "pacienteId" | "evolucionId" | "pathname" | "nombreOriginal" | "mimeType" | "sizeBytes" | "createdAt", ExtArgs["result"]["evolucionImagen"]>
 export type EvolucionImagenInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   evolucion?: boolean | Prisma.EvolucionDefaultArgs<ExtArgs>
 }
@@ -699,7 +668,6 @@ export type $EvolucionImagenPayload<ExtArgs extends runtime.Types.Extensions.Int
     consultorioId: number
     pacienteId: number
     evolucionId: number
-    url: string
     pathname: string
     nombreOriginal: string
     mimeType: string
@@ -1079,7 +1047,6 @@ export interface EvolucionImagenFieldRefs {
   readonly consultorioId: Prisma.FieldRef<"EvolucionImagen", 'Int'>
   readonly pacienteId: Prisma.FieldRef<"EvolucionImagen", 'Int'>
   readonly evolucionId: Prisma.FieldRef<"EvolucionImagen", 'Int'>
-  readonly url: Prisma.FieldRef<"EvolucionImagen", 'String'>
   readonly pathname: Prisma.FieldRef<"EvolucionImagen", 'String'>
   readonly nombreOriginal: Prisma.FieldRef<"EvolucionImagen", 'String'>
   readonly mimeType: Prisma.FieldRef<"EvolucionImagen", 'String'>

@@ -516,6 +516,7 @@ export default function PatientDetailPage({
     grupos,
     editingGrupoId: editingEvolucionGrupoId,
     onChangeEditingGrupoId: setEditingEvolucionGrupoId,
+    onCreateGrupo: createDiagnosticoInline,
     onAddImages: addImagesToEvolucion,
     onRemoveImage: removeImageFromEvolucion,
     imagesUploading,
@@ -551,18 +552,20 @@ export default function PatientDetailPage({
                 setNewEvolucionText(plainText)
               }}
             />
-            <DiagnosticoSelect
-              grupos={grupos}
-              value={nuevaEvolucionGrupoId}
-              onChange={setNuevaEvolucionGrupoId}
-              onCreate={createDiagnosticoInline}
-            />
-            <EvolucionImages
-              items={stagedImages.map((s, i) => ({ key: String(i), url: s.previewUrl, name: s.file.name }))}
-              onAdd={addStagedImages}
-              onRemove={removeStagedImage}
-              error={stagedImagesError}
-            />
+            <div className="evolution-form-fields-row">
+              <DiagnosticoSelect
+                grupos={grupos}
+                value={nuevaEvolucionGrupoId}
+                onChange={setNuevaEvolucionGrupoId}
+                onCreate={createDiagnosticoInline}
+              />
+              <EvolucionImages
+                items={stagedImages.map((s, i) => ({ key: String(i), url: s.previewUrl, name: s.file.name }))}
+                onAdd={addStagedImages}
+                onRemove={removeStagedImage}
+                error={stagedImagesError}
+              />
+            </div>
             <button
               type="button"
               className="primary-button"
@@ -760,6 +763,8 @@ export default function PatientDetailPage({
       <PatientProfileHeader
         patient={patient}
         socialWorkName={socialWorkName}
+        canEditPhoto={canEditAdmin}
+        onPhotoChanged={(fotoUrl) => setPatient((current) => (current ? { ...current, fotoUrl } : current))}
         actions={
           <>
             {canEditAdmin ? (

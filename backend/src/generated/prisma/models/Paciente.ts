@@ -52,6 +52,8 @@ export type PacienteMinAggregateOutputType = {
   numeroAfiliado: string | null
   observaciones: string | null
   activo: boolean | null
+  fotoPathname: string | null
+  fotoMimeType: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -70,6 +72,8 @@ export type PacienteMaxAggregateOutputType = {
   numeroAfiliado: string | null
   observaciones: string | null
   activo: boolean | null
+  fotoPathname: string | null
+  fotoMimeType: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -88,6 +92,8 @@ export type PacienteCountAggregateOutputType = {
   numeroAfiliado: number
   observaciones: number
   activo: number
+  fotoPathname: number
+  fotoMimeType: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -120,6 +126,8 @@ export type PacienteMinAggregateInputType = {
   numeroAfiliado?: true
   observaciones?: true
   activo?: true
+  fotoPathname?: true
+  fotoMimeType?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -138,6 +146,8 @@ export type PacienteMaxAggregateInputType = {
   numeroAfiliado?: true
   observaciones?: true
   activo?: true
+  fotoPathname?: true
+  fotoMimeType?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -156,6 +166,8 @@ export type PacienteCountAggregateInputType = {
   numeroAfiliado?: true
   observaciones?: true
   activo?: true
+  fotoPathname?: true
+  fotoMimeType?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -261,6 +273,8 @@ export type PacienteGroupByOutputType = {
   numeroAfiliado: string | null
   observaciones: string | null
   activo: boolean
+  fotoPathname: string | null
+  fotoMimeType: string | null
   createdAt: Date
   updatedAt: Date
   _count: PacienteCountAggregateOutputType | null
@@ -302,6 +316,8 @@ export type PacienteWhereInput = {
   numeroAfiliado?: Prisma.StringNullableFilter<"Paciente"> | string | null
   observaciones?: Prisma.StringNullableFilter<"Paciente"> | string | null
   activo?: Prisma.BoolFilter<"Paciente"> | boolean
+  fotoPathname?: Prisma.StringNullableFilter<"Paciente"> | string | null
+  fotoMimeType?: Prisma.StringNullableFilter<"Paciente"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Paciente"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Paciente"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
@@ -326,6 +342,8 @@ export type PacienteOrderByWithRelationInput = {
   numeroAfiliado?: Prisma.SortOrderInput | Prisma.SortOrder
   observaciones?: Prisma.SortOrderInput | Prisma.SortOrder
   activo?: Prisma.SortOrder
+  fotoPathname?: Prisma.SortOrderInput | Prisma.SortOrder
+  fotoMimeType?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   consultorio?: Prisma.ConsultorioOrderByWithRelationInput
@@ -355,6 +373,8 @@ export type PacienteWhereUniqueInput = Prisma.AtLeast<{
   numeroAfiliado?: Prisma.StringNullableFilter<"Paciente"> | string | null
   observaciones?: Prisma.StringNullableFilter<"Paciente"> | string | null
   activo?: Prisma.BoolFilter<"Paciente"> | boolean
+  fotoPathname?: Prisma.StringNullableFilter<"Paciente"> | string | null
+  fotoMimeType?: Prisma.StringNullableFilter<"Paciente"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Paciente"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Paciente"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
@@ -379,6 +399,8 @@ export type PacienteOrderByWithAggregationInput = {
   numeroAfiliado?: Prisma.SortOrderInput | Prisma.SortOrder
   observaciones?: Prisma.SortOrderInput | Prisma.SortOrder
   activo?: Prisma.SortOrder
+  fotoPathname?: Prisma.SortOrderInput | Prisma.SortOrder
+  fotoMimeType?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.PacienteCountOrderByAggregateInput
@@ -405,6 +427,8 @@ export type PacienteScalarWhereWithAggregatesInput = {
   numeroAfiliado?: Prisma.StringNullableWithAggregatesFilter<"Paciente"> | string | null
   observaciones?: Prisma.StringNullableWithAggregatesFilter<"Paciente"> | string | null
   activo?: Prisma.BoolWithAggregatesFilter<"Paciente"> | boolean
+  fotoPathname?: Prisma.StringNullableWithAggregatesFilter<"Paciente"> | string | null
+  fotoMimeType?: Prisma.StringNullableWithAggregatesFilter<"Paciente"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Paciente"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Paciente"> | Date | string
 }
@@ -420,6 +444,8 @@ export type PacienteCreateInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutPacientesInput
@@ -444,6 +470,8 @@ export type PacienteUncheckedCreateInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutPacienteInput
@@ -463,6 +491,8 @@ export type PacienteUpdateInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutPacientesNestedInput
@@ -487,6 +517,8 @@ export type PacienteUncheckedUpdateInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   turnos?: Prisma.TurnoUncheckedUpdateManyWithoutPacienteNestedInput
@@ -509,6 +541,8 @@ export type PacienteCreateManyInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -524,6 +558,8 @@ export type PacienteUpdateManyMutationInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -542,6 +578,8 @@ export type PacienteUncheckedUpdateManyInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -581,6 +619,8 @@ export type PacienteCountOrderByAggregateInput = {
   numeroAfiliado?: Prisma.SortOrder
   observaciones?: Prisma.SortOrder
   activo?: Prisma.SortOrder
+  fotoPathname?: Prisma.SortOrder
+  fotoMimeType?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -605,6 +645,8 @@ export type PacienteMaxOrderByAggregateInput = {
   numeroAfiliado?: Prisma.SortOrder
   observaciones?: Prisma.SortOrder
   activo?: Prisma.SortOrder
+  fotoPathname?: Prisma.SortOrder
+  fotoMimeType?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -623,6 +665,8 @@ export type PacienteMinOrderByAggregateInput = {
   numeroAfiliado?: Prisma.SortOrder
   observaciones?: Prisma.SortOrder
   activo?: Prisma.SortOrder
+  fotoPathname?: Prisma.SortOrder
+  fotoMimeType?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -793,6 +837,8 @@ export type PacienteCreateWithoutConsultorioInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   obraSocial?: Prisma.ObraSocialCreateNestedOneWithoutPacientesInput
@@ -815,6 +861,8 @@ export type PacienteUncheckedCreateWithoutConsultorioInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutPacienteInput
@@ -866,6 +914,8 @@ export type PacienteScalarWhereInput = {
   numeroAfiliado?: Prisma.StringNullableFilter<"Paciente"> | string | null
   observaciones?: Prisma.StringNullableFilter<"Paciente"> | string | null
   activo?: Prisma.BoolFilter<"Paciente"> | boolean
+  fotoPathname?: Prisma.StringNullableFilter<"Paciente"> | string | null
+  fotoMimeType?: Prisma.StringNullableFilter<"Paciente"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Paciente"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Paciente"> | Date | string
 }
@@ -881,6 +931,8 @@ export type PacienteCreateWithoutObraSocialInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutPacientesInput
@@ -903,6 +955,8 @@ export type PacienteUncheckedCreateWithoutObraSocialInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutPacienteInput
@@ -948,6 +1002,8 @@ export type PacienteCreateWithoutTurnosInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutPacientesInput
@@ -971,6 +1027,8 @@ export type PacienteUncheckedCreateWithoutTurnosInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutPacienteInput
@@ -1005,6 +1063,8 @@ export type PacienteUpdateWithoutTurnosInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutPacientesNestedInput
@@ -1028,6 +1088,8 @@ export type PacienteUncheckedUpdateWithoutTurnosInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutPacienteNestedInput
@@ -1046,6 +1108,8 @@ export type PacienteCreateWithoutEvolucionesInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutPacientesInput
@@ -1069,6 +1133,8 @@ export type PacienteUncheckedCreateWithoutEvolucionesInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutPacienteInput
@@ -1103,6 +1169,8 @@ export type PacienteUpdateWithoutEvolucionesInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutPacientesNestedInput
@@ -1126,6 +1194,8 @@ export type PacienteUncheckedUpdateWithoutEvolucionesInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   turnos?: Prisma.TurnoUncheckedUpdateManyWithoutPacienteNestedInput
@@ -1144,6 +1214,8 @@ export type PacienteCreateWithoutGruposEvolucionInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutPacientesInput
@@ -1167,6 +1239,8 @@ export type PacienteUncheckedCreateWithoutGruposEvolucionInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutPacienteInput
@@ -1201,6 +1275,8 @@ export type PacienteUpdateWithoutGruposEvolucionInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutPacientesNestedInput
@@ -1224,6 +1300,8 @@ export type PacienteUncheckedUpdateWithoutGruposEvolucionInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   turnos?: Prisma.TurnoUncheckedUpdateManyWithoutPacienteNestedInput
@@ -1242,6 +1320,8 @@ export type PacienteCreateWithoutFichaInicialInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutPacientesInput
@@ -1265,6 +1345,8 @@ export type PacienteUncheckedCreateWithoutFichaInicialInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutPacienteInput
@@ -1299,6 +1381,8 @@ export type PacienteUpdateWithoutFichaInicialInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutPacientesNestedInput
@@ -1322,6 +1406,8 @@ export type PacienteUncheckedUpdateWithoutFichaInicialInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   turnos?: Prisma.TurnoUncheckedUpdateManyWithoutPacienteNestedInput
@@ -1342,6 +1428,8 @@ export type PacienteCreateManyConsultorioInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1357,6 +1445,8 @@ export type PacienteUpdateWithoutConsultorioInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   obraSocial?: Prisma.ObraSocialUpdateOneWithoutPacientesNestedInput
@@ -1379,6 +1469,8 @@ export type PacienteUncheckedUpdateWithoutConsultorioInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   turnos?: Prisma.TurnoUncheckedUpdateManyWithoutPacienteNestedInput
@@ -1400,6 +1492,8 @@ export type PacienteUncheckedUpdateManyWithoutConsultorioInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1417,6 +1511,8 @@ export type PacienteCreateManyObraSocialInput = {
   numeroAfiliado?: string | null
   observaciones?: string | null
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1432,6 +1528,8 @@ export type PacienteUpdateWithoutObraSocialInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutPacientesNestedInput
@@ -1454,6 +1552,8 @@ export type PacienteUncheckedUpdateWithoutObraSocialInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   turnos?: Prisma.TurnoUncheckedUpdateManyWithoutPacienteNestedInput
@@ -1475,6 +1575,8 @@ export type PacienteUncheckedUpdateManyWithoutObraSocialInput = {
   numeroAfiliado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1542,6 +1644,8 @@ export type PacienteSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   numeroAfiliado?: boolean
   observaciones?: boolean
   activo?: boolean
+  fotoPathname?: boolean
+  fotoMimeType?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
@@ -1569,11 +1673,13 @@ export type PacienteSelectScalar = {
   numeroAfiliado?: boolean
   observaciones?: boolean
   activo?: boolean
+  fotoPathname?: boolean
+  fotoMimeType?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type PacienteOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "nombre" | "apellido" | "documento" | "fechaNacimiento" | "email" | "telefono" | "direccion" | "obraSocialId" | "numeroAfiliado" | "observaciones" | "activo" | "createdAt" | "updatedAt", ExtArgs["result"]["paciente"]>
+export type PacienteOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "nombre" | "apellido" | "documento" | "fechaNacimiento" | "email" | "telefono" | "direccion" | "obraSocialId" | "numeroAfiliado" | "observaciones" | "activo" | "fotoPathname" | "fotoMimeType" | "createdAt" | "updatedAt", ExtArgs["result"]["paciente"]>
 export type PacienteInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
   obraSocial?: boolean | Prisma.Paciente$obraSocialArgs<ExtArgs>
@@ -1608,6 +1714,8 @@ export type $PacientePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     numeroAfiliado: string | null
     observaciones: string | null
     activo: boolean
+    fotoPathname: string | null
+    fotoMimeType: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["paciente"]>
@@ -1998,6 +2106,8 @@ export interface PacienteFieldRefs {
   readonly numeroAfiliado: Prisma.FieldRef<"Paciente", 'String'>
   readonly observaciones: Prisma.FieldRef<"Paciente", 'String'>
   readonly activo: Prisma.FieldRef<"Paciente", 'Boolean'>
+  readonly fotoPathname: Prisma.FieldRef<"Paciente", 'String'>
+  readonly fotoMimeType: Prisma.FieldRef<"Paciente", 'String'>
   readonly createdAt: Prisma.FieldRef<"Paciente", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Paciente", 'DateTime'>
 }

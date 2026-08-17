@@ -1165,3 +1165,67 @@ evolución"; imagen seleccionada queda en staging con miniatura antes de
 guardar; evolución con imagen adjunta se guarda correctamente (sin token de
 Blob local, la subida en sí no se pudo probar de punta a punta — esperado,
 no es un bug).
+
+---
+
+## Sesión: Alertas icon-only, Diagnóstico consistente, unificar uploads con Vercel Blob
+
+Ronda de cinco partes.
+
+**1) Alertas icon-only**: `AlertToggleButton.tsx` (un solo componente,
+ya reusado en todos los campos) pasó de ícono+texto a solo ícono — círculo
+28px, ícono 16px, texto movido a `title`/`aria-label`. Sin cambios de lógica.
+
+**2) Diagnóstico consistente**: el "selector sin estilo" reportado no era
+un componente nuevo — el dropdown custom (`DiagnosticoSelect.tsx`) ya
+existía y ya se usaba en el alta de evolución; solo la **edición**
+(`EvolutionTable.tsx`) tenía un `<select>` nativo aparte, nunca actualizado.
+Quedó reemplazado por el mismo componente.
+
+**3) Diagnóstico + Archivos en una fila**: `EvolucionImages.tsx`
+rediseñado — el cuadrado suelto "+ Imagen" pasó a ser un botón real "Subir
+imágenes" con label "Archivos" a juego con "Diagnóstico"; ambos van en
+`.evolution-form-fields-row` (flex con wrap), en alta y edición.
+
+**4) Uploads unificados con Vercel Blob + privacidad corregida**: se
+descubrió que `@vercel/blob@2.8.0` sí soporta `access: 'private'` +
+`get()` autenticado — la ronda anterior había asumido (mal) que Blob solo
+tenía modo público. Corregido: todo pasó a privado, con un endpoint
+`.../contenido` por recurso que revalida permisos y sirve el contenido por
+streaming — el frontend nunca ve una URL de Blob (`AuthorizedImg.tsx`,
+`openAuthorizedFile()`). Infra compartida nueva: `blobStorage.ts` +
+`uploadMiddleware.ts`, usada por las 4 superficies:
+- Evoluciones (ya existía, ahora privado; `EvolucionImagen.url` se eliminó
+  de la base).
+- Estudios: `FichaEstudioComplementario` no tenía columnas de archivo — se
+  agregaron (un archivo por estudio, PDF/JPG/PNG/WEBP hasta 15MB), subido
+  desde la fila del estudio (necesita el estudio ya guardado).
+- Foto de Usuario: única ruta de autoedición que existe para `Usuario`,
+  siempre "la propia" (`/api/usuarios/me/foto`, nunca acepta un id).
+- Foto de Paciente: mismo permiso que el resto de datos administrativos.
+
+**5) Limpieza de placeholders**: "estará disponible próximamente" (foto de
+Usuario/Paciente) y "Carga de archivos próximamente" (Estudios) ya no
+existen — reemplazados por la funcionalidad real. Nada más se tocó.
+
+**Producción**: migración nueva `20260817160512_archivos_estudio_foto_usuario_paciente`
+— agrega columnas en Estudio/Usuario/Paciente y **elimina**
+`EvolucionImagen.url` (verificado 0 filas en dev antes de aplicar — nunca
+hubo `BLOB_READ_WRITE_TOKEN` configurado en ningún ambiente, así que ninguna
+subida pudo haber tenido éxito). Aplicada al dev DB a mano, **no** aplicada
+a Aiven — correr `npx prisma migrate status` y `npx prisma migrate deploy`.
+`BLOB_READ_WRITE_TOKEN` sigue sin configurar en ningún ambiente, este dev
+local incluido.
+
+Backend 188→201 tests (+13, incluyendo un fake `get()` de Blob respaldado
+por un `Map` en memoria para verificar contenido de punta a punta sin red
+real). Frontend sigue en 90. `tsc -b`/`build`/`lint` limpios en ambos
+paquetes.
+
+Verificado con Playwright (dos sesiones): popovers de foto sin
+"próximamente" y con botón real; tab Estudios sin "próximamente"; alerta
+icon-only con `aria-label`; fila Diagnóstico+Archivos en desktop; Diagnóstico
+abre el dropdown custom tanto en alta como en **edición** (ya no el
+`<select>` nativo); sin scroll horizontal en 390px. La subida real a Blob no
+se pudo probar de punta a punta en el navegador (sin token local) — esperado,
+sí verificado de punta a punta en los tests de backend con el mock.

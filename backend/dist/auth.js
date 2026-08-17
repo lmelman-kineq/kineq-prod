@@ -65,6 +65,7 @@ const USUARIO_SELECT = {
     activo: true,
     consultorioId: true,
     profesionalId: true,
+    fotoPathname: true,
 };
 function findAuthUsuario(usuarioId) {
     return prisma_1.default.usuario.findUnique({ where: { id: usuarioId }, select: USUARIO_SELECT });

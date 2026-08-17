@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { MAX_EVOLUCION_IMAGES, validateNewEvolucionImages } from '../utils/evolucionImageValidation'
+import AuthorizedImg from './AuthorizedImg'
 
 export type EvolucionImageItem = { key: string; url: string; name: string }
+
+function UploadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 16V4" />
+      <path d="M7 9l5-5 5 5" />
+      <path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+    </svg>
+  )
+}
 
 type EvolucionImagesProps = {
   items: EvolucionImageItem[]
@@ -9,10 +20,17 @@ type EvolucionImagesProps = {
   onAdd?: (files: File[]) => void
   onRemove?: (key: string) => void
   disabled?: boolean
+  uploading?: boolean
   error?: string | null
 }
 
-export default function EvolucionImages({ items, onAdd, onRemove, disabled, error }: EvolucionImagesProps) {
+// Campo "Archivos" — mismo look que un `.dropdown-field` (label arriba,
+// control abajo) para poder ir en la misma fila que Diagnóstico
+// (`.evolution-form-fields-row` en PatientDetailPage.tsx/EvolutionTable.tsx).
+// El botón de subida es una acción con label + ícono, no un cuadrado
+// placeholder — las miniaturas aparecen debajo recién cuando hay algo
+// seleccionado/subido.
+export default function EvolucionImages({ items, onAdd, onRemove, disabled, uploading, error }: EvolucionImagesProps) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [lightboxKey, setLightboxKey] = useState<string | null>(null)
   const [pickError, setPickError] = useState<string | null>(null)
@@ -38,51 +56,61 @@ export default function EvolucionImages({ items, onAdd, onRemove, disabled, erro
   const lightboxItem = items.find((item) => item.key === lightboxKey) ?? null
 
   return (
-    <div className="evolucion-images">
-      <div className="evolucion-images-grid">
-        {items.map((item) => (
-          <div key={item.key} className="evolucion-image-thumb">
-            <button
-              type="button"
-              className="evolucion-image-thumb-open"
-              onClick={() => setLightboxKey(item.key)}
-              aria-label={`Ver imagen ${item.name}`}
-            >
-              <img src={item.url} alt={item.name} />
-            </button>
-            {onRemove ? (
+    <div className="evolucion-images dropdown-field">
+      {onAdd ? (
+        <>
+          <span className="dropdown-field-label">Archivos</span>
+          <button
+            type="button"
+            className="secondary-button evolucion-images-upload-button"
+            onClick={() => inputRef.current?.click()}
+            disabled={disabled || items.length >= MAX_EVOLUCION_IMAGES}
+          >
+            <UploadIcon />
+            {uploading ? 'Subiendo...' : items.length ? 'Agregar imagen' : 'Subir imágenes'}
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            hidden
+            onChange={(event) => {
+              handleFiles(event.target.files)
+              event.target.value = ''
+            }}
+          />
+        </>
+      ) : null}
+
+      {items.length > 0 ? (
+        <div className="evolucion-images-grid">
+          {items.map((item) => (
+            <div key={item.key} className="evolucion-image-thumb">
               <button
                 type="button"
-                className="evolucion-image-thumb-remove"
-                aria-label={`Quitar imagen ${item.name}`}
-                title="Quitar imagen"
-                onClick={() => onRemove(item.key)}
-                disabled={disabled}
+                className="evolucion-image-thumb-open"
+                onClick={() => setLightboxKey(item.key)}
+                aria-label={`Ver imagen ${item.name}`}
+                title={item.name}
               >
-                &times;
+                <AuthorizedImg src={item.url} alt={item.name} />
               </button>
-            ) : null}
-          </div>
-        ))}
-        {onAdd && items.length < MAX_EVOLUCION_IMAGES ? (
-          <button type="button" className="evolucion-image-add" onClick={() => inputRef.current?.click()} disabled={disabled}>
-            + Imagen
-          </button>
-        ) : null}
-      </div>
-
-      {onAdd ? (
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-          hidden
-          onChange={(event) => {
-            handleFiles(event.target.files)
-            event.target.value = ''
-          }}
-        />
+              {onRemove ? (
+                <button
+                  type="button"
+                  className="evolucion-image-thumb-remove"
+                  aria-label={`Quitar imagen ${item.name}`}
+                  title="Quitar imagen"
+                  onClick={() => onRemove(item.key)}
+                  disabled={disabled}
+                >
+                  &times;
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
       ) : null}
 
       {pickError || error ? <p className="evolution-form-error">{pickError || error}</p> : null}
@@ -97,7 +125,7 @@ export default function EvolucionImages({ items, onAdd, onRemove, disabled, erro
           >
             &times;
           </button>
-          <img src={lightboxItem.url} alt={lightboxItem.name} onClick={(event) => event.stopPropagation()} />
+          <AuthorizedImg src={lightboxItem.url} alt={lightboxItem.name} onClick={(event) => event.stopPropagation()} />
         </div>
       ) : null}
     </div>

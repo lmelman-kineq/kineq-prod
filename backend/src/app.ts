@@ -6,6 +6,12 @@ import prisma from './prisma'
 import authRoutes from './authRoutes'
 import estadisticasRoutes from './estadisticasRoutes'
 import evolucionImagenesRoutes from './evolucionImagenesRoutes'
+import estudioArchivoRoutes from './estudioArchivoRoutes'
+import usuarioFotoRoutes from './usuarioFotoRoutes'
+import pacienteFotoRoutes from './pacienteFotoRoutes'
+import { estudioParaCliente, fichaParaCliente } from './estudioSerializer'
+import { pacienteParaCliente } from './pacienteSerializer'
+import { evolucionParaCliente } from './evolucionImagenSerializer'
 import { sanitizeRichText, stripToPlainText } from './sanitizeRichText'
 import {
   ADMIN_DATA_ROLES,
@@ -127,6 +133,10 @@ const USUARIO_LIST_SELECT = {
   createdAt: true,
   profesional: { select: { id: true, nombre: true, apellido: true } },
 } as const
+
+// Foto de perfil: siempre "la propia" (nunca un id de usuario recibido del
+// cliente) — ver usuarioFotoRoutes.ts.
+app.use('/api/usuarios/me/foto', usuarioFotoRoutes)
 
 app.get('/api/usuarios', requireRole(RolUsuario.ADMINISTRADOR), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
@@ -266,6 +276,8 @@ app.patch('/api/usuarios/:usuarioId', requireRole(RolUsuario.ADMINISTRADOR), asy
 
 // PACIENTES
 // Lectura: todos los roles. Alta y edición administrativa: administrador y recepción.
+app.use('/api/pacientes/:pacienteId/foto', pacienteFotoRoutes)
+
 app.get('/api/pacientes', async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
   const pacientes = await prisma.paciente.findMany({
@@ -282,7 +294,7 @@ app.get('/api/pacientes/:pacienteId', async (req, res) => {
 
   const paciente = await prisma.paciente.findFirst({ where: { id: pacienteId, consultorioId } })
   if (!paciente) return res.status(404).json({ error: 'paciente not found' })
-  res.json(paciente)
+  res.json(pacienteParaCliente(paciente))
 })
 
 app.post('/api/pacientes', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
@@ -305,7 +317,7 @@ app.post('/api/pacientes', requireRole(...ADMIN_DATA_ROLES), async (req, res) =>
         numeroAfiliado: numeroAfiliado || null,
       },
     })
-    res.status(201).json(paciente)
+    res.status(201).json(pacienteParaCliente(paciente))
   } catch (err) {
     if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
       return res.status(409).json({ error: 'Ya existe un paciente con ese documento en este consultorio' })
@@ -380,7 +392,7 @@ app.patch(
         return result
       })
 
-      res.json(updated)
+      res.json(pacienteParaCliente(updated))
     } catch (err) {
       if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
         return res.status(409).json({ error: 'Ya existe un paciente con ese documento en este consultorio' })
@@ -1036,7 +1048,7 @@ app.get('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) => 
   if (pacienteId) where.pacienteId = pacienteId
 
   const evoluciones = await prisma.evolucion.findMany({ where, include: { profesional: true, grupo: true, imagenes: true } })
-  res.json(evoluciones)
+  res.json(evoluciones.map(evolucionParaCliente))
 })
 
 // Un grupo solo se puede asignar si es del mismo paciente (nunca cross-
@@ -1087,7 +1099,7 @@ app.post('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) =>
       data: { consultorioId, pacienteId, profesionalId, turnoId: turnoId || null, contenido, contenidoHtml, grupoId: grupoId || null },
       include: { profesional: true, grupo: true, imagenes: true },
     })
-    res.status(201).json(ev)
+    res.status(201).json(evolucionParaCliente(ev))
   } catch (err) {
     // El detalle real (excepción/SQL de Prisma) va solo al log del server —
     // nunca al cliente, para no filtrar stack traces ni detalles internos.
@@ -1153,7 +1165,7 @@ app.patch('/api/evoluciones/:evolucionId', requireRole(...CLINICAL_ROLES), async
     }
 
     const updated = await prisma.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true, imagenes: true } })
-    res.json(updated)
+    res.json(evolucionParaCliente(updated))
   } catch (err) {
     console.error('failed to update evolucion', err)
     res.status(500).json({ error: 'No se pudo guardar los cambios de la evolución. Volvé a intentar.' })
@@ -1300,7 +1312,7 @@ app.get('/api/pacientes/:pacienteId/ficha-inicial', requireRole(...CLINICAL_ROLE
   // No existir ficha todavía es un estado normal, no un error: se devuelve
   // `null` en vez de 404, así el frontend distingue "sin ficha" de "sin acceso".
   const ficha = await prisma.fichaInicial.findUnique({ where: { pacienteId }, include: FICHA_INICIAL_INCLUDE })
-  res.json(ficha)
+  res.json(fichaParaCliente(ficha))
 })
 
 // Campos de texto libre de FichaInicial que el profesional puede marcar
@@ -1400,7 +1412,7 @@ app.patch('/api/pacientes/:pacienteId/ficha-inicial', requireRole(...CLINICAL_RO
   try {
     const ficha = await upsertFichaInicial(consultorioId, pacienteId, payload)
     const fresh = await recomputeSeccionesEstado(ficha.id, consultorioId)
-    res.json(fresh)
+    res.json(fichaParaCliente(fresh))
   } catch (err) {
     console.error('failed to save ficha inicial', err)
     res.status(500).json({ error: 'failed to save ficha inicial' })
@@ -1899,6 +1911,8 @@ app.delete('/api/ficha-medicacion/:id', requireRole(...CLINICAL_ROLES), async (r
 
 // ESTUDIOS COMPLEMENTARIOS (entradas individuales; el campo de texto libre
 // `estudiosComplementarios` en FichaInicial se mantiene como nota general)
+app.use('/api/ficha-estudios/:id/archivo', estudioArchivoRoutes)
+
 app.post('/api/pacientes/:pacienteId/ficha-inicial/estudios', requireRole(...CLINICAL_ROLES), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
   const pacienteId = Number(req.params.pacienteId)
@@ -1926,7 +1940,7 @@ app.post('/api/pacientes/:pacienteId/ficha-inicial/estudios', requireRole(...CLI
     },
     include: { profesional: true },
   })
-  res.status(201).json(estudio)
+  res.status(201).json(estudioParaCliente(estudio))
 })
 
 app.patch('/api/ficha-estudios/:id', requireRole(...CLINICAL_ROLES), async (req, res) => {
@@ -1951,7 +1965,7 @@ app.patch('/api/ficha-estudios/:id', requireRole(...CLINICAL_ROLES), async (req,
   if (observaciones !== undefined) payload.observaciones = observaciones || null
 
   const updated = await prisma.fichaEstudioComplementario.update({ where: { id }, data: payload })
-  res.json(updated)
+  res.json(estudioParaCliente(updated))
 })
 
 app.delete('/api/ficha-estudios/:id', requireRole(...CLINICAL_ROLES), async (req, res) => {

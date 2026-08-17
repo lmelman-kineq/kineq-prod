@@ -1890,6 +1890,8 @@ export const UsuarioScalarFieldEnum = {
   rol: 'rol',
   activo: 'activo',
   profesionalId: 'profesionalId',
+  fotoPathname: 'fotoPathname',
+  fotoMimeType: 'fotoMimeType',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1911,6 +1913,8 @@ export const PacienteScalarFieldEnum = {
   numeroAfiliado: 'numeroAfiliado',
   observaciones: 'observaciones',
   activo: 'activo',
+  fotoPathname: 'fotoPathname',
+  fotoMimeType: 'fotoMimeType',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2035,7 +2039,6 @@ export const EvolucionImagenScalarFieldEnum = {
   consultorioId: 'consultorioId',
   pacienteId: 'pacienteId',
   evolucionId: 'evolucionId',
-  url: 'url',
   pathname: 'pathname',
   nombreOriginal: 'nombreOriginal',
   mimeType: 'mimeType',
@@ -2200,6 +2203,10 @@ export const FichaEstudioComplementarioScalarFieldEnum = {
   resumen: 'resumen',
   observaciones: 'observaciones',
   activo: 'activo',
+  archivoPathname: 'archivoPathname',
+  archivoNombreOriginal: 'archivoNombreOriginal',
+  archivoMimeType: 'archivoMimeType',
+  archivoSizeBytes: 'archivoSizeBytes',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2253,7 +2260,9 @@ export const UsuarioOrderByRelevanceFieldEnum = {
   nombre: 'nombre',
   apellido: 'apellido',
   email: 'email',
-  passwordHash: 'passwordHash'
+  passwordHash: 'passwordHash',
+  fotoPathname: 'fotoPathname',
+  fotoMimeType: 'fotoMimeType'
 } as const
 
 export type UsuarioOrderByRelevanceFieldEnum = (typeof UsuarioOrderByRelevanceFieldEnum)[keyof typeof UsuarioOrderByRelevanceFieldEnum]
@@ -2267,7 +2276,9 @@ export const PacienteOrderByRelevanceFieldEnum = {
   telefono: 'telefono',
   direccion: 'direccion',
   numeroAfiliado: 'numeroAfiliado',
-  observaciones: 'observaciones'
+  observaciones: 'observaciones',
+  fotoPathname: 'fotoPathname',
+  fotoMimeType: 'fotoMimeType'
 } as const
 
 export type PacienteOrderByRelevanceFieldEnum = (typeof PacienteOrderByRelevanceFieldEnum)[keyof typeof PacienteOrderByRelevanceFieldEnum]
@@ -2316,7 +2327,6 @@ export type EvolucionOrderByRelevanceFieldEnum = (typeof EvolucionOrderByRelevan
 
 
 export const EvolucionImagenOrderByRelevanceFieldEnum = {
-  url: 'url',
   pathname: 'pathname',
   nombreOriginal: 'nombreOriginal',
   mimeType: 'mimeType'
@@ -2406,7 +2416,10 @@ export type FichaMedicacionOrderByRelevanceFieldEnum = (typeof FichaMedicacionOr
 export const FichaEstudioComplementarioOrderByRelevanceFieldEnum = {
   tipo: 'tipo',
   resumen: 'resumen',
-  observaciones: 'observaciones'
+  observaciones: 'observaciones',
+  archivoPathname: 'archivoPathname',
+  archivoNombreOriginal: 'archivoNombreOriginal',
+  archivoMimeType: 'archivoMimeType'
 } as const
 
 export type FichaEstudioComplementarioOrderByRelevanceFieldEnum = (typeof FichaEstudioComplementarioOrderByRelevanceFieldEnum)[keyof typeof FichaEstudioComplementarioOrderByRelevanceFieldEnum]

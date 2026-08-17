@@ -17,6 +17,7 @@ import TurnoFormFields, {
 import TurnosPage, { type TurnosPageItem } from './components/TurnosPage'
 import PatientsPage from './components/PatientsPage'
 import PatientDetailPage from './components/PatientDetailPage'
+import AuthorizedImg from './components/AuthorizedImg'
 import ConfiguracionPage from './components/ConfiguracionPage'
 import EstadisticasPage from './components/EstadisticasPage'
 import * as api from './services/api'
@@ -273,10 +274,13 @@ const ROL_LABELS: Record<string, string> = {
 }
 
 function Dashboard() {
-  const { user, logout } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
   const [activePage, setActivePage] = useState<AppPage>('home')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [profilePhotoInfoOpen, setProfilePhotoInfoOpen] = useState(false)
+  const [profilePhotoUploading, setProfilePhotoUploading] = useState(false)
+  const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null)
+  const profilePhotoInputRef = useRef<HTMLInputElement | null>(null)
   const avatarWrapperRef = useRef<HTMLDivElement | null>(null)
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
   const [specialtiesState, setSpecialtiesState] = useState<SpecialtyOption[]>([])
@@ -584,6 +588,49 @@ function Dashboard() {
       document.removeEventListener('keydown', handleEscape)
     }
   }, [profilePhotoInfoOpen])
+
+  const MAX_PROFILE_PHOTO_SIZE_BYTES = 5 * 1024 * 1024
+  const ALLOWED_PROFILE_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+  const handleProfilePhotoSelected = async (fileList: FileList | null) => {
+    const file = fileList?.[0]
+    if (!file) return
+
+    if (!ALLOWED_PROFILE_PHOTO_TYPES.includes(file.type)) {
+      setProfilePhotoError('Formato no permitido. Solo se aceptan imágenes JPG, PNG o WEBP.')
+      return
+    }
+    if (file.size > MAX_PROFILE_PHOTO_SIZE_BYTES) {
+      setProfilePhotoError(`La foto debe pesar como máximo ${MAX_PROFILE_PHOTO_SIZE_BYTES / (1024 * 1024)}MB.`)
+      return
+    }
+
+    setProfilePhotoError(null)
+    setProfilePhotoUploading(true)
+    try {
+      await api.uploadUsuarioFoto(file)
+      await refreshUser()
+      setProfilePhotoInfoOpen(false)
+    } catch (err) {
+      setProfilePhotoError(err instanceof Error && err.message.trim() ? err.message : 'No se pudo subir la foto.')
+    } finally {
+      setProfilePhotoUploading(false)
+    }
+  }
+
+  const removeProfilePhoto = async () => {
+    setProfilePhotoError(null)
+    setProfilePhotoUploading(true)
+    try {
+      await api.deleteUsuarioFoto()
+      await refreshUser()
+      setProfilePhotoInfoOpen(false)
+    } catch (err) {
+      setProfilePhotoError(err instanceof Error && err.message.trim() ? err.message : 'No se pudo eliminar la foto.')
+    } finally {
+      setProfilePhotoUploading(false)
+    }
+  }
 
   // Cierra el menú contextual del turno al hacer click afuera, scrollear o presionar Escape.
   useEffect(() => {
@@ -1286,24 +1333,50 @@ function Dashboard() {
 
         <div className="sidebar-brand">
           <div className="avatar-wrapper" ref={avatarWrapperRef}>
-            <div className="avatar">{initials}</div>
+            {user?.fotoUrl ? (
+              <div className="avatar avatar--photo">
+                <AuthorizedImg src={user.fotoUrl} alt="" />
+              </div>
+            ) : (
+              <div className="avatar">{initials}</div>
+            )}
             <button
               type="button"
               className="avatar-edit-button"
               aria-label="Foto de perfil"
               title="Foto de perfil"
-              onClick={() => setProfilePhotoInfoOpen(true)}
+              onClick={() => setProfilePhotoInfoOpen((current) => !current)}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 20h9" />
                 <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
               </svg>
             </button>
+            <input
+              ref={profilePhotoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              onChange={(event) => {
+                void handleProfilePhotoSelected(event.target.files)
+                event.target.value = ''
+              }}
+            />
             {profilePhotoInfoOpen ? (
               <div className="avatar-edit-popover" role="dialog" aria-label="Foto de perfil">
                 <p className="avatar-edit-popover-title">Foto de perfil</p>
-                <p>La carga de imágenes estará disponible próximamente.</p>
-                <button type="button" className="secondary-button" onClick={() => setProfilePhotoInfoOpen(false)}>Entendido</button>
+                <div className="avatar-edit-popover-actions">
+                  <button type="button" className="secondary-button" disabled={profilePhotoUploading} onClick={() => profilePhotoInputRef.current?.click()}>
+                    {profilePhotoUploading ? 'Subiendo...' : user?.fotoUrl ? 'Reemplazar foto' : 'Subir foto'}
+                  </button>
+                  {user?.fotoUrl ? (
+                    <button type="button" className="secondary-button" disabled={profilePhotoUploading} onClick={() => { void removeProfilePhoto() }}>
+                      Quitar foto
+                    </button>
+                  ) : null}
+                </div>
+                {profilePhotoError ? <p className="evolution-form-error">{profilePhotoError}</p> : null}
+                <button type="button" className="secondary-button" onClick={() => setProfilePhotoInfoOpen(false)}>Cerrar</button>
               </div>
             ) : null}
           </div>

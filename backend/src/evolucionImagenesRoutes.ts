@@ -1,51 +1,28 @@
 import { Router } from 'express'
-import multer from 'multer'
-import { put, del } from '@vercel/blob'
 import prisma from './prisma'
 import { CLINICAL_ROLES, requireProfesionalVinculado, requireRole } from './auth'
 import { RolUsuario } from './generated/prisma/client'
+import { createUploadHandler } from './uploadMiddleware'
+import { uploadToBlob, deleteFromBlob, streamBlobToResponse } from './blobStorage'
+import { imagenParaCliente } from './evolucionImagenSerializer'
 
 // Mismos límites que le mostramos al usuario en el frontend (ver
 // EvolucionImages.tsx): hasta 5 imágenes por evolución, 10MB cada una,
 // solo formatos de foto clínica comunes.
 const MAX_IMAGES_PER_EVOLUCION = 5
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
-const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_FILE_SIZE_BYTES, files: MAX_IMAGES_PER_EVOLUCION },
-  fileFilter: (_req, file, cb) => {
-    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      cb(new Error('Formato no permitido. Solo se aceptan imágenes JPG, PNG o WEBP.'))
-      return
-    }
-    cb(null, true)
-  },
+const uploadHandler = createUploadHandler('imagenes', {
+  allowedMimeTypes: ALLOWED_MIME_TYPES,
+  maxSizeBytes: MAX_FILE_SIZE_BYTES,
+  maxFiles: MAX_IMAGES_PER_EVOLUCION,
+  formatosLabel: 'imágenes JPG, PNG o WEBP',
 })
 
 const router = Router({ mergeParams: true })
 
-// El binario nunca se guarda en MySQL: `put()` lo sube a Vercel Blob y acá
-// solo persistimos la referencia (ver modelo EvolucionImagen). Vercel Blob
-// no tiene buckets privados — `addRandomSuffix` (default) es la única
-// protección real contra adivinar la URL, así que el pathname nunca incluye
-// datos identificables del paciente, solo ids internos.
-router.post('/', requireRole(...CLINICAL_ROLES), (req, res, next) => {
-  upload.array('imagenes', MAX_IMAGES_PER_EVOLUCION)(req, res, (err) => {
-    if (err instanceof multer.MulterError) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ error: `Cada imagen debe pesar como máximo ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB.` })
-      }
-      if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
-        return res.status(400).json({ error: `Como máximo se pueden subir ${MAX_IMAGES_PER_EVOLUCION} imágenes por vez.` })
-      }
-      return res.status(400).json({ error: 'No se pudieron procesar las imágenes.' })
-    }
-    if (err) return res.status(400).json({ error: err.message })
-    next()
-  })
-}, async (req, res) => {
+router.post('/', requireRole(...CLINICAL_ROLES), uploadHandler, async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
   const evolucionId = Number(req.params.evolucionId)
   if (Number.isNaN(evolucionId)) return res.status(400).json({ error: 'invalid id' })
@@ -70,17 +47,12 @@ router.post('/', requireRole(...CLINICAL_ROLES), (req, res, next) => {
     }
 
     const subidas = await Promise.all(files.map(async (file) => {
-      const blob = await put(`evoluciones/${consultorioId}/${evolucionId}/${file.originalname}`, file.buffer, {
-        access: 'public',
-        addRandomSuffix: true,
-        contentType: file.mimetype,
-      })
+      const blob = await uploadToBlob(`evoluciones/${consultorioId}/${evolucionId}/${file.originalname}`, file.buffer, file.mimetype)
       return prisma.evolucionImagen.create({
         data: {
           consultorioId,
           pacienteId: evolucion.pacienteId,
           evolucionId,
-          url: blob.url,
           pathname: blob.pathname,
           nombreOriginal: file.originalname,
           mimeType: file.mimetype,
@@ -89,10 +61,32 @@ router.post('/', requireRole(...CLINICAL_ROLES), (req, res, next) => {
       })
     }))
 
-    res.status(201).json(subidas)
+    res.status(201).json(subidas.map(imagenParaCliente))
   } catch (err) {
     console.error('failed to upload evolucion imagenes', err)
     res.status(500).json({ error: 'No se pudieron subir las imágenes. Volvé a intentar.' })
+  }
+})
+
+// Único punto que sirve el binario: valida consultorio/paciente/evolución/
+// dueño antes de pedirle el contenido a Vercel Blob. La lectura clínica
+// (ver el historial de un paciente) ya es más permisiva que la escritura —
+// no exige `requireProfesionalVinculado`, mismo criterio que el resto de
+// las lecturas de Evoluciones.
+router.get('/:imagenId/contenido', requireRole(...CLINICAL_ROLES), async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const evolucionId = Number(req.params.evolucionId)
+  const imagenId = Number(req.params.imagenId)
+  if (Number.isNaN(evolucionId) || Number.isNaN(imagenId)) return res.status(400).json({ error: 'invalid id' })
+
+  const imagen = await prisma.evolucionImagen.findFirst({ where: { id: imagenId, evolucionId, consultorioId } })
+  if (!imagen) return res.status(404).json({ error: 'imagen not found' })
+
+  try {
+    await streamBlobToResponse(imagen.pathname, res, imagen.mimeType, imagen.nombreOriginal)
+  } catch (err) {
+    console.error('failed to stream evolucion imagen', err)
+    res.status(500).json({ error: 'No se pudo cargar la imagen.' })
   }
 })
 
@@ -116,12 +110,7 @@ router.delete('/:imagenId', requireRole(...CLINICAL_ROLES), async (req, res) => 
     const imagen = await prisma.evolucionImagen.findFirst({ where: { id: imagenId, evolucionId, consultorioId } })
     if (!imagen) return res.status(404).json({ error: 'imagen not found' })
 
-    await del(imagen.pathname).catch((err) => {
-      // Si el blob ya no existe (o el borrado falla) igual sacamos la
-      // referencia: no queremos dejar la imagen "atascada" en la evolución
-      // por un error transitorio del storage.
-      console.error('failed to delete blob', err)
-    })
+    await deleteFromBlob(imagen.pathname)
     await prisma.evolucionImagen.delete({ where: { id: imagenId } })
 
     res.status(204).end()

@@ -316,6 +316,19 @@ body,
   font-weight: 700;
 }
 
+.avatar--photo {
+  overflow: hidden;
+  padding: 0;
+}
+
+.avatar--photo img,
+.avatar--photo .authorized-img-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .avatar-wrapper {
   position: relative;
   flex: 0 0 auto;
@@ -396,6 +409,11 @@ body,
   margin: 0;
   font-weight: 700;
   color: var(--color-text);
+}
+
+.avatar-edit-popover-actions {
+  display: grid;
+  gap: 6px;
 }
 
 .avatar-edit-popover p {
@@ -1151,6 +1169,14 @@ body,
 
 .dropdown-field {
   position: relative;
+}
+
+.dropdown-field-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .dropdown-list {
@@ -3023,6 +3049,19 @@ select:disabled {
   font-size: 30px;
 }
 
+.patient-avatar--photo {
+  overflow: hidden;
+  padding: 0;
+}
+
+.patient-avatar--photo img,
+.patient-avatar--photo .authorized-img-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .attention-header {
   align-items: center;
   flex-wrap: wrap;
@@ -3088,9 +3127,41 @@ select:disabled {
   font-size: 13px;
 }
 
+/* Diagnóstico + Archivos en la misma fila en desktop (Nueva evolución y
+   edición de una evolución existente) — cada campo toma un ancho parejo;
+   en mobile se apilan solos, sin breakpoint dedicado. */
+.evolution-form-fields-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.evolution-form-fields-row > * {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
 .evolucion-images {
   display: grid;
   gap: 8px;
+}
+
+.evolucion-images-upload-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+}
+
+.evolucion-images-upload-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .evolucion-images-grid {
@@ -3140,18 +3211,10 @@ select:disabled {
   cursor: pointer;
 }
 
-.evolucion-image-add {
-  width: 84px;
-  height: 84px;
-  display: grid;
-  place-items: center;
-  border: 1px dashed var(--color-border);
-  border-radius: 12px;
+.authorized-img-placeholder {
+  width: 100%;
+  height: 100%;
   background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .evolucion-image-lightbox {
@@ -3433,22 +3496,22 @@ select:disabled {
 .alert-toggle-button {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: 50%;
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .alert-toggle-button svg {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -4138,6 +4201,24 @@ select:disabled {
 
 /* Alertas clínicas: cada item del popup es un botón real (navega al campo
    de origen), pero debe seguir viéndose como la fila de siempre. */
+/* Estudios: la fila normal (info + acciones) más un renglón opcional
+   debajo para "Subiendo..."/error del archivo adjunto — el resto de
+   Antecedentes/Alergias/Medicación no necesita esto y sigue usando
+   `.antecedentes-item` como fila simple. */
+.antecedentes-item--column {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.antecedentes-item-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
 .antecedentes-item--clickable {
   width: 100%;
   text-align: left;
@@ -4269,35 +4350,6 @@ select:disabled {
   background: var(--color-input-bg);
   color: var(--color-text);
   font-size: 14px;
-}
-
-.ficha-field-archivo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.ficha-field-archivo > span:first-child {
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-.ficha-field-archivo-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: not-allowed;
-}
-
-.ficha-field-archivo-button svg {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .ficha-field-archivo-hint {

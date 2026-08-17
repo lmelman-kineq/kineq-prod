@@ -130,6 +130,8 @@ exports.UsuarioScalarFieldEnum = {
     rol: 'rol',
     activo: 'activo',
     profesionalId: 'profesionalId',
+    fotoPathname: 'fotoPathname',
+    fotoMimeType: 'fotoMimeType',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
 };
@@ -147,6 +149,8 @@ exports.PacienteScalarFieldEnum = {
     numeroAfiliado: 'numeroAfiliado',
     observaciones: 'observaciones',
     activo: 'activo',
+    fotoPathname: 'fotoPathname',
+    fotoMimeType: 'fotoMimeType',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
 };
@@ -235,7 +239,6 @@ exports.EvolucionImagenScalarFieldEnum = {
     consultorioId: 'consultorioId',
     pacienteId: 'pacienteId',
     evolucionId: 'evolucionId',
-    url: 'url',
     pathname: 'pathname',
     nombreOriginal: 'nombreOriginal',
     mimeType: 'mimeType',
@@ -368,6 +371,10 @@ exports.FichaEstudioComplementarioScalarFieldEnum = {
     resumen: 'resumen',
     observaciones: 'observaciones',
     activo: 'activo',
+    archivoPathname: 'archivoPathname',
+    archivoNombreOriginal: 'archivoNombreOriginal',
+    archivoMimeType: 'archivoMimeType',
+    archivoSizeBytes: 'archivoSizeBytes',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
 };
@@ -401,7 +408,9 @@ exports.UsuarioOrderByRelevanceFieldEnum = {
     nombre: 'nombre',
     apellido: 'apellido',
     email: 'email',
-    passwordHash: 'passwordHash'
+    passwordHash: 'passwordHash',
+    fotoPathname: 'fotoPathname',
+    fotoMimeType: 'fotoMimeType'
 };
 exports.PacienteOrderByRelevanceFieldEnum = {
     nombre: 'nombre',
@@ -411,7 +420,9 @@ exports.PacienteOrderByRelevanceFieldEnum = {
     telefono: 'telefono',
     direccion: 'direccion',
     numeroAfiliado: 'numeroAfiliado',
-    observaciones: 'observaciones'
+    observaciones: 'observaciones',
+    fotoPathname: 'fotoPathname',
+    fotoMimeType: 'fotoMimeType'
 };
 exports.ProfesionalOrderByRelevanceFieldEnum = {
     nombre: 'nombre',
@@ -436,7 +447,6 @@ exports.EvolucionOrderByRelevanceFieldEnum = {
     contenidoHtml: 'contenidoHtml'
 };
 exports.EvolucionImagenOrderByRelevanceFieldEnum = {
-    url: 'url',
     pathname: 'pathname',
     nombreOriginal: 'nombreOriginal',
     mimeType: 'mimeType'
@@ -494,6 +504,9 @@ exports.FichaMedicacionOrderByRelevanceFieldEnum = {
 exports.FichaEstudioComplementarioOrderByRelevanceFieldEnum = {
     tipo: 'tipo',
     resumen: 'resumen',
-    observaciones: 'observaciones'
+    observaciones: 'observaciones',
+    archivoPathname: 'archivoPathname',
+    archivoNombreOriginal: 'archivoNombreOriginal',
+    archivoMimeType: 'archivoMimeType'
 };
 //# sourceMappingURL=prismaNamespaceBrowser.js.map

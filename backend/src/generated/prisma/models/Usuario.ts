@@ -48,6 +48,8 @@ export type UsuarioMinAggregateOutputType = {
   rol: $Enums.RolUsuario | null
   activo: boolean | null
   profesionalId: number | null
+  fotoPathname: string | null
+  fotoMimeType: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -62,6 +64,8 @@ export type UsuarioMaxAggregateOutputType = {
   rol: $Enums.RolUsuario | null
   activo: boolean | null
   profesionalId: number | null
+  fotoPathname: string | null
+  fotoMimeType: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -76,6 +80,8 @@ export type UsuarioCountAggregateOutputType = {
   rol: number
   activo: number
   profesionalId: number
+  fotoPathname: number
+  fotoMimeType: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -104,6 +110,8 @@ export type UsuarioMinAggregateInputType = {
   rol?: true
   activo?: true
   profesionalId?: true
+  fotoPathname?: true
+  fotoMimeType?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -118,6 +126,8 @@ export type UsuarioMaxAggregateInputType = {
   rol?: true
   activo?: true
   profesionalId?: true
+  fotoPathname?: true
+  fotoMimeType?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -132,6 +142,8 @@ export type UsuarioCountAggregateInputType = {
   rol?: true
   activo?: true
   profesionalId?: true
+  fotoPathname?: true
+  fotoMimeType?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -233,6 +245,8 @@ export type UsuarioGroupByOutputType = {
   rol: $Enums.RolUsuario
   activo: boolean
   profesionalId: number | null
+  fotoPathname: string | null
+  fotoMimeType: string | null
   createdAt: Date
   updatedAt: Date
   _count: UsuarioCountAggregateOutputType | null
@@ -270,6 +284,8 @@ export type UsuarioWhereInput = {
   rol?: Prisma.EnumRolUsuarioFilter<"Usuario"> | $Enums.RolUsuario
   activo?: Prisma.BoolFilter<"Usuario"> | boolean
   profesionalId?: Prisma.IntNullableFilter<"Usuario"> | number | null
+  fotoPathname?: Prisma.StringNullableFilter<"Usuario"> | string | null
+  fotoMimeType?: Prisma.StringNullableFilter<"Usuario"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Usuario"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Usuario"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
@@ -286,6 +302,8 @@ export type UsuarioOrderByWithRelationInput = {
   rol?: Prisma.SortOrder
   activo?: Prisma.SortOrder
   profesionalId?: Prisma.SortOrderInput | Prisma.SortOrder
+  fotoPathname?: Prisma.SortOrderInput | Prisma.SortOrder
+  fotoMimeType?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   consultorio?: Prisma.ConsultorioOrderByWithRelationInput
@@ -306,6 +324,8 @@ export type UsuarioWhereUniqueInput = Prisma.AtLeast<{
   passwordHash?: Prisma.StringFilter<"Usuario"> | string
   rol?: Prisma.EnumRolUsuarioFilter<"Usuario"> | $Enums.RolUsuario
   activo?: Prisma.BoolFilter<"Usuario"> | boolean
+  fotoPathname?: Prisma.StringNullableFilter<"Usuario"> | string | null
+  fotoMimeType?: Prisma.StringNullableFilter<"Usuario"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Usuario"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Usuario"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
@@ -322,6 +342,8 @@ export type UsuarioOrderByWithAggregationInput = {
   rol?: Prisma.SortOrder
   activo?: Prisma.SortOrder
   profesionalId?: Prisma.SortOrderInput | Prisma.SortOrder
+  fotoPathname?: Prisma.SortOrderInput | Prisma.SortOrder
+  fotoMimeType?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.UsuarioCountOrderByAggregateInput
@@ -344,6 +366,8 @@ export type UsuarioScalarWhereWithAggregatesInput = {
   rol?: Prisma.EnumRolUsuarioWithAggregatesFilter<"Usuario"> | $Enums.RolUsuario
   activo?: Prisma.BoolWithAggregatesFilter<"Usuario"> | boolean
   profesionalId?: Prisma.IntNullableWithAggregatesFilter<"Usuario"> | number | null
+  fotoPathname?: Prisma.StringNullableWithAggregatesFilter<"Usuario"> | string | null
+  fotoMimeType?: Prisma.StringNullableWithAggregatesFilter<"Usuario"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Usuario"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Usuario"> | Date | string
 }
@@ -355,6 +379,8 @@ export type UsuarioCreateInput = {
   passwordHash: string
   rol: $Enums.RolUsuario
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutUsuariosInput
@@ -371,6 +397,8 @@ export type UsuarioUncheckedCreateInput = {
   rol: $Enums.RolUsuario
   activo?: boolean
   profesionalId?: number | null
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -382,6 +410,8 @@ export type UsuarioUpdateInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   rol?: Prisma.EnumRolUsuarioFieldUpdateOperationsInput | $Enums.RolUsuario
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutUsuariosNestedInput
@@ -398,6 +428,8 @@ export type UsuarioUncheckedUpdateInput = {
   rol?: Prisma.EnumRolUsuarioFieldUpdateOperationsInput | $Enums.RolUsuario
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profesionalId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -412,6 +444,8 @@ export type UsuarioCreateManyInput = {
   rol: $Enums.RolUsuario
   activo?: boolean
   profesionalId?: number | null
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -423,6 +457,8 @@ export type UsuarioUpdateManyMutationInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   rol?: Prisma.EnumRolUsuarioFieldUpdateOperationsInput | $Enums.RolUsuario
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -437,6 +473,8 @@ export type UsuarioUncheckedUpdateManyInput = {
   rol?: Prisma.EnumRolUsuarioFieldUpdateOperationsInput | $Enums.RolUsuario
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profesionalId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -467,6 +505,8 @@ export type UsuarioCountOrderByAggregateInput = {
   rol?: Prisma.SortOrder
   activo?: Prisma.SortOrder
   profesionalId?: Prisma.SortOrder
+  fotoPathname?: Prisma.SortOrder
+  fotoMimeType?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -487,6 +527,8 @@ export type UsuarioMaxOrderByAggregateInput = {
   rol?: Prisma.SortOrder
   activo?: Prisma.SortOrder
   profesionalId?: Prisma.SortOrder
+  fotoPathname?: Prisma.SortOrder
+  fotoMimeType?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -501,6 +543,8 @@ export type UsuarioMinOrderByAggregateInput = {
   rol?: Prisma.SortOrder
   activo?: Prisma.SortOrder
   profesionalId?: Prisma.SortOrder
+  fotoPathname?: Prisma.SortOrder
+  fotoMimeType?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -609,6 +653,8 @@ export type UsuarioCreateWithoutConsultorioInput = {
   passwordHash: string
   rol: $Enums.RolUsuario
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   profesional?: Prisma.ProfesionalCreateNestedOneWithoutUsuarioInput
@@ -623,6 +669,8 @@ export type UsuarioUncheckedCreateWithoutConsultorioInput = {
   rol: $Enums.RolUsuario
   activo?: boolean
   profesionalId?: number | null
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -666,6 +714,8 @@ export type UsuarioScalarWhereInput = {
   rol?: Prisma.EnumRolUsuarioFilter<"Usuario"> | $Enums.RolUsuario
   activo?: Prisma.BoolFilter<"Usuario"> | boolean
   profesionalId?: Prisma.IntNullableFilter<"Usuario"> | number | null
+  fotoPathname?: Prisma.StringNullableFilter<"Usuario"> | string | null
+  fotoMimeType?: Prisma.StringNullableFilter<"Usuario"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Usuario"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Usuario"> | Date | string
 }
@@ -677,6 +727,8 @@ export type UsuarioCreateWithoutProfesionalInput = {
   passwordHash: string
   rol: $Enums.RolUsuario
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutUsuariosInput
@@ -691,6 +743,8 @@ export type UsuarioUncheckedCreateWithoutProfesionalInput = {
   passwordHash: string
   rol: $Enums.RolUsuario
   activo?: boolean
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -718,6 +772,8 @@ export type UsuarioUpdateWithoutProfesionalInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   rol?: Prisma.EnumRolUsuarioFieldUpdateOperationsInput | $Enums.RolUsuario
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutUsuariosNestedInput
@@ -732,6 +788,8 @@ export type UsuarioUncheckedUpdateWithoutProfesionalInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   rol?: Prisma.EnumRolUsuarioFieldUpdateOperationsInput | $Enums.RolUsuario
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -745,6 +803,8 @@ export type UsuarioCreateManyConsultorioInput = {
   rol: $Enums.RolUsuario
   activo?: boolean
   profesionalId?: number | null
+  fotoPathname?: string | null
+  fotoMimeType?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -756,6 +816,8 @@ export type UsuarioUpdateWithoutConsultorioInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   rol?: Prisma.EnumRolUsuarioFieldUpdateOperationsInput | $Enums.RolUsuario
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   profesional?: Prisma.ProfesionalUpdateOneWithoutUsuarioNestedInput
@@ -770,6 +832,8 @@ export type UsuarioUncheckedUpdateWithoutConsultorioInput = {
   rol?: Prisma.EnumRolUsuarioFieldUpdateOperationsInput | $Enums.RolUsuario
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profesionalId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -783,6 +847,8 @@ export type UsuarioUncheckedUpdateManyWithoutConsultorioInput = {
   rol?: Prisma.EnumRolUsuarioFieldUpdateOperationsInput | $Enums.RolUsuario
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   profesionalId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  fotoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fotoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -799,6 +865,8 @@ export type UsuarioSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   rol?: boolean
   activo?: boolean
   profesionalId?: boolean
+  fotoPathname?: boolean
+  fotoMimeType?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
@@ -817,11 +885,13 @@ export type UsuarioSelectScalar = {
   rol?: boolean
   activo?: boolean
   profesionalId?: boolean
+  fotoPathname?: boolean
+  fotoMimeType?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UsuarioOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "nombre" | "apellido" | "email" | "passwordHash" | "rol" | "activo" | "profesionalId" | "createdAt" | "updatedAt", ExtArgs["result"]["usuario"]>
+export type UsuarioOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "nombre" | "apellido" | "email" | "passwordHash" | "rol" | "activo" | "profesionalId" | "fotoPathname" | "fotoMimeType" | "createdAt" | "updatedAt", ExtArgs["result"]["usuario"]>
 export type UsuarioInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
   profesional?: boolean | Prisma.Usuario$profesionalArgs<ExtArgs>
@@ -843,6 +913,8 @@ export type $UsuarioPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     rol: $Enums.RolUsuario
     activo: boolean
     profesionalId: number | null
+    fotoPathname: string | null
+    fotoMimeType: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["usuario"]>
@@ -1225,6 +1297,8 @@ export interface UsuarioFieldRefs {
   readonly rol: Prisma.FieldRef<"Usuario", 'RolUsuario'>
   readonly activo: Prisma.FieldRef<"Usuario", 'Boolean'>
   readonly profesionalId: Prisma.FieldRef<"Usuario", 'Int'>
+  readonly fotoPathname: Prisma.FieldRef<"Usuario", 'String'>
+  readonly fotoMimeType: Prisma.FieldRef<"Usuario", 'String'>
   readonly createdAt: Prisma.FieldRef<"Usuario", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Usuario", 'DateTime'>
 }

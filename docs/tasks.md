@@ -325,6 +325,37 @@ Además, producción necesita la variable de entorno `BLOB_READ_WRITE_TOKEN` (Ve
 
 ---
 
+## Ficha Inicial (alertas icon-only), Diagnóstico consistente, unificar uploads con Vercel Blob
+
+Ronda de cinco partes.
+
+**1) Alertas icon-only**: `AlertToggleButton.tsx` (un solo componente, ya reusado en todos los campos alertables) pasó de ícono+texto a solo ícono — círculo de 28px, ícono 16px, texto movido a `title`/`aria-label`. Misma lógica/estado de siempre.
+
+**2) Diagnóstico consistente**: se descubrió que el "selector sin estilo" reportado no era un componente nuevo a construir — el dropdown custom (`DiagnosticoSelect.tsx`, con color + "+ Agregar diagnóstico" dentro del panel) ya existía y ya se usaba en el **alta** de evolución; la **edición** (`EvolutionTable.tsx`) usaba un `<select>` nativo aparte, nunca actualizado a juego. Quedó reemplazado por el mismo `DiagnosticoSelect` (se agregó `onCreateGrupo` a las props de `EvolutionTable` para poder crear un diagnóstico inline también desde ahí).
+
+**3) Evoluciones: Diagnóstico + Archivos en una fila**: el cuadrado suelto "+ Imagen" desapareció. `EvolucionImages.tsx` se rediseñó: label "Archivos" a juego con "Diagnóstico" (`.dropdown-field-label`, nueva clase compartida) y un botón real "Subir imágenes"/"Agregar imagen" con ícono — las miniaturas aparecen debajo solo cuando hay algo. `DiagnosticoSelect` + `EvolucionImages` van dentro de `.evolution-form-fields-row` (flex con wrap, sin breakpoint dedicado), tanto en el alta como en la edición.
+
+**4) Unificar uploads con Vercel Blob + corregir privacidad**: al inspeccionar la implementación de imágenes de Evolución (ronda anterior) se encontró que `@vercel/blob@2.8.0` sí soporta `access: 'private'` + `get()` autenticado — la ronda anterior había asumido que Blob solo tenía modo público y lo documentó como límite conocido; eso era información vieja/incorrecta, no una limitación real de la librería instalada. Se corrigió: **todo** pasó a `access: 'private'`, y se agregó un endpoint `.../contenido` por recurso que revalida permisos y sirve el contenido vía streaming — el frontend nunca recibe ni guarda una URL de Blob (`AuthorizedImg.tsx` para imágenes, `openAuthorizedFile()` en `services/api.ts` para archivos no-imagen como un PDF de Estudio). Infra compartida (nunca 4 implementaciones separadas): `backend/src/blobStorage.ts` (`uploadToBlob`/`deleteFromBlob`/`streamBlobToResponse`) y `backend/src/uploadMiddleware.ts` (`createUploadHandler`, factory de `multer` + mensajes de error en español). Con eso, las 4 superficies:
+- **Evoluciones** (ya existía, ahora privado): sin cambios de UX, `EvolucionImagen.url` se eliminó de la base (se computa al vuelo).
+- **Estudios**: `FichaEstudioComplementario` no tenía ninguna columna de archivo — se agregaron (`archivoPathname`/`archivoNombreOriginal`/`archivoMimeType`/`archivoSizeBytes`, un archivo por estudio, PDF/JPG/PNG/WEBP hasta 15MB). Se sube/reemplaza/borra desde la fila del estudio en `FichaEstudiosList.tsx`, nunca desde el alta/edición de texto (necesita el estudio ya guardado).
+- **Foto de Usuario**: `Usuario.fotoPathname`/`fotoMimeType` nuevos. Única ruta de autoedición que existe para `Usuario` — siempre "la propia" (`/api/usuarios/me/foto`, nunca acepta un id), sin abrir edición de otros campos.
+- **Foto de Paciente**: `Paciente.fotoPathname`/`fotoMimeType` nuevos, mismo permiso que el resto de datos administrativos (`ADMIN_DATA_ROLES`).
+
+**5) Limpieza de placeholders**: "La carga de imágenes estará disponible próximamente" (foto de Usuario, foto de Paciente) y "Carga de archivos próximamente" (Estudios, tres lugares) ya no existen — reemplazados por la funcionalidad real. No se tocó ningún otro placeholder no relacionado (portal de pacientes, autorizaciones de obra social, etc. siguen "no implementar todavía" a propósito).
+
+**Producción**: una migración nueva y mayormente aditiva, `20260817160512_archivos_estudio_foto_usuario_paciente` — agrega columnas en `FichaEstudioComplementario`/`Usuario`/`Paciente`, y **elimina** `EvolucionImagen.url` (verificado 0 filas en dev antes de aplicar — no había ningún `BLOB_READ_WRITE_TOKEN` configurado en ningún ambiente hasta ahora, así que ninguna subida pudo haber tenido éxito nunca). Aplicada al dev DB a mano, **no** aplicada a Aiven — correr manualmente:
+```bash
+npx prisma migrate status
+npx prisma migrate deploy
+```
+`BLOB_READ_WRITE_TOKEN` sigue siendo la variable de entorno necesaria (Vercel Blob) — sin configurar en ningún ambiente todavía, incluido este dev local (se verificó explícitamente: 0 filas en `EvolucionImagen`).
+
+**Tests**: backend 188→201 (+13: Estudios archivo — subida/formato inválido/sin profesional vinculado/cross-consultorio/reemplazo-y-borrado —, Paciente foto — subida/cross-consultorio/sin-foto/borrado —, Usuario foto — subida/aislamiento por "me"/borrado). El mock de `@vercel/blob` (`vi.mock`) se extendió con un `get()` fake respaldado por un `Map` en memoria, para poder verificar de punta a punta que el contenido servido por cada ruta `.../contenido` es exactamente el que se subió, sin red ni token real. Frontend sigue en 90 (nada de lógica pura nueva que amerite extraer — la validación de Estudios/fotos es análoga a la ya testeada de imágenes de Evolución). `tsc -b`/`build`/`lint` limpios en ambos paquetes.
+
+**Verificado manualmente** con Playwright (dos sesiones): popovers de foto de Usuario/Paciente sin texto "próximamente" y con botón real "Subir foto"; tab Estudios sin "próximamente"; botón de alerta icon-only con `aria-label` correcto; fila Diagnóstico+Archivos visible en desktop con label "Archivos" y botón "Subir imágenes" (no el cuadrado viejo); Diagnóstico abre el dropdown custom (no `<select>`) con "+ Agregar diagnóstico" dentro; en la **edición** de una evolución existente (no solo el alta) el `<select>` nativo ya no aparece, aparece el mismo dropdown custom; sin scroll horizontal en 390px con el formulario de edición abierto. La subida real de un archivo a Blob no se pudo probar de punta a punta en el navegador (sin `BLOB_READ_WRITE_TOKEN` local) — comportamiento esperado, no un bug; sí se verificó de punta a punta en los tests de backend (con el mock).
+
+---
+
 ## Known gaps / next priorities
 
 - **Pre-existing bug found during manual verification of this round, not fixed (out of scope — not touched by this work):** the Inicio/home dashboard's mini-calendar renders a React "duplicate key" console warning (`Encountered two children with the same key... "M"`) on every load — almost certainly the weekday-initial header (L, M, M, J, V, S, D) using the letter itself as the React `key` instead of an index, so the two `M`s (Martes/Miércoles) collide. Confirmed via isolated console-error-count checkpoints that this fires during the post-login home render, before any Estadísticas/Turnos navigation — unrelated to the new code in this round. Cosmetic/non-crashing, but worth a one-line fix (`key={index}`) next time that file is touched.
@@ -354,7 +385,7 @@ Además, producción necesita la variable de entorno `BLOB_READ_WRITE_TOKEN` (Ve
 ## Not implemented yet (explicitly out of scope until a real spec exists)
 
 - Firma profesional / firma digital, audit trail, evolution version history.
-- Treatment model, real documents/file uploads at the paciente/turno/tratamiento/estudio level (the Estudios tab has a real CRUD list; its own "Subir archivo" attachment action per row is still a placeholder). Upload infra now exists for one specific case — images attached to Evoluciones, via Vercel Blob, see the "Unificar Paciente/Atención, Nombre completo, imágenes en Evoluciones" entry above — but it isn't wired to Estudios or any other module yet.
+- Treatment model, real documents/file uploads at the turno/tratamiento level (no upload surface exists there). Estudios' "Subir archivo" is now real (see the "Ficha Inicial (alertas icon-only), Diagnóstico consistente, unificar uploads con Vercel Blob" entry above) — the file/document gap that remains is specifically turno- and tratamiento-level attachments, not Estudios.
 - Advanced clinical timeline, coded diagnoses, clinical discharge.
 - Configurable templates, clinical AI, voice-to-text, patient portal, export/print, multi-site, granular permissions, specialty-specific fields.
 - Full sidebar redesign or app-wide redesign (this session only touched the attention + patient-detail screens, by design).

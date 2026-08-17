@@ -5,6 +5,7 @@ import { professionalName } from '../utils/professional'
 import RichTextEditor from './RichTextEditor'
 import EvolucionContent from './EvolucionContent'
 import EvolucionImages from './EvolucionImages'
+import DiagnosticoSelect from './DiagnosticoSelect'
 
 export function GrupoChip({ grupo }: { grupo: GrupoEvolucion | null | undefined }) {
   if (!grupo) return <span className="grupo-evolucion-chip grupo-evolucion-chip--none">Sin diagnóstico</span>
@@ -54,6 +55,7 @@ type EvolutionTableProps = {
   grupos?: GrupoEvolucion[]
   editingGrupoId?: number | null
   onChangeEditingGrupoId?: (id: number | null) => void
+  onCreateGrupo?: (nombre: string) => Promise<GrupoEvolucion>
   onAddImages?: (evolucion: Evolucion, files: File[]) => void
   onRemoveImage?: (evolucion: Evolucion, imagenId: number) => void
   imagesUploading?: boolean
@@ -79,6 +81,7 @@ export default function EvolutionTable({
   grupos = [],
   editingGrupoId = null,
   onChangeEditingGrupoId,
+  onCreateGrupo,
   onAddImages,
   onRemoveImage,
   imagesUploading,
@@ -192,27 +195,23 @@ export default function EvolutionTable({
                             ) : (
                               <textarea rows={4} value={editingText} onChange={(event) => onChangeEditingText(event.target.value)} />
                             )}
-                            {onChangeEditingGrupoId ? (
-                              <label className="ficha-field">
-                                <span>Diagnóstico</span>
-                                <select
+                            <div className="evolution-form-fields-row">
+                              {onChangeEditingGrupoId && onCreateGrupo ? (
+                                <DiagnosticoSelect
+                                  grupos={grupos}
                                   value={editingGrupoId ?? ''}
-                                  onChange={(event) => onChangeEditingGrupoId(event.target.value ? Number(event.target.value) : null)}
-                                >
-                                  <option value="">Sin diagnóstico</option>
-                                  {grupos.map((g) => (
-                                    <option key={g.id} value={g.id}>{g.nombre}</option>
-                                  ))}
-                                </select>
-                              </label>
-                            ) : null}
-                            <EvolucionImages
-                              items={(evolucion.imagenes ?? []).map((img) => ({ key: String(img.id), url: img.url, name: img.nombreOriginal }))}
-                              onAdd={onAddImages ? (files) => onAddImages(evolucion, files) : undefined}
-                              onRemove={onRemoveImage ? (key) => onRemoveImage(evolucion, Number(key)) : undefined}
-                              disabled={imagesUploading}
-                              error={imagesError}
-                            />
+                                  onChange={(id) => onChangeEditingGrupoId(id === '' ? null : id)}
+                                  onCreate={onCreateGrupo}
+                                />
+                              ) : null}
+                              <EvolucionImages
+                                items={(evolucion.imagenes ?? []).map((img) => ({ key: String(img.id), url: img.url, name: img.nombreOriginal }))}
+                                onAdd={onAddImages ? (files) => onAddImages(evolucion, files) : undefined}
+                                onRemove={onRemoveImage ? (key) => onRemoveImage(evolucion, Number(key)) : undefined}
+                                disabled={imagesUploading}
+                                error={imagesError}
+                              />
+                            </div>
                             {error ? <p className="evolution-form-error">{error}</p> : null}
                             <div className="evolution-edit-actions">
                               <button type="button" className="secondary-button" onClick={onCancelEdit}>

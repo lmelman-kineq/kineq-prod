@@ -1,5 +1,6 @@
-import { useState, type SVGProps } from 'react'
+import { useRef, useState, type SVGProps } from 'react'
 import type { FichaEstudioComplementario, FichaEstudioInput } from '../types/domain'
+import { openAuthorizedFile } from '../services/api'
 import DateInput from './DateInput'
 
 function EditIcon(props: SVGProps<SVGSVGElement>) {
@@ -31,19 +32,37 @@ function UploadIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+function FileIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <path d="M6 2h9l5 5v15H6Z" />
+      <path d="M15 2v5h5" />
+    </svg>
+  )
+}
+
 const EMPTY_FORM = { tipo: '', fecha: '', resumen: '' }
+
+const MAX_ARCHIVO_SIZE_BYTES = 15 * 1024 * 1024
+const ALLOWED_ARCHIVO_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
 
 type Props = {
   estudios: FichaEstudioComplementario[]
   onAdd: (data: FichaEstudioInput) => Promise<void>
   onUpdate: (id: number, data: Partial<FichaEstudioInput>) => Promise<void>
   onRemove: (id: number) => Promise<void>
+  onUploadArchivo: (id: number, file: File) => Promise<void>
+  onRemoveArchivo: (id: number) => Promise<void>
 }
 
-export default function FichaEstudiosList({ estudios, onAdd, onUpdate, onRemove }: Props) {
+export default function FichaEstudiosList({ estudios, onAdd, onUpdate, onRemove, onUploadArchivo, onRemoveArchivo }: Props) {
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [archivoBusyId, setArchivoBusyId] = useState<number | null>(null)
+  const [archivoError, setArchivoError] = useState<{ id: number; message: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [pickingForId, setPickingForId] = useState<number | null>(null)
 
   const startAdd = () => {
     setEditingId(null)
@@ -80,8 +99,62 @@ export default function FichaEstudiosList({ estudios, onAdd, onUpdate, onRemove 
 
   const formOpen = adding || editingId !== null
 
+  const triggerUpload = (estudioId: number) => {
+    setPickingForId(estudioId)
+    fileInputRef.current?.click()
+  }
+
+  const handleFileSelected = async (fileList: FileList | null) => {
+    const estudioId = pickingForId
+    setPickingForId(null)
+    const file = fileList?.[0]
+    if (!file || estudioId === null) return
+
+    if (!ALLOWED_ARCHIVO_TYPES.includes(file.type)) {
+      setArchivoError({ id: estudioId, message: 'Formato no permitido. Solo se aceptan PDF, JPG, PNG o WEBP.' })
+      return
+    }
+    if (file.size > MAX_ARCHIVO_SIZE_BYTES) {
+      setArchivoError({ id: estudioId, message: `El archivo debe pesar como máximo ${MAX_ARCHIVO_SIZE_BYTES / (1024 * 1024)}MB.` })
+      return
+    }
+
+    setArchivoError(null)
+    setArchivoBusyId(estudioId)
+    try {
+      await onUploadArchivo(estudioId, file)
+    } catch (err) {
+      setArchivoError({ id: estudioId, message: err instanceof Error && err.message.trim() ? err.message : 'No se pudo subir el archivo.' })
+    } finally {
+      setArchivoBusyId(null)
+    }
+  }
+
+  const handleRemoveArchivo = async (estudioId: number) => {
+    setArchivoError(null)
+    setArchivoBusyId(estudioId)
+    try {
+      await onRemoveArchivo(estudioId)
+    } catch (err) {
+      setArchivoError({ id: estudioId, message: err instanceof Error && err.message.trim() ? err.message : 'No se pudo eliminar el archivo.' })
+    } finally {
+      setArchivoBusyId(null)
+    }
+  }
+
   return (
     <div className="antecedentes-section">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf,image/jpeg,image/png,image/webp"
+        hidden
+        onChange={(event) => {
+          void handleFileSelected(event.target.files)
+          event.target.value = ''
+        }}
+      />
+
       {!formOpen ? (
         <button type="button" className="secondary-button" onClick={startAdd}>+ Agregar estudio</button>
       ) : (
@@ -91,14 +164,11 @@ export default function FichaEstudiosList({ estudios, onAdd, onUpdate, onRemove 
             <DateInput value={form.fecha} onChange={(fecha) => setForm((c) => ({ ...c, fecha }))} />
             <input type="text" placeholder="Resumen" value={form.resumen} onChange={(event) => setForm((c) => ({ ...c, resumen: event.target.value }))} />
           </div>
-          <div className="ficha-field-archivo">
-            <span>Archivo adjunto</span>
-            {/* Carga real de archivos pendiente — ver adjuntar `fileId`/`attachmentId` a futuro */}
-            <button type="button" className="secondary-button ficha-field-archivo-button" title="Carga de archivos próximamente" onClick={() => {}}>
-              <UploadIcon /> Subir archivo
-            </button>
-            <span className="ficha-field-archivo-hint">Carga de archivos próximamente</span>
-          </div>
+          {editingId !== null ? (
+            <p className="ficha-field-archivo-hint">El archivo adjunto se sube desde la lista, con el estudio ya guardado.</p>
+          ) : (
+            <p className="ficha-field-archivo-hint">Guardá el estudio primero; después vas a poder adjuntarle un archivo.</p>
+          )}
           <div className="evolution-edit-actions">
             <button type="button" className="secondary-button" onClick={cancel}>Cancelar</button>
             <button type="button" className="primary-button" disabled={!form.tipo.trim()} onClick={() => { void save() }}>Guardar</button>
@@ -112,28 +182,67 @@ export default function FichaEstudiosList({ estudios, onAdd, onUpdate, onRemove 
         </p>
       ) : (
         <div className="antecedentes-list">
-          {estudios.map((estudio) => (
-            <div key={estudio.id} className="antecedentes-item">
-              <div className="antecedentes-item-info">
-                <strong>{estudio.tipo}</strong>
-                <span>
-                  {[estudio.fecha ? estudio.fecha.slice(0, 10) : null, estudio.resumen].filter(Boolean).join(' · ') || 'Sin resumen'}
-                </span>
+          {estudios.map((estudio) => {
+            const busy = archivoBusyId === estudio.id
+            const rowError = archivoError?.id === estudio.id ? archivoError.message : null
+            return (
+              <div key={estudio.id} className="antecedentes-item antecedentes-item--column">
+                <div className="antecedentes-item-row">
+                  <div className="antecedentes-item-info">
+                    <strong>{estudio.tipo}</strong>
+                    <span>
+                      {[estudio.fecha ? estudio.fecha.slice(0, 10) : null, estudio.resumen].filter(Boolean).join(' · ') || 'Sin resumen'}
+                    </span>
+                  </div>
+                  <div className="config-row-actions">
+                    {estudio.archivoUrl ? (
+                      <>
+                        <button
+                          type="button"
+                          className="config-icon-button"
+                          aria-label="Ver archivo"
+                          title={estudio.archivoNombreOriginal ?? 'Ver archivo'}
+                          disabled={busy}
+                          onClick={() => { void openAuthorizedFile(estudio.archivoUrl!) }}
+                        >
+                          <FileIcon />
+                        </button>
+                        <button
+                          type="button"
+                          className="config-icon-button config-icon-button--danger"
+                          aria-label="Quitar archivo"
+                          title="Quitar archivo"
+                          disabled={busy}
+                          onClick={() => { void handleRemoveArchivo(estudio.id) }}
+                        >
+                          <TrashIcon />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="config-icon-button"
+                        aria-label="Subir archivo"
+                        title="Subir archivo"
+                        disabled={busy}
+                        onClick={() => triggerUpload(estudio.id)}
+                      >
+                        <UploadIcon />
+                      </button>
+                    )}
+                    <button type="button" className="config-icon-button" aria-label="Editar estudio" title="Editar" onClick={() => startEdit(estudio)}>
+                      <EditIcon />
+                    </button>
+                    <button type="button" className="config-icon-button config-icon-button--danger" aria-label="Quitar estudio" title="Quitar" onClick={() => { void onRemove(estudio.id) }}>
+                      <TrashIcon />
+                    </button>
+                  </div>
+                </div>
+                {busy ? <span className="ficha-field-archivo-hint">Subiendo...</span> : null}
+                {rowError ? <p className="evolution-form-error">{rowError}</p> : null}
               </div>
-              <div className="config-row-actions">
-                {/* Carga real de archivos pendiente — ver adjuntar `fileId`/`attachmentId` a futuro */}
-                <button type="button" className="config-icon-button" aria-label="Subir archivo" title="Carga de archivos próximamente" onClick={() => {}}>
-                  <UploadIcon />
-                </button>
-                <button type="button" className="config-icon-button" aria-label="Editar estudio" title="Editar" onClick={() => startEdit(estudio)}>
-                  <EditIcon />
-                </button>
-                <button type="button" className="config-icon-button config-icon-button--danger" aria-label="Quitar estudio" title="Quitar" onClick={() => { void onRemove(estudio.id) }}>
-                  <TrashIcon />
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

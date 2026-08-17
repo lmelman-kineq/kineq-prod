@@ -116,6 +116,11 @@ model Usuario {
   rol           RolUsuario
   activo        Boolean    @default(true)
   profesionalId Int?       @unique
+  // Foto de perfil: igual criterio que EvolucionImagen — solo la referencia
+  // al blob (privado), nunca la URL ni el binario. `fotoMimeType` alcanza
+  // para servirla (avatar, sin nombre de archivo visible en ningún lado).
+  fotoPathname  String?    @db.Text
+  fotoMimeType  String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -139,6 +144,9 @@ model Paciente {
   numeroAfiliado  String?
   observaciones   String?
   activo          Boolean   @default(true)
+  // Foto/avatar del paciente — mismo criterio que Usuario.fotoPathname.
+  fotoPathname    String?   @db.Text
+  fotoMimeType    String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -149,17 +157,17 @@ model Paciente {
   fichaInicial    FichaInicial?
   gruposEvolucion GrupoEvolucion[]
 
-  @@index([consultorioId, activo])
-  @@index([consultorioId, apellido, nombre])
   // Único por consultorio cuando hay documento — MySQL no deduplica NULLs,
   // así que pacientes sin documento (el caso normal ahora que es opcional)
   // no chocan entre sí.
   @@unique([consultorioId, documento])
+  @@index([consultorioId, activo])
+  @@index([consultorioId, apellido, nombre])
   @@index([obraSocialId])
 }
 
 model Profesional {
-  id            Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   consultorioId Int
   nombre        String
   apellido      String
@@ -178,7 +186,7 @@ model Profesional {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  consultorio       Consultorio               @relation(fields: [consultorioId], references: [id])
+  consultorio       Consultorio                  @relation(fields: [consultorioId], references: [id])
   especialidades    ProfesionalEspecialidad[]
   turnos            Turno[]
   evoluciones       Evolucion[]
@@ -343,11 +351,11 @@ model Evolucion {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  consultorio Consultorio     @relation(fields: [consultorioId], references: [id])
-  paciente    Paciente        @relation(fields: [pacienteId], references: [id])
-  profesional Profesional     @relation(fields: [profesionalId], references: [id])
-  turno       Turno?          @relation(fields: [turnoId], references: [id])
-  grupo       GrupoEvolucion? @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+  consultorio Consultorio       @relation(fields: [consultorioId], references: [id])
+  paciente    Paciente          @relation(fields: [pacienteId], references: [id])
+  profesional Profesional       @relation(fields: [profesionalId], references: [id])
+  turno       Turno?            @relation(fields: [turnoId], references: [id])
+  grupo       GrupoEvolucion?   @relation(fields: [grupoId], references: [id], onDelete: SetNull)
   imagenes    EvolucionImagen[]
 
   @@index([consultorioId, pacienteId, createdAt])
@@ -357,20 +365,19 @@ model Evolucion {
 }
 
 // Imágenes adjuntas a una evolución (fotos clínicas). El binario vive en
-// Vercel Blob, nunca en MySQL — acá solo se guarda la referencia. `pathname`
-// es la clave dentro del blob store, necesaria para poder borrarlo (`del()`)
-// cuando se saca una imagen; `url` es lo que se manda tal cual al frontend.
-// Vercel Blob no tiene buckets privados: la única protección es que la URL
-// nunca se expone salvo a través de este endpoint (que sí valida
-// consultorio/paciente/evolución) y que el pathname incluye un sufijo
-// aleatorio (ver evolucionImagenesUpload.ts) — no hay control de acceso real
-// del lado del storage.
+// Vercel Blob (`access: 'private'`), nunca en MySQL — acá solo se guarda la
+// referencia. `pathname` es la clave dentro del blob store: la usan tanto
+// `del()` (al sacar una imagen) como `get()` (al servirla) — ver
+// `backend/src/blobStorage.ts`. No hay columna `url`: el frontend nunca
+// recibe la URL de Vercel Blob (privada, inservible sin el token del
+// servidor), solo la ruta propia `/api/evoluciones/:evolucionId/imagenes/:id/contenido`,
+// que valida consultorio/paciente/evolución antes de servir el contenido —
+// ver `evolucionImagenesRoutes.ts`.
 model EvolucionImagen {
   id             Int      @id @default(autoincrement())
   consultorioId  Int
   pacienteId     Int
   evolucionId    Int
-  url            String   @db.Text
   pathname       String   @db.Text
   nombreOriginal String
   mimeType       String
@@ -522,7 +529,7 @@ model CatalogoClinicoItem {
   // onDelete explícito quedó en SET NULL por default, y los ítems de
   // catálogo de un consultorio de prueba borrado terminaron viéndose desde
   // cualquier otro consultorio).
-  consultorio  Consultorio?         @relation(fields: [consultorioId], references: [id], onDelete: Cascade)
+  consultorio  Consultorio?       @relation(fields: [consultorioId], references: [id], onDelete: Cascade)
   antecedentes FichaAntecedente[]
   alergias     FichaAlergia[]
 
@@ -549,9 +556,9 @@ model FichaAntecedente {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  consultorio  Consultorio          @relation(fields: [consultorioId], references: [id])
-  fichaInicial FichaInicial         @relation(fields: [fichaInicialId], references: [id])
-  catalogoItem CatalogoClinicoItem  @relation(fields: [catalogoItemId], references: [id])
+  consultorio  Consultorio         @relation(fields: [consultorioId], references: [id])
+  fichaInicial FichaInicial        @relation(fields: [fichaInicialId], references: [id])
+  catalogoItem CatalogoClinicoItem @relation(fields: [catalogoItemId], references: [id])
 
   @@unique([fichaInicialId, catalogoItemId])
   @@index([consultorioId])
@@ -580,20 +587,20 @@ model FichaAlergia {
 
 // Sin catálogo farmacológico: `nombre` es texto libre a propósito.
 model FichaMedicacion {
-  id             Int      @id @default(autoincrement())
-  consultorioId  Int
-  fichaInicialId Int
-  nombre         String
-  dosis          String?
-  unidad         String?
-  frecuencia     String?
-  via            String?
-  motivo         String?
-  observaciones  String?
-  esAlertaClinica Boolean @default(false)
-  activa         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  consultorioId   Int
+  fichaInicialId  Int
+  nombre          String
+  dosis           String?
+  unidad          String?
+  frecuencia      String?
+  via             String?
+  motivo          String?
+  observaciones   String?
+  esAlertaClinica Boolean  @default(false)
+  activa          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
   fichaInicial FichaInicial @relation(fields: [fichaInicialId], references: [id])
@@ -607,17 +614,25 @@ model FichaMedicacion {
 // esto es para registros puntuales con fecha. Sin `documentoId` todavía —
 // la carga real de archivos está fuera de alcance.
 model FichaEstudioComplementario {
-  id             Int       @id @default(autoincrement())
-  consultorioId  Int
-  fichaInicialId Int
-  profesionalId  Int?
-  tipo           String
-  fecha          DateTime?
-  resumen        String?
-  observaciones  String?
-  activo         Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                    Int       @id @default(autoincrement())
+  consultorioId         Int
+  fichaInicialId        Int
+  profesionalId         Int?
+  tipo                  String
+  fecha                 DateTime?
+  resumen               String?
+  observaciones         String?
+  activo                Boolean   @default(true)
+  // Archivo adjunto (PDF/imagen del estudio) — un archivo por entrada, mismo
+  // criterio que EvolucionImagen/Usuario.fotoPathname: solo la referencia al
+  // blob privado, nunca la URL ni el binario. Todos nullable: la mayoría de
+  // los estudios existentes no tiene archivo cargado.
+  archivoPathname       String?   @db.Text
+  archivoNombreOriginal String?
+  archivoMimeType       String?
+  archivoSizeBytes      Int?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
   fichaInicial FichaInicial @relation(fields: [fichaInicialId], references: [id])
@@ -628,12 +643,12 @@ model FichaEstudioComplementario {
 }
 
 model FichaSeccionEstado {
-  id             Int                    @id @default(autoincrement())
+  id             Int                   @id @default(autoincrement())
   consultorioId  Int
   fichaInicialId Int
   seccion        SeccionFicha
-  estado         EstadoRevisionSeccion  @default(PENDIENTE)
-  updatedAt      DateTime               @updatedAt
+  estado         EstadoRevisionSeccion @default(PENDIENTE)
+  updatedAt      DateTime              @updatedAt
 
   consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
   fichaInicial FichaInicial @relation(fields: [fichaInicialId], references: [id])

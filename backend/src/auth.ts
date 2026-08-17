@@ -59,6 +59,7 @@ export type AuthUsuario = {
   activo: boolean
   consultorioId: number
   profesionalId: number | null
+  fotoPathname: string | null
 }
 
 const USUARIO_SELECT = {
@@ -70,6 +71,7 @@ const USUARIO_SELECT = {
   activo: true,
   consultorioId: true,
   profesionalId: true,
+  fotoPathname: true,
 } as const
 
 export function findAuthUsuario(usuarioId: number): Promise<AuthUsuario | null> {

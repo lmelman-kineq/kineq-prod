@@ -93,6 +93,31 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
+// Único punto donde se hace fetch a un archivo servido por una ruta
+// "/contenido" (imágenes de Evolución, archivo de Estudio, foto de Usuario/
+// Paciente): todas viven detrás de Vercel Blob privado, así que nunca se
+// linkea directo a una URL — siempre se pide con la misma sesión (cookies)
+// que el resto de la app y se arma un object URL local. Usado tanto por
+// <AuthorizedImg> (para mostrar la imagen) como por openAuthorizedFile
+// (para "ver"/descargar un archivo que no es una imagen, ej. un PDF).
+export async function fetchAuthorizedBlob(path: string): Promise<Blob> {
+  const response = await fetch(`${BASE_URL}${path}`, { credentials: 'include' })
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as ApiErrorBody
+    throw new ApiError(body.error ?? body.message ?? `Error HTTP ${response.status}`, response.status)
+  }
+  return response.blob()
+}
+
+export async function openAuthorizedFile(path: string): Promise<void> {
+  const blob = await fetchAuthorizedBlob(path)
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener')
+  // Se revoca con demora (no de inmediato): la pestaña nueva todavía tiene
+  // que terminar de cargar el object URL.
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
 function normalizeDateBoundary(value: string, endOfDay: boolean): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
 
@@ -188,8 +213,31 @@ export function patchUsuario(usuarioId: number, data: UsuarioUpdateInput): Promi
   })
 }
 
+// Foto de perfil: siempre "la propia" — no existe (ni existía antes) una
+// ruta de autoedición de Usuario más allá de esto, ver
+// backend/src/usuarioFotoRoutes.ts.
+export function uploadUsuarioFoto(file: File): Promise<{ fotoUrl: string }> {
+  const formData = new FormData()
+  formData.append('foto', file)
+  return request('/api/usuarios/me/foto', { method: 'POST', body: formData })
+}
+
+export function deleteUsuarioFoto(): Promise<void> {
+  return request('/api/usuarios/me/foto', { method: 'DELETE' })
+}
+
 export function getPacientes(): Promise<Paciente[]> {
   return request('/api/pacientes')
+}
+
+export function uploadPacienteFoto(pacienteId: number, file: File): Promise<{ fotoUrl: string }> {
+  const formData = new FormData()
+  formData.append('foto', file)
+  return request(`/api/pacientes/${pacienteId}/foto`, { method: 'POST', body: formData })
+}
+
+export function deletePacienteFoto(pacienteId: number): Promise<void> {
+  return request(`/api/pacientes/${pacienteId}/foto`, { method: 'DELETE' })
 }
 
 export function getPaciente(pacienteId: number): Promise<Paciente> {
@@ -517,6 +565,16 @@ export function patchFichaEstudio(id: number, data: Partial<FichaEstudioInput>):
 
 export function deleteFichaEstudio(id: number): Promise<void> {
   return request(`/api/ficha-estudios/${id}`, { method: 'DELETE' })
+}
+
+export function uploadEstudioArchivo(estudioId: number, file: File): Promise<FichaEstudioComplementario> {
+  const formData = new FormData()
+  formData.append('archivo', file)
+  return request(`/api/ficha-estudios/${estudioId}/archivo`, { method: 'POST', body: formData })
+}
+
+export function deleteEstudioArchivo(estudioId: number): Promise<void> {
+  return request(`/api/ficha-estudios/${estudioId}/archivo`, { method: 'DELETE' })
 }
 
 export function putAlertaCampo(pacienteId: number, campo: string): Promise<FichaAlertaCampo> {

@@ -11,12 +11,47 @@ import { seedCatalogosGlobales } from './seedCatalogosGlobales'
 // persistencia del endpoint de imágenes sin depender de esa infraestructura.
 // vitest hoistea este vi.mock por encima de los imports de arriba.
 let blobStoreCounter = 0
+const fakeBlobStore = new Map<string, Buffer>()
 vi.mock('@vercel/blob', () => ({
-  put: vi.fn(async (pathname: string) => {
+  put: vi.fn(async (pathname: string, body: Buffer) => {
     blobStoreCounter += 1
-    return { url: `https://blob.test/${pathname}-${blobStoreCounter}`, pathname: `${pathname}-${blobStoreCounter}` }
+    const finalPathname = `${pathname}-${blobStoreCounter}`
+    fakeBlobStore.set(finalPathname, Buffer.isBuffer(body) ? body : Buffer.from(body))
+    return { url: `https://blob.test/${finalPathname}`, pathname: finalPathname }
   }),
-  del: vi.fn(async () => undefined),
+  del: vi.fn(async (pathname: string) => {
+    fakeBlobStore.delete(pathname)
+  }),
+  // Fake de `get()` con `access: 'private'`: devuelve el mismo buffer que se
+  // guardó en `put()`, envuelto en un ReadableStream real — así los tests
+  // de las rutas `/contenido` verifican el contenido de punta a punta, sin
+  // red ni token real.
+  get: vi.fn(async (pathname: string) => {
+    const data = fakeBlobStore.get(pathname)
+    if (!data) return null
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(data))
+        controller.close()
+      },
+    })
+    return {
+      statusCode: 200,
+      stream,
+      headers: new Headers(),
+      blob: {
+        url: `https://blob.test/${pathname}`,
+        downloadUrl: '',
+        pathname,
+        contentDisposition: '',
+        cacheControl: '',
+        uploadedAt: new Date(),
+        etag: '',
+        contentType: 'application/octet-stream',
+        size: data.length,
+      },
+    }
+  }),
 }))
 
 const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -518,12 +553,41 @@ describe('auth, roles y aislamiento por consultorio', () => {
         .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
       expect(res.status).toBe(201)
       expect(res.body).toHaveLength(1)
-      expect(res.body[0].url).toBeTruthy()
+      // Nunca la URL cruda de Vercel Blob (privado) — solo la ruta propia
+      // que sirve el contenido después de validar permisos.
+      expect(res.body[0].url).toBe(`/api/evoluciones/${created.body.id}/imagenes/${res.body[0].id}/contenido`)
       expect(res.body[0].mimeType).toBe('image/jpeg')
+      expect(res.body[0]).not.toHaveProperty('pathname')
 
       const list = await request(app).get('/api/evoluciones').set('Cookie', cookies.adminA).query({ pacienteId: pacienteAId })
       const leida = list.body.find((e: any) => e.id === created.body.id)
       expect(leida.imagenes).toHaveLength(1)
+      expect(leida.imagenes[0]).not.toHaveProperty('pathname')
+
+      // El contenido servido por la ruta propia es el mismo que se subió.
+      const contenido = await request(app).get(res.body[0].url).set('Cookie', cookies.profesionalA)
+      expect(contenido.status).toBe(200)
+      expect(contenido.headers['content-type']).toContain('image/jpeg')
+      expect(contenido.body.equals(fakeImage())).toBe(true)
+
+      await prisma.evolucion.delete({ where: { id: created.body.id } })
+    })
+
+    it('no se puede ver el contenido de una imagen de otro consultorio', async () => {
+      const created = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'con imagen privada' })
+      expect(created.status).toBe(201)
+
+      const uploaded = await request(app)
+        .post(`/api/evoluciones/${created.body.id}/imagenes`)
+        .set('Cookie', cookies.profesionalA)
+        .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
+      expect(uploaded.status).toBe(201)
+
+      const res = await request(app).get(uploaded.body[0].url).set('Cookie', cookies.adminB)
+      expect(res.status).toBe(404)
 
       await prisma.evolucion.delete({ where: { id: created.body.id } })
     })
@@ -556,7 +620,6 @@ describe('auth, roles y aislamiento por consultorio', () => {
           consultorioId: consultorioAId,
           pacienteId: pacienteAId,
           evolucionId: created.body.id,
-          url: `https://blob.test/existing-${i}`,
           pathname: `existing-${i}`,
           nombreOriginal: `existing-${i}.jpg`,
           mimeType: 'image/jpeg',
@@ -1687,6 +1750,111 @@ describe('auth, roles y aislamiento por consultorio', () => {
     })
   })
 
+  describe('estudios: archivo adjunto', () => {
+    const fakeFile = () => Buffer.from('fake-pdf-bytes')
+
+    async function crearEstudio() {
+      const res = await request(app)
+        .post(`/api/pacientes/${pacienteAId}/ficha-inicial/estudios`)
+        .set('Cookie', cookies.profesionalA)
+        .send({ tipo: 'RX' })
+      expect(res.status).toBe(201)
+      return res.body.id as number
+    }
+
+    it('sube un archivo, sirve el contenido y no expone archivoPathname', async () => {
+      const estudioId = await crearEstudio()
+
+      const res = await request(app)
+        .post(`/api/ficha-estudios/${estudioId}/archivo`)
+        .set('Cookie', cookies.profesionalA)
+        .attach('archivo', fakeFile(), { filename: 'rx.pdf', contentType: 'application/pdf' })
+      expect(res.status).toBe(201)
+      expect(res.body.archivoUrl).toBe(`/api/ficha-estudios/${estudioId}/archivo/contenido`)
+      expect(res.body).not.toHaveProperty('archivoPathname')
+
+      const contenido = await request(app).get(res.body.archivoUrl).set('Cookie', cookies.adminA)
+      expect(contenido.status).toBe(200)
+      expect(contenido.headers['content-type']).toContain('application/pdf')
+      expect(contenido.body.equals(fakeFile())).toBe(true)
+
+      const ficha = await request(app).get(`/api/pacientes/${pacienteAId}/ficha-inicial`).set('Cookie', cookies.adminA)
+      const estudioEnFicha = ficha.body.estudios.find((e: any) => e.id === estudioId)
+      expect(estudioEnFicha.archivoUrl).toBe(res.body.archivoUrl)
+      expect(estudioEnFicha).not.toHaveProperty('archivoPathname')
+
+      await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
+    })
+
+    it('rechaza un formato no permitido (400)', async () => {
+      const estudioId = await crearEstudio()
+
+      const res = await request(app)
+        .post(`/api/ficha-estudios/${estudioId}/archivo`)
+        .set('Cookie', cookies.profesionalA)
+        .attach('archivo', fakeFile(), { filename: 'nota.txt', contentType: 'text/plain' })
+      expect(res.status).toBe(400)
+
+      await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
+    })
+
+    it('un usuario sin profesional vinculado no puede subir el archivo', async () => {
+      const estudioId = await crearEstudio()
+
+      const res = await request(app)
+        .post(`/api/ficha-estudios/${estudioId}/archivo`)
+        .set('Cookie', cookies.profesionalSinVinculo)
+        .attach('archivo', fakeFile(), { filename: 'rx.pdf', contentType: 'application/pdf' })
+      expect(res.status).toBe(403)
+
+      await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
+    })
+
+    it('no se puede subir ni ver el archivo de un estudio de otro consultorio', async () => {
+      const estudioId = await crearEstudio()
+
+      const subida = await request(app)
+        .post(`/api/ficha-estudios/${estudioId}/archivo`)
+        .set('Cookie', cookies.adminB)
+        .attach('archivo', fakeFile(), { filename: 'rx.pdf', contentType: 'application/pdf' })
+      expect(subida.status).toBe(404)
+
+      await request(app)
+        .post(`/api/ficha-estudios/${estudioId}/archivo`)
+        .set('Cookie', cookies.profesionalA)
+        .attach('archivo', fakeFile(), { filename: 'rx.pdf', contentType: 'application/pdf' })
+
+      const lectura = await request(app).get(`/api/ficha-estudios/${estudioId}/archivo/contenido`).set('Cookie', cookies.adminB)
+      expect(lectura.status).toBe(404)
+
+      await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
+    })
+
+    it('reemplaza el archivo existente y lo elimina', async () => {
+      const estudioId = await crearEstudio()
+
+      const primero = await request(app)
+        .post(`/api/ficha-estudios/${estudioId}/archivo`)
+        .set('Cookie', cookies.profesionalA)
+        .attach('archivo', fakeFile(), { filename: 'v1.pdf', contentType: 'application/pdf' })
+      expect(primero.status).toBe(201)
+
+      const segundo = await request(app)
+        .post(`/api/ficha-estudios/${estudioId}/archivo`)
+        .set('Cookie', cookies.profesionalA)
+        .attach('archivo', Buffer.from('otro contenido'), { filename: 'v2.pdf', contentType: 'application/pdf' })
+      expect(segundo.status).toBe(201)
+
+      const del = await request(app).delete(`/api/ficha-estudios/${estudioId}/archivo`).set('Cookie', cookies.profesionalA)
+      expect(del.status).toBe(204)
+
+      const despues = await request(app).get(`/api/ficha-estudios/${estudioId}/archivo/contenido`).set('Cookie', cookies.adminA)
+      expect(despues.status).toBe(404)
+
+      await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
+    })
+  })
+
   describe('vínculo Usuario-Profesional desde el lado Profesional', () => {
     it('un administrador vincula un profesional a un usuario existente', async () => {
       const profesional = await prisma.profesional.create({ data: { consultorioId: consultorioAId, nombre: 'Nuevo', apellido: 'Prof' } })
@@ -2070,6 +2238,126 @@ describe('auth, roles y aislamiento por consultorio', () => {
       expect(res.body.documento).toBeNull()
 
       await prisma.paciente.delete({ where: { id: creado.id } })
+    })
+  })
+
+  describe('Pacientes: foto', () => {
+    const fakePhoto = () => Buffer.from('fake-avatar-bytes')
+
+    it('sube una foto, la sirve y no expone fotoPathname en ningún response de paciente', async () => {
+      const creado = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'ConFoto', apellido: '' } })
+
+      const res = await request(app)
+        .post(`/api/pacientes/${creado.id}/foto`)
+        .set('Cookie', cookies.recepcionA)
+        .attach('foto', fakePhoto(), { filename: 'avatar.png', contentType: 'image/png' })
+      expect(res.status).toBe(201)
+      expect(res.body.fotoUrl).toBe(`/api/pacientes/${creado.id}/foto/contenido`)
+
+      const contenido = await request(app).get(res.body.fotoUrl).set('Cookie', cookies.profesionalA)
+      expect(contenido.status).toBe(200)
+      expect(contenido.body.equals(fakePhoto())).toBe(true)
+
+      const get = await request(app).get(`/api/pacientes/${creado.id}`).set('Cookie', cookies.adminA)
+      expect(get.body.fotoUrl).toBe(`/api/pacientes/${creado.id}/foto/contenido`)
+      expect(get.body).not.toHaveProperty('fotoPathname')
+      expect(get.body).not.toHaveProperty('fotoMimeType')
+
+      await prisma.paciente.delete({ where: { id: creado.id } })
+    })
+
+    it('no se puede subir ni ver la foto de un paciente de otro consultorio', async () => {
+      const creado = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'Aislado', apellido: '' } })
+
+      const subida = await request(app)
+        .post(`/api/pacientes/${creado.id}/foto`)
+        .set('Cookie', cookies.adminB)
+        .attach('foto', fakePhoto(), { filename: 'avatar.png', contentType: 'image/png' })
+      expect(subida.status).toBe(404)
+
+      const lectura = await request(app).get(`/api/pacientes/${creado.id}/foto/contenido`).set('Cookie', cookies.adminB)
+      expect(lectura.status).toBe(404)
+
+      await prisma.paciente.delete({ where: { id: creado.id } })
+    })
+
+    it('sin foto, GET /contenido devuelve 404 y el paciente no tiene fotoUrl', async () => {
+      const creado = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'SinFoto', apellido: '' } })
+
+      const get = await request(app).get(`/api/pacientes/${creado.id}`).set('Cookie', cookies.adminA)
+      expect(get.body.fotoUrl).toBeNull()
+
+      const lectura = await request(app).get(`/api/pacientes/${creado.id}/foto/contenido`).set('Cookie', cookies.adminA)
+      expect(lectura.status).toBe(404)
+
+      await prisma.paciente.delete({ where: { id: creado.id } })
+    })
+
+    it('elimina la foto', async () => {
+      const creado = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'ParaBorrar', apellido: '' } })
+      await request(app)
+        .post(`/api/pacientes/${creado.id}/foto`)
+        .set('Cookie', cookies.adminA)
+        .attach('foto', fakePhoto(), { filename: 'avatar.png', contentType: 'image/png' })
+
+      const del = await request(app).delete(`/api/pacientes/${creado.id}/foto`).set('Cookie', cookies.adminA)
+      expect(del.status).toBe(204)
+
+      const get = await request(app).get(`/api/pacientes/${creado.id}`).set('Cookie', cookies.adminA)
+      expect(get.body.fotoUrl).toBeNull()
+
+      await prisma.paciente.delete({ where: { id: creado.id } })
+    })
+  })
+
+  describe('Usuario: foto de perfil (propia)', () => {
+    const fakePhoto = () => Buffer.from('fake-user-avatar-bytes')
+
+    it('sube su propia foto, la sirve, y GET /auth/me la refleja sin exponer fotoPathname', async () => {
+      const res = await request(app)
+        .post('/api/usuarios/me/foto')
+        .set('Cookie', cookies.profesionalA)
+        .attach('foto', fakePhoto(), { filename: 'yo.png', contentType: 'image/png' })
+      expect(res.status).toBe(201)
+      expect(res.body.fotoUrl).toBe('/api/usuarios/me/foto/contenido')
+
+      const contenido = await request(app).get('/api/usuarios/me/foto/contenido').set('Cookie', cookies.profesionalA)
+      expect(contenido.status).toBe(200)
+      expect(contenido.body.equals(fakePhoto())).toBe(true)
+
+      const me = await request(app).get('/auth/me').set('Cookie', cookies.profesionalA)
+      expect(me.body.fotoUrl).toBe('/api/usuarios/me/foto/contenido')
+      expect(me.body).not.toHaveProperty('fotoPathname')
+
+      await request(app).delete('/api/usuarios/me/foto').set('Cookie', cookies.profesionalA)
+    })
+
+    it('la ruta "me" nunca expone la foto de otro usuario', async () => {
+      await request(app)
+        .post('/api/usuarios/me/foto')
+        .set('Cookie', cookies.profesionalA)
+        .attach('foto', fakePhoto(), { filename: 'yo.png', contentType: 'image/png' })
+
+      // adminA (usuario distinto, sin foto propia todavía) pide "su" foto —
+      // por diseño la ruta no acepta un id, así que jamás puede terminar
+      // viendo la de profesionalA.
+      const res = await request(app).get('/api/usuarios/me/foto/contenido').set('Cookie', cookies.adminA)
+      expect(res.status).toBe(404)
+
+      await request(app).delete('/api/usuarios/me/foto').set('Cookie', cookies.profesionalA)
+    })
+
+    it('elimina su propia foto', async () => {
+      await request(app)
+        .post('/api/usuarios/me/foto')
+        .set('Cookie', cookies.recepcionA)
+        .attach('foto', fakePhoto(), { filename: 'yo.png', contentType: 'image/png' })
+
+      const del = await request(app).delete('/api/usuarios/me/foto').set('Cookie', cookies.recepcionA)
+      expect(del.status).toBe(204)
+
+      const me = await request(app).get('/auth/me').set('Cookie', cookies.recepcionA)
+      expect(me.body.fotoUrl).toBeNull()
     })
   })
 

@@ -31,6 +31,7 @@ export type FichaEstudioComplementarioAvgAggregateOutputType = {
   consultorioId: number | null
   fichaInicialId: number | null
   profesionalId: number | null
+  archivoSizeBytes: number | null
 }
 
 export type FichaEstudioComplementarioSumAggregateOutputType = {
@@ -38,6 +39,7 @@ export type FichaEstudioComplementarioSumAggregateOutputType = {
   consultorioId: number | null
   fichaInicialId: number | null
   profesionalId: number | null
+  archivoSizeBytes: number | null
 }
 
 export type FichaEstudioComplementarioMinAggregateOutputType = {
@@ -50,6 +52,10 @@ export type FichaEstudioComplementarioMinAggregateOutputType = {
   resumen: string | null
   observaciones: string | null
   activo: boolean | null
+  archivoPathname: string | null
+  archivoNombreOriginal: string | null
+  archivoMimeType: string | null
+  archivoSizeBytes: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -64,6 +70,10 @@ export type FichaEstudioComplementarioMaxAggregateOutputType = {
   resumen: string | null
   observaciones: string | null
   activo: boolean | null
+  archivoPathname: string | null
+  archivoNombreOriginal: string | null
+  archivoMimeType: string | null
+  archivoSizeBytes: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -78,6 +88,10 @@ export type FichaEstudioComplementarioCountAggregateOutputType = {
   resumen: number
   observaciones: number
   activo: number
+  archivoPathname: number
+  archivoNombreOriginal: number
+  archivoMimeType: number
+  archivoSizeBytes: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -89,6 +103,7 @@ export type FichaEstudioComplementarioAvgAggregateInputType = {
   consultorioId?: true
   fichaInicialId?: true
   profesionalId?: true
+  archivoSizeBytes?: true
 }
 
 export type FichaEstudioComplementarioSumAggregateInputType = {
@@ -96,6 +111,7 @@ export type FichaEstudioComplementarioSumAggregateInputType = {
   consultorioId?: true
   fichaInicialId?: true
   profesionalId?: true
+  archivoSizeBytes?: true
 }
 
 export type FichaEstudioComplementarioMinAggregateInputType = {
@@ -108,6 +124,10 @@ export type FichaEstudioComplementarioMinAggregateInputType = {
   resumen?: true
   observaciones?: true
   activo?: true
+  archivoPathname?: true
+  archivoNombreOriginal?: true
+  archivoMimeType?: true
+  archivoSizeBytes?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -122,6 +142,10 @@ export type FichaEstudioComplementarioMaxAggregateInputType = {
   resumen?: true
   observaciones?: true
   activo?: true
+  archivoPathname?: true
+  archivoNombreOriginal?: true
+  archivoMimeType?: true
+  archivoSizeBytes?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -136,6 +160,10 @@ export type FichaEstudioComplementarioCountAggregateInputType = {
   resumen?: true
   observaciones?: true
   activo?: true
+  archivoPathname?: true
+  archivoNombreOriginal?: true
+  archivoMimeType?: true
+  archivoSizeBytes?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -237,6 +265,10 @@ export type FichaEstudioComplementarioGroupByOutputType = {
   resumen: string | null
   observaciones: string | null
   activo: boolean
+  archivoPathname: string | null
+  archivoNombreOriginal: string | null
+  archivoMimeType: string | null
+  archivoSizeBytes: number | null
   createdAt: Date
   updatedAt: Date
   _count: FichaEstudioComplementarioCountAggregateOutputType | null
@@ -274,6 +306,10 @@ export type FichaEstudioComplementarioWhereInput = {
   resumen?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
   observaciones?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
   activo?: Prisma.BoolFilter<"FichaEstudioComplementario"> | boolean
+  archivoPathname?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
+  archivoNombreOriginal?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
+  archivoMimeType?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
+  archivoSizeBytes?: Prisma.IntNullableFilter<"FichaEstudioComplementario"> | number | null
   createdAt?: Prisma.DateTimeFilter<"FichaEstudioComplementario"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"FichaEstudioComplementario"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
@@ -291,6 +327,10 @@ export type FichaEstudioComplementarioOrderByWithRelationInput = {
   resumen?: Prisma.SortOrderInput | Prisma.SortOrder
   observaciones?: Prisma.SortOrderInput | Prisma.SortOrder
   activo?: Prisma.SortOrder
+  archivoPathname?: Prisma.SortOrderInput | Prisma.SortOrder
+  archivoNombreOriginal?: Prisma.SortOrderInput | Prisma.SortOrder
+  archivoMimeType?: Prisma.SortOrderInput | Prisma.SortOrder
+  archivoSizeBytes?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   consultorio?: Prisma.ConsultorioOrderByWithRelationInput
@@ -312,6 +352,10 @@ export type FichaEstudioComplementarioWhereUniqueInput = Prisma.AtLeast<{
   resumen?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
   observaciones?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
   activo?: Prisma.BoolFilter<"FichaEstudioComplementario"> | boolean
+  archivoPathname?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
+  archivoNombreOriginal?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
+  archivoMimeType?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
+  archivoSizeBytes?: Prisma.IntNullableFilter<"FichaEstudioComplementario"> | number | null
   createdAt?: Prisma.DateTimeFilter<"FichaEstudioComplementario"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"FichaEstudioComplementario"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
@@ -329,6 +373,10 @@ export type FichaEstudioComplementarioOrderByWithAggregationInput = {
   resumen?: Prisma.SortOrderInput | Prisma.SortOrder
   observaciones?: Prisma.SortOrderInput | Prisma.SortOrder
   activo?: Prisma.SortOrder
+  archivoPathname?: Prisma.SortOrderInput | Prisma.SortOrder
+  archivoNombreOriginal?: Prisma.SortOrderInput | Prisma.SortOrder
+  archivoMimeType?: Prisma.SortOrderInput | Prisma.SortOrder
+  archivoSizeBytes?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.FichaEstudioComplementarioCountOrderByAggregateInput
@@ -351,6 +399,10 @@ export type FichaEstudioComplementarioScalarWhereWithAggregatesInput = {
   resumen?: Prisma.StringNullableWithAggregatesFilter<"FichaEstudioComplementario"> | string | null
   observaciones?: Prisma.StringNullableWithAggregatesFilter<"FichaEstudioComplementario"> | string | null
   activo?: Prisma.BoolWithAggregatesFilter<"FichaEstudioComplementario"> | boolean
+  archivoPathname?: Prisma.StringNullableWithAggregatesFilter<"FichaEstudioComplementario"> | string | null
+  archivoNombreOriginal?: Prisma.StringNullableWithAggregatesFilter<"FichaEstudioComplementario"> | string | null
+  archivoMimeType?: Prisma.StringNullableWithAggregatesFilter<"FichaEstudioComplementario"> | string | null
+  archivoSizeBytes?: Prisma.IntNullableWithAggregatesFilter<"FichaEstudioComplementario"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"FichaEstudioComplementario"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"FichaEstudioComplementario"> | Date | string
 }
@@ -361,6 +413,10 @@ export type FichaEstudioComplementarioCreateInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutFichaEstudiosInput
@@ -378,6 +434,10 @@ export type FichaEstudioComplementarioUncheckedCreateInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -388,6 +448,10 @@ export type FichaEstudioComplementarioUpdateInput = {
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutFichaEstudiosNestedInput
@@ -405,6 +469,10 @@ export type FichaEstudioComplementarioUncheckedUpdateInput = {
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -419,6 +487,10 @@ export type FichaEstudioComplementarioCreateManyInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -429,6 +501,10 @@ export type FichaEstudioComplementarioUpdateManyMutationInput = {
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -443,6 +519,10 @@ export type FichaEstudioComplementarioUncheckedUpdateManyInput = {
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -473,6 +553,10 @@ export type FichaEstudioComplementarioCountOrderByAggregateInput = {
   resumen?: Prisma.SortOrder
   observaciones?: Prisma.SortOrder
   activo?: Prisma.SortOrder
+  archivoPathname?: Prisma.SortOrder
+  archivoNombreOriginal?: Prisma.SortOrder
+  archivoMimeType?: Prisma.SortOrder
+  archivoSizeBytes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -482,6 +566,7 @@ export type FichaEstudioComplementarioAvgOrderByAggregateInput = {
   consultorioId?: Prisma.SortOrder
   fichaInicialId?: Prisma.SortOrder
   profesionalId?: Prisma.SortOrder
+  archivoSizeBytes?: Prisma.SortOrder
 }
 
 export type FichaEstudioComplementarioMaxOrderByAggregateInput = {
@@ -494,6 +579,10 @@ export type FichaEstudioComplementarioMaxOrderByAggregateInput = {
   resumen?: Prisma.SortOrder
   observaciones?: Prisma.SortOrder
   activo?: Prisma.SortOrder
+  archivoPathname?: Prisma.SortOrder
+  archivoNombreOriginal?: Prisma.SortOrder
+  archivoMimeType?: Prisma.SortOrder
+  archivoSizeBytes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -508,6 +597,10 @@ export type FichaEstudioComplementarioMinOrderByAggregateInput = {
   resumen?: Prisma.SortOrder
   observaciones?: Prisma.SortOrder
   activo?: Prisma.SortOrder
+  archivoPathname?: Prisma.SortOrder
+  archivoNombreOriginal?: Prisma.SortOrder
+  archivoMimeType?: Prisma.SortOrder
+  archivoSizeBytes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -517,6 +610,7 @@ export type FichaEstudioComplementarioSumOrderByAggregateInput = {
   consultorioId?: Prisma.SortOrder
   fichaInicialId?: Prisma.SortOrder
   profesionalId?: Prisma.SortOrder
+  archivoSizeBytes?: Prisma.SortOrder
 }
 
 export type FichaEstudioComplementarioCreateNestedManyWithoutConsultorioInput = {
@@ -651,6 +745,10 @@ export type FichaEstudioComplementarioCreateWithoutConsultorioInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   fichaInicial: Prisma.FichaInicialCreateNestedOneWithoutEstudiosInput
@@ -666,6 +764,10 @@ export type FichaEstudioComplementarioUncheckedCreateWithoutConsultorioInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -709,6 +811,10 @@ export type FichaEstudioComplementarioScalarWhereInput = {
   resumen?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
   observaciones?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
   activo?: Prisma.BoolFilter<"FichaEstudioComplementario"> | boolean
+  archivoPathname?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
+  archivoNombreOriginal?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
+  archivoMimeType?: Prisma.StringNullableFilter<"FichaEstudioComplementario"> | string | null
+  archivoSizeBytes?: Prisma.IntNullableFilter<"FichaEstudioComplementario"> | number | null
   createdAt?: Prisma.DateTimeFilter<"FichaEstudioComplementario"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"FichaEstudioComplementario"> | Date | string
 }
@@ -719,6 +825,10 @@ export type FichaEstudioComplementarioCreateWithoutProfesionalInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutFichaEstudiosInput
@@ -734,6 +844,10 @@ export type FichaEstudioComplementarioUncheckedCreateWithoutProfesionalInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -770,6 +884,10 @@ export type FichaEstudioComplementarioCreateWithoutFichaInicialInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutFichaEstudiosInput
@@ -785,6 +903,10 @@ export type FichaEstudioComplementarioUncheckedCreateWithoutFichaInicialInput = 
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -824,6 +946,10 @@ export type FichaEstudioComplementarioCreateManyConsultorioInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -834,6 +960,10 @@ export type FichaEstudioComplementarioUpdateWithoutConsultorioInput = {
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   fichaInicial?: Prisma.FichaInicialUpdateOneRequiredWithoutEstudiosNestedInput
@@ -849,6 +979,10 @@ export type FichaEstudioComplementarioUncheckedUpdateWithoutConsultorioInput = {
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -862,6 +996,10 @@ export type FichaEstudioComplementarioUncheckedUpdateManyWithoutConsultorioInput
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -875,6 +1013,10 @@ export type FichaEstudioComplementarioCreateManyProfesionalInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -885,6 +1027,10 @@ export type FichaEstudioComplementarioUpdateWithoutProfesionalInput = {
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutFichaEstudiosNestedInput
@@ -900,6 +1046,10 @@ export type FichaEstudioComplementarioUncheckedUpdateWithoutProfesionalInput = {
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -913,6 +1063,10 @@ export type FichaEstudioComplementarioUncheckedUpdateManyWithoutProfesionalInput
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -926,6 +1080,10 @@ export type FichaEstudioComplementarioCreateManyFichaInicialInput = {
   resumen?: string | null
   observaciones?: string | null
   activo?: boolean
+  archivoPathname?: string | null
+  archivoNombreOriginal?: string | null
+  archivoMimeType?: string | null
+  archivoSizeBytes?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -936,6 +1094,10 @@ export type FichaEstudioComplementarioUpdateWithoutFichaInicialInput = {
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutFichaEstudiosNestedInput
@@ -951,6 +1113,10 @@ export type FichaEstudioComplementarioUncheckedUpdateWithoutFichaInicialInput = 
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -964,6 +1130,10 @@ export type FichaEstudioComplementarioUncheckedUpdateManyWithoutFichaInicialInpu
   resumen?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   observaciones?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  archivoPathname?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoNombreOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoMimeType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivoSizeBytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -980,6 +1150,10 @@ export type FichaEstudioComplementarioSelect<ExtArgs extends runtime.Types.Exten
   resumen?: boolean
   observaciones?: boolean
   activo?: boolean
+  archivoPathname?: boolean
+  archivoNombreOriginal?: boolean
+  archivoMimeType?: boolean
+  archivoSizeBytes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
@@ -999,11 +1173,15 @@ export type FichaEstudioComplementarioSelectScalar = {
   resumen?: boolean
   observaciones?: boolean
   activo?: boolean
+  archivoPathname?: boolean
+  archivoNombreOriginal?: boolean
+  archivoMimeType?: boolean
+  archivoSizeBytes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type FichaEstudioComplementarioOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "fichaInicialId" | "profesionalId" | "tipo" | "fecha" | "resumen" | "observaciones" | "activo" | "createdAt" | "updatedAt", ExtArgs["result"]["fichaEstudioComplementario"]>
+export type FichaEstudioComplementarioOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "fichaInicialId" | "profesionalId" | "tipo" | "fecha" | "resumen" | "observaciones" | "activo" | "archivoPathname" | "archivoNombreOriginal" | "archivoMimeType" | "archivoSizeBytes" | "createdAt" | "updatedAt", ExtArgs["result"]["fichaEstudioComplementario"]>
 export type FichaEstudioComplementarioInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
   fichaInicial?: boolean | Prisma.FichaInicialDefaultArgs<ExtArgs>
@@ -1027,6 +1205,10 @@ export type $FichaEstudioComplementarioPayload<ExtArgs extends runtime.Types.Ext
     resumen: string | null
     observaciones: string | null
     activo: boolean
+    archivoPathname: string | null
+    archivoNombreOriginal: string | null
+    archivoMimeType: string | null
+    archivoSizeBytes: number | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["fichaEstudioComplementario"]>
@@ -1410,6 +1592,10 @@ export interface FichaEstudioComplementarioFieldRefs {
   readonly resumen: Prisma.FieldRef<"FichaEstudioComplementario", 'String'>
   readonly observaciones: Prisma.FieldRef<"FichaEstudioComplementario", 'String'>
   readonly activo: Prisma.FieldRef<"FichaEstudioComplementario", 'Boolean'>
+  readonly archivoPathname: Prisma.FieldRef<"FichaEstudioComplementario", 'String'>
+  readonly archivoNombreOriginal: Prisma.FieldRef<"FichaEstudioComplementario", 'String'>
+  readonly archivoMimeType: Prisma.FieldRef<"FichaEstudioComplementario", 'String'>
+  readonly archivoSizeBytes: Prisma.FieldRef<"FichaEstudioComplementario", 'Int'>
   readonly createdAt: Prisma.FieldRef<"FichaEstudioComplementario", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"FichaEstudioComplementario", 'DateTime'>
 }

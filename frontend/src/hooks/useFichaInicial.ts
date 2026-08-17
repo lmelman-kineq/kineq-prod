@@ -185,6 +185,14 @@ export function useFichaInicial(patientId: number, canEditClinical: boolean, ref
     await api.deleteFichaEstudio(id)
     await refresh()
   }
+  const uploadEstudioArchivo = async (id: number, file: File) => {
+    await api.uploadEstudioArchivo(id, file)
+    await refresh()
+  }
+  const removeEstudioArchivo = async (id: number) => {
+    await api.deleteEstudioArchivo(id)
+    await refresh()
+  }
 
   return {
     ficha,
@@ -207,6 +215,8 @@ export function useFichaInicial(patientId: number, canEditClinical: boolean, ref
     addEstudio,
     updateEstudio,
     removeEstudio,
+    uploadEstudioArchivo,
+    removeEstudioArchivo,
     toggleAlertaCampo,
   }
 }

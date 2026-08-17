@@ -10,6 +10,12 @@ const prisma_1 = __importDefault(require("./prisma"));
 const authRoutes_1 = __importDefault(require("./authRoutes"));
 const estadisticasRoutes_1 = __importDefault(require("./estadisticasRoutes"));
 const evolucionImagenesRoutes_1 = __importDefault(require("./evolucionImagenesRoutes"));
+const estudioArchivoRoutes_1 = __importDefault(require("./estudioArchivoRoutes"));
+const usuarioFotoRoutes_1 = __importDefault(require("./usuarioFotoRoutes"));
+const pacienteFotoRoutes_1 = __importDefault(require("./pacienteFotoRoutes"));
+const estudioSerializer_1 = require("./estudioSerializer");
+const pacienteSerializer_1 = require("./pacienteSerializer");
+const evolucionImagenSerializer_1 = require("./evolucionImagenSerializer");
 const sanitizeRichText_1 = require("./sanitizeRichText");
 const auth_1 = require("./auth");
 const client_1 = require("./generated/prisma/client");
@@ -112,6 +118,9 @@ const USUARIO_LIST_SELECT = {
     createdAt: true,
     profesional: { select: { id: true, nombre: true, apellido: true } },
 };
+// Foto de perfil: siempre "la propia" (nunca un id de usuario recibido del
+// cliente) — ver usuarioFotoRoutes.ts.
+app.use('/api/usuarios/me/foto', usuarioFotoRoutes_1.default);
 app.get('/api/usuarios', (0, auth_1.requireRole)(client_1.RolUsuario.ADMINISTRADOR), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
     const usuarios = await prisma_1.default.usuario.findMany({
@@ -243,6 +252,7 @@ app.patch('/api/usuarios/:usuarioId', (0, auth_1.requireRole)(client_1.RolUsuari
 });
 // PACIENTES
 // Lectura: todos los roles. Alta y edición administrativa: administrador y recepción.
+app.use('/api/pacientes/:pacienteId/foto', pacienteFotoRoutes_1.default);
 app.get('/api/pacientes', async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
     const pacientes = await prisma_1.default.paciente.findMany({
@@ -259,7 +269,7 @@ app.get('/api/pacientes/:pacienteId', async (req, res) => {
     const paciente = await prisma_1.default.paciente.findFirst({ where: { id: pacienteId, consultorioId } });
     if (!paciente)
         return res.status(404).json({ error: 'paciente not found' });
-    res.json(paciente);
+    res.json((0, pacienteSerializer_1.pacienteParaCliente)(paciente));
 });
 app.post('/api/pacientes', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
@@ -281,7 +291,7 @@ app.post('/api/pacientes', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES), 
                 numeroAfiliado: numeroAfiliado || null,
             },
         });
-        res.status(201).json(paciente);
+        res.status(201).json((0, pacienteSerializer_1.pacienteParaCliente)(paciente));
     }
     catch (err) {
         if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
@@ -349,7 +359,7 @@ app.patch('/api/pacientes/:pacienteId', (0, auth_1.requireRole)(...auth_1.ADMIN_
             }
             return result;
         });
-        res.json(updated);
+        res.json((0, pacienteSerializer_1.pacienteParaCliente)(updated));
     }
     catch (err) {
         if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
@@ -982,7 +992,7 @@ app.get('/api/evoluciones', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), a
     if (pacienteId)
         where.pacienteId = pacienteId;
     const evoluciones = await prisma_1.default.evolucion.findMany({ where, include: { profesional: true, grupo: true, imagenes: true } });
-    res.json(evoluciones);
+    res.json(evoluciones.map(evolucionImagenSerializer_1.evolucionParaCliente));
 });
 // Un grupo solo se puede asignar si es del mismo paciente (nunca cross-
 // paciente/consultorio).
@@ -1033,7 +1043,7 @@ app.post('/api/evoluciones', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), 
             data: { consultorioId, pacienteId, profesionalId, turnoId: turnoId || null, contenido, contenidoHtml, grupoId: grupoId || null },
             include: { profesional: true, grupo: true, imagenes: true },
         });
-        res.status(201).json(ev);
+        res.status(201).json((0, evolucionImagenSerializer_1.evolucionParaCliente)(ev));
     }
     catch (err) {
         // El detalle real (excepción/SQL de Prisma) va solo al log del server —
@@ -1103,7 +1113,7 @@ app.patch('/api/evoluciones/:evolucionId', (0, auth_1.requireRole)(...auth_1.CLI
             }
         }
         const updated = await prisma_1.default.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true, imagenes: true } });
-        res.json(updated);
+        res.json((0, evolucionImagenSerializer_1.evolucionParaCliente)(updated));
     }
     catch (err) {
         console.error('failed to update evolucion', err);
@@ -1249,7 +1259,7 @@ app.get('/api/pacientes/:pacienteId/ficha-inicial', (0, auth_1.requireRole)(...a
     // No existir ficha todavía es un estado normal, no un error: se devuelve
     // `null` en vez de 404, así el frontend distingue "sin ficha" de "sin acceso".
     const ficha = await prisma_1.default.fichaInicial.findUnique({ where: { pacienteId }, include: FICHA_INICIAL_INCLUDE });
-    res.json(ficha);
+    res.json((0, estudioSerializer_1.fichaParaCliente)(ficha));
 });
 // Campos de texto libre de FichaInicial que el profesional puede marcar
 // manualmente como alerta clínica (a diferencia de Antecedentes/Medicación,
@@ -1346,7 +1356,7 @@ app.patch('/api/pacientes/:pacienteId/ficha-inicial', (0, auth_1.requireRole)(..
     try {
         const ficha = await upsertFichaInicial(consultorioId, pacienteId, payload);
         const fresh = await recomputeSeccionesEstado(ficha.id, consultorioId);
-        res.json(fresh);
+        res.json((0, estudioSerializer_1.fichaParaCliente)(fresh));
     }
     catch (err) {
         console.error('failed to save ficha inicial', err);
@@ -1824,6 +1834,7 @@ app.delete('/api/ficha-medicacion/:id', (0, auth_1.requireRole)(...auth_1.CLINIC
 });
 // ESTUDIOS COMPLEMENTARIOS (entradas individuales; el campo de texto libre
 // `estudiosComplementarios` en FichaInicial se mantiene como nota general)
+app.use('/api/ficha-estudios/:id/archivo', estudioArchivoRoutes_1.default);
 app.post('/api/pacientes/:pacienteId/ficha-inicial/estudios', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
     const pacienteId = Number(req.params.pacienteId);
@@ -1851,7 +1862,7 @@ app.post('/api/pacientes/:pacienteId/ficha-inicial/estudios', (0, auth_1.require
         },
         include: { profesional: true },
     });
-    res.status(201).json(estudio);
+    res.status(201).json((0, estudioSerializer_1.estudioParaCliente)(estudio));
 });
 app.patch('/api/ficha-estudios/:id', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
@@ -1878,7 +1889,7 @@ app.patch('/api/ficha-estudios/:id', (0, auth_1.requireRole)(...auth_1.CLINICAL_
     if (observaciones !== undefined)
         payload.observaciones = observaciones || null;
     const updated = await prisma_1.default.fichaEstudioComplementario.update({ where: { id }, data: payload });
-    res.json(updated);
+    res.json((0, estudioSerializer_1.estudioParaCliente)(updated));
 });
 app.delete('/api/ficha-estudios/:id', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;

@@ -19,7 +19,10 @@ type Props = {
 // Marca manual del profesional ("quiero que esto quede destacado en futuras
 // atenciones") — no es un diagnóstico automático de Kineq. Mismo lenguaje
 // visual discreto que el resto de Alertas clínicas, sin rojo agresivo.
+// Icon-only: el texto vive en el tooltip (`title`) y en `aria-label`, no en
+// el botón — mismo estado activo/inactivo y misma lógica de siempre.
 export default function AlertToggleButton({ active, disabled, onToggle }: Props) {
+  const label = active ? 'Quitar alerta' : 'Marcar como alerta'
   return (
     <button
       type="button"
@@ -27,10 +30,10 @@ export default function AlertToggleButton({ active, disabled, onToggle }: Props)
       disabled={disabled}
       onClick={onToggle}
       aria-pressed={active}
-      title={active ? 'Quitar de Alertas clínicas' : 'Marcar como alerta'}
+      aria-label={label}
+      title={label}
     >
       <AlertIcon />
-      {active ? 'Alerta' : 'Marcar como alerta'}
     </button>
   )
 }

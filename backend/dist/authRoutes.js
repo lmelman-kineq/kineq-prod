@@ -17,6 +17,7 @@ function toPublicUsuario(usuario) {
         rol: usuario.rol,
         consultorioId: usuario.consultorioId,
         profesionalId: usuario.profesionalId,
+        fotoUrl: usuario.fotoPathname ? '/api/usuarios/me/foto/contenido' : null,
     };
 }
 // Crea un nuevo consultorio junto con su primer administrador.

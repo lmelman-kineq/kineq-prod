@@ -36,7 +36,7 @@ export default function FichaEstudiosTab({ fichaHook, navTarget, onNavTargetHand
         <span className="ficha-section-icon" aria-hidden="true">{ESTUDIOS_ICON}</span>
         <div>
           <h3>Estudios complementarios</h3>
-          <p className="ficha-section-description">Entradas puntuales con fecha. La carga de archivos se implementará más adelante.</p>
+          <p className="ficha-section-description">Entradas puntuales con fecha, cada una con su archivo adjunto opcional (PDF, JPG, PNG o WEBP).</p>
         </div>
       </div>
 
@@ -52,6 +52,8 @@ export default function FichaEstudiosTab({ fichaHook, navTarget, onNavTargetHand
           onAdd={fichaHook.addEstudio}
           onUpdate={fichaHook.updateEstudio}
           onRemove={fichaHook.removeEstudio}
+          onUploadArchivo={fichaHook.uploadEstudioArchivo}
+          onRemoveArchivo={fichaHook.removeEstudioArchivo}
         />
         <section className="ficha-section">
           <div className="ficha-section-header">

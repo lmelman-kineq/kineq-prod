@@ -89,7 +89,7 @@ export default function DiagnosticoSelect({ grupos, value, onChange, onCreate, d
 
   return (
     <div className="dropdown-field">
-      <label>Diagnóstico</label>
+      <label className="dropdown-field-label">Diagnóstico</label>
       <div
         className="dropdown-input-row"
         ref={fieldRef}
