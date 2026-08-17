@@ -95,6 +95,11 @@ export type Turno = Prisma.TurnoModel
  */
 export type Evolucion = Prisma.EvolucionModel
 /**
+ * Model EvolucionImagen
+ * 
+ */
+export type EvolucionImagen = Prisma.EvolucionImagenModel
+/**
  * Model GrupoEvolucion
  * 
  */

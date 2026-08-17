@@ -1,10 +1,23 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import request from 'supertest'
 import app from './app'
 import prisma from './prisma'
 import { hashPassword } from './auth'
 import { RolUsuario, EstadoTurno } from './generated/prisma/client'
 import { seedCatalogosGlobales } from './seedCatalogosGlobales'
+
+// Los tests no tienen un BLOB_READ_WRITE_TOKEN real ni acceso de red a
+// Vercel Blob — se mockea el módulo para poder probar validación/permisos/
+// persistencia del endpoint de imágenes sin depender de esa infraestructura.
+// vitest hoistea este vi.mock por encima de los imports de arriba.
+let blobStoreCounter = 0
+vi.mock('@vercel/blob', () => ({
+  put: vi.fn(async (pathname: string) => {
+    blobStoreCounter += 1
+    return { url: `https://blob.test/${pathname}-${blobStoreCounter}`, pathname: `${pathname}-${blobStoreCounter}` }
+  }),
+  del: vi.fn(async () => undefined),
+}))
 
 const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const PASSWORD = 'Password123'
@@ -486,6 +499,141 @@ describe('auth, roles y aislamiento por consultorio', () => {
         .send({ contenido: 'editado por admin' })
       expect(res.status).toBe(200)
       expect(res.body.contenido).toBe('editado por admin')
+    })
+  })
+
+  describe('evoluciones: imágenes', () => {
+    const fakeImage = () => Buffer.from('fake-image-bytes')
+
+    it('profesional sube una imagen a su propia evolución', async () => {
+      const created = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'con imagen' })
+      expect(created.status).toBe(201)
+
+      const res = await request(app)
+        .post(`/api/evoluciones/${created.body.id}/imagenes`)
+        .set('Cookie', cookies.profesionalA)
+        .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
+      expect(res.status).toBe(201)
+      expect(res.body).toHaveLength(1)
+      expect(res.body[0].url).toBeTruthy()
+      expect(res.body[0].mimeType).toBe('image/jpeg')
+
+      const list = await request(app).get('/api/evoluciones').set('Cookie', cookies.adminA).query({ pacienteId: pacienteAId })
+      const leida = list.body.find((e: any) => e.id === created.body.id)
+      expect(leida.imagenes).toHaveLength(1)
+
+      await prisma.evolucion.delete({ where: { id: created.body.id } })
+    })
+
+    it('rechaza un tipo de archivo no permitido (400)', async () => {
+      const created = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'con adjunto invalido' })
+      expect(created.status).toBe(201)
+
+      const res = await request(app)
+        .post(`/api/evoluciones/${created.body.id}/imagenes`)
+        .set('Cookie', cookies.profesionalA)
+        .attach('imagenes', fakeImage(), { filename: 'doc.pdf', contentType: 'application/pdf' })
+      expect(res.status).toBe(400)
+
+      await prisma.evolucion.delete({ where: { id: created.body.id } })
+    })
+
+    it('rechaza superar el máximo de 5 imágenes por evolución', async () => {
+      const created = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'ya con 5 imagenes' })
+      expect(created.status).toBe(201)
+
+      await prisma.evolucionImagen.createMany({
+        data: Array.from({ length: 5 }, (_, i) => ({
+          consultorioId: consultorioAId,
+          pacienteId: pacienteAId,
+          evolucionId: created.body.id,
+          url: `https://blob.test/existing-${i}`,
+          pathname: `existing-${i}`,
+          nombreOriginal: `existing-${i}.jpg`,
+          mimeType: 'image/jpeg',
+          sizeBytes: 100,
+        })),
+      })
+
+      const res = await request(app)
+        .post(`/api/evoluciones/${created.body.id}/imagenes`)
+        .set('Cookie', cookies.profesionalA)
+        .attach('imagenes', fakeImage(), { filename: 'sexta.jpg', contentType: 'image/jpeg' })
+      expect(res.status).toBe(400)
+
+      await prisma.evolucionImagen.deleteMany({ where: { evolucionId: created.body.id } })
+      await prisma.evolucion.delete({ where: { id: created.body.id } })
+    })
+
+    it('profesional no puede agregar imágenes a evoluciones de otro profesional', async () => {
+      const created = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'de profesionalA' })
+      expect(created.status).toBe(201)
+
+      // Reutiliza el usuario vinculado a otroProfesionalAId que ya crea el
+      // describe('evoluciones: edición') de arriba (profesionalId es
+      // 1:1 con Usuario, así que no se puede crear un segundo vínculo).
+      const otroCookie = cookieFrom(await loginRequest(`otro-profesional-${RUN_ID}@test.local`))
+
+      const res = await request(app)
+        .post(`/api/evoluciones/${created.body.id}/imagenes`)
+        .set('Cookie', otroCookie)
+        .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
+      expect(res.status).toBe(403)
+
+      await prisma.evolucion.delete({ where: { id: created.body.id } })
+    })
+
+    it('administrador puede eliminar una imagen de cualquier evolución del consultorio', async () => {
+      const created = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'para borrar imagen' })
+      expect(created.status).toBe(201)
+
+      const uploaded = await request(app)
+        .post(`/api/evoluciones/${created.body.id}/imagenes`)
+        .set('Cookie', cookies.profesionalA)
+        .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
+      expect(uploaded.status).toBe(201)
+      const imagenId = uploaded.body[0].id
+
+      const del = await request(app)
+        .delete(`/api/evoluciones/${created.body.id}/imagenes/${imagenId}`)
+        .set('Cookie', cookies.adminA)
+      expect(del.status).toBe(204)
+
+      const remaining = await prisma.evolucionImagen.findUnique({ where: { id: imagenId } })
+      expect(remaining).toBeNull()
+
+      await prisma.evolucion.delete({ where: { id: created.body.id } })
+    })
+
+    it('no se puede subir imágenes a una evolución de otro consultorio', async () => {
+      const created = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'de consultorio A' })
+      expect(created.status).toBe(201)
+
+      const res = await request(app)
+        .post(`/api/evoluciones/${created.body.id}/imagenes`)
+        .set('Cookie', cookies.adminB)
+        .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
+      expect(res.status).toBe(404)
+
+      await prisma.evolucion.delete({ where: { id: created.body.id } })
     })
   })
 
@@ -1824,7 +1972,37 @@ describe('auth, roles y aislamiento por consultorio', () => {
     })
   })
 
-  describe('Pacientes: solo Nombre y Apellido son obligatorios', () => {
+  describe('Pacientes: Nombre completo (solo nombre es obligatorio)', () => {
+    it('crea un paciente solo con nombre, sin apellido (Nombre completo)', async () => {
+      const res = await request(app)
+        .post('/api/pacientes')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: `Maria de los Angeles Perez${RUN_ID}`, apellido: '' })
+      expect(res.status).toBe(201)
+      expect(res.body.apellido).toBe('')
+
+      await prisma.paciente.delete({ where: { id: res.body.id } })
+    })
+
+    it('rechaza crear un paciente sin nombre', async () => {
+      const res = await request(app)
+        .post('/api/pacientes')
+        .set('Cookie', cookies.adminA)
+        .send({ apellido: 'SinNombre' })
+      expect(res.status).toBe(400)
+    })
+
+    it('editar el nombre a vacío se rechaza (400)', async () => {
+      const creado = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'ConNombre', apellido: '' } })
+      const res = await request(app)
+        .patch(`/api/pacientes/${creado.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: '' })
+      expect(res.status).toBe(400)
+
+      await prisma.paciente.delete({ where: { id: creado.id } })
+    })
+
     it('crea un paciente solo con nombre y apellido', async () => {
       const res = await request(app)
         .post('/api/pacientes')

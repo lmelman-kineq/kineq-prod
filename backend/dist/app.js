@@ -9,6 +9,7 @@ const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const prisma_1 = __importDefault(require("./prisma"));
 const authRoutes_1 = __importDefault(require("./authRoutes"));
 const estadisticasRoutes_1 = __importDefault(require("./estadisticasRoutes"));
+const evolucionImagenesRoutes_1 = __importDefault(require("./evolucionImagenesRoutes"));
 const sanitizeRichText_1 = require("./sanitizeRichText");
 const auth_1 = require("./auth");
 const client_1 = require("./generated/prisma/client");
@@ -246,7 +247,7 @@ app.get('/api/pacientes', async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
     const pacientes = await prisma_1.default.paciente.findMany({
         where: { consultorioId, activo: true },
-        orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
+        orderBy: [{ nombre: 'asc' }],
     });
     res.json(pacientes);
 });
@@ -263,14 +264,14 @@ app.get('/api/pacientes/:pacienteId', async (req, res) => {
 app.post('/api/pacientes', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
     const { nombre, apellido, documento, fechaNacimiento, direccion, email, telefono, obraSocialId, numeroAfiliado } = req.body;
-    if (!nombre || !apellido)
-        return res.status(400).json({ error: 'nombre and apellido required' });
+    if (!nombre)
+        return res.status(400).json({ error: 'nombre required' });
     try {
         const paciente = await prisma_1.default.paciente.create({
             data: {
                 consultorioId,
                 nombre,
-                apellido,
+                apellido: apellido || '',
                 documento: documento || null,
                 fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : null,
                 direccion: direccion || null,
@@ -309,6 +310,12 @@ app.patch('/api/pacientes/:pacienteId', (0, auth_1.requireRole)(...auth_1.ADMIN_
     // unique(consultorioId, documento) ni divergir de cómo lo guarda el POST.
     if ('documento' in allowed) {
         allowed.documento = allowed.documento || null;
+    }
+    if ('apellido' in allowed) {
+        allowed.apellido = allowed.apellido || '';
+    }
+    if ('nombre' in allowed && !allowed.nombre) {
+        return res.status(400).json({ error: 'nombre required' });
     }
     try {
         const paciente = await prisma_1.default.paciente.findFirst({ where: { id: pacienteId, consultorioId } });
@@ -967,13 +974,14 @@ app.patch('/api/turnos/:turnoId', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_R
 });
 // EVOLUCIONES
 // Contenido clínico: solo administrador y profesional. Recepción y supervisor no acceden.
+app.use('/api/evoluciones/:evolucionId/imagenes', evolucionImagenesRoutes_1.default);
 app.get('/api/evoluciones', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
     const pacienteId = req.query.pacienteId ? Number(req.query.pacienteId) : undefined;
     const where = { consultorioId, activo: true };
     if (pacienteId)
         where.pacienteId = pacienteId;
-    const evoluciones = await prisma_1.default.evolucion.findMany({ where, include: { profesional: true, grupo: true } });
+    const evoluciones = await prisma_1.default.evolucion.findMany({ where, include: { profesional: true, grupo: true, imagenes: true } });
     res.json(evoluciones);
 });
 // Un grupo solo se puede asignar si es del mismo paciente (nunca cross-
@@ -1023,7 +1031,7 @@ app.post('/api/evoluciones', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), 
         }
         const ev = await prisma_1.default.evolucion.create({
             data: { consultorioId, pacienteId, profesionalId, turnoId: turnoId || null, contenido, contenidoHtml, grupoId: grupoId || null },
-            include: { profesional: true, grupo: true },
+            include: { profesional: true, grupo: true, imagenes: true },
         });
         res.status(201).json(ev);
     }
@@ -1094,7 +1102,7 @@ app.patch('/api/evoluciones/:evolucionId', (0, auth_1.requireRole)(...auth_1.CLI
                 payload.grupoId = null;
             }
         }
-        const updated = await prisma_1.default.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true } });
+        const updated = await prisma_1.default.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true, imagenes: true } });
         res.json(updated);
     }
     catch (err) {

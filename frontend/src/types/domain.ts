@@ -135,6 +135,18 @@ export interface GrupoEvolucion {
   updatedAt: string
 }
 
+export interface EvolucionImagen {
+  id: number
+  consultorioId: number
+  pacienteId: number
+  evolucionId: number
+  url: string
+  nombreOriginal: string
+  mimeType: string
+  sizeBytes: number
+  createdAt: string
+}
+
 export interface Evolucion {
   id: number
   consultorioId: number
@@ -151,6 +163,7 @@ export interface Evolucion {
   profesional?: Profesional
   turno?: Turno | null
   grupo?: GrupoEvolucion | null
+  imagenes?: EvolucionImagen[]
 }
 
 export type EstadoFichaInicial = 'BORRADOR' | 'COMPLETA'

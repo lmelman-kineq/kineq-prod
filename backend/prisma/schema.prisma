@@ -348,11 +348,39 @@ model Evolucion {
   profesional Profesional     @relation(fields: [profesionalId], references: [id])
   turno       Turno?          @relation(fields: [turnoId], references: [id])
   grupo       GrupoEvolucion? @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+  imagenes    EvolucionImagen[]
 
   @@index([consultorioId, pacienteId, createdAt])
   @@index([consultorioId, profesionalId, createdAt])
   @@index([turnoId])
   @@index([grupoId])
+}
+
+// Imágenes adjuntas a una evolución (fotos clínicas). El binario vive en
+// Vercel Blob, nunca en MySQL — acá solo se guarda la referencia. `pathname`
+// es la clave dentro del blob store, necesaria para poder borrarlo (`del()`)
+// cuando se saca una imagen; `url` es lo que se manda tal cual al frontend.
+// Vercel Blob no tiene buckets privados: la única protección es que la URL
+// nunca se expone salvo a través de este endpoint (que sí valida
+// consultorio/paciente/evolución) y que el pathname incluye un sufijo
+// aleatorio (ver evolucionImagenesUpload.ts) — no hay control de acceso real
+// del lado del storage.
+model EvolucionImagen {
+  id             Int      @id @default(autoincrement())
+  consultorioId  Int
+  pacienteId     Int
+  evolucionId    Int
+  url            String   @db.Text
+  pathname       String   @db.Text
+  nombreOriginal String
+  mimeType       String
+  sizeBytes      Int
+  createdAt      DateTime @default(now())
+
+  evolucion Evolucion @relation(fields: [evolucionId], references: [id], onDelete: Cascade)
+
+  @@index([consultorioId, evolucionId])
+  @@index([pacienteId])
 }
 
 // Agrupación puramente visual/organizativa de evoluciones (ej. "Lumbalgia").

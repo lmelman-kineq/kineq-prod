@@ -4,6 +4,7 @@ import { formatDateTime } from '../utils/dateFormat'
 import { professionalName } from '../utils/professional'
 import RichTextEditor from './RichTextEditor'
 import EvolucionContent from './EvolucionContent'
+import EvolucionImages from './EvolucionImages'
 
 export function GrupoChip({ grupo }: { grupo: GrupoEvolucion | null | undefined }) {
   if (!grupo) return <span className="grupo-evolucion-chip grupo-evolucion-chip--none">Sin diagnóstico</span>
@@ -53,6 +54,10 @@ type EvolutionTableProps = {
   grupos?: GrupoEvolucion[]
   editingGrupoId?: number | null
   onChangeEditingGrupoId?: (id: number | null) => void
+  onAddImages?: (evolucion: Evolucion, files: File[]) => void
+  onRemoveImage?: (evolucion: Evolucion, imagenId: number) => void
+  imagesUploading?: boolean
+  imagesError?: string | null
 }
 
 export default function EvolutionTable({
@@ -74,6 +79,10 @@ export default function EvolutionTable({
   grupos = [],
   editingGrupoId = null,
   onChangeEditingGrupoId,
+  onAddImages,
+  onRemoveImage,
+  imagesUploading,
+  imagesError,
 }: EvolutionTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
@@ -197,6 +206,13 @@ export default function EvolutionTable({
                                 </select>
                               </label>
                             ) : null}
+                            <EvolucionImages
+                              items={(evolucion.imagenes ?? []).map((img) => ({ key: String(img.id), url: img.url, name: img.nombreOriginal }))}
+                              onAdd={onAddImages ? (files) => onAddImages(evolucion, files) : undefined}
+                              onRemove={onRemoveImage ? (key) => onRemoveImage(evolucion, Number(key)) : undefined}
+                              disabled={imagesUploading}
+                              error={imagesError}
+                            />
                             {error ? <p className="evolution-form-error">{error}</p> : null}
                             <div className="evolution-edit-actions">
                               <button type="button" className="secondary-button" onClick={onCancelEdit}>

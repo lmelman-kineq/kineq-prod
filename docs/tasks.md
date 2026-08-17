@@ -290,6 +290,41 @@ Nunca `prisma db push` ni `prisma migrate reset`.
 
 ---
 
+## Ajuste: Diagnóstico en Evoluciones dentro de Atención, independiente del estado del turno
+
+Un solo gap real, solo frontend. El reporte decía "Editar paciente desaparece y el selector de Diagnóstico no está disponible con el turno FINALIZADO" — verificado en vivo con Playwright antes de tocar nada: **"Editar paciente" ya funcionaba correctamente** en las cuatro fases del turno (`ASIGNADO`/`EN_ESPERA`/`ATENDIENDO`/`FINALIZADO`), sin ninguna condición sobre `turno.estado` — no hacía falta ningún cambio ahí. El gap real era otro: `AttentionPage.tsx` **nunca había tenido** el selector de Diagnóstico en su formulario de evolución (ni al crear ni al editar), en ningún estado del turno — `EvolutionTable.tsx` ya soportaba las props `grupos`/`editingGrupoId`/`onChangeEditingGrupoId` (`PatientDetailPage.tsx` las usaba), pero `AttentionPage.tsx` nunca las pasó ni tenía su propio `DiagnosticoSelect`.
+
+**Fix**: se agregó el mismo `DiagnosticoSelect` (con `grupos` cargado junto al resto de datos del paciente y `createDiagnosticoInline`) tanto al alta de una evolución nueva como a la edición de una existente en `AttentionPage.tsx` — depende únicamente de `turno.patientId`, nunca de `turno.estado`. Cargar una evolución con el turno ya `FINALIZADO` ("evolución post-sesión") es un flujo válido que ya funcionaba a nivel backend (`POST /api/evoluciones` nunca tocó `Turno.estado`); solo faltaba la UI para elegir/crear el Diagnóstico en esa pantalla.
+
+**Tests**: sin cambios de backend (nada se tocó — sigue en 179). Frontend sigue en 81 (mismo criterio de rondas anteriores, sin lógica pura nueva que extraer). `tsc -b`/`npm run build`/`lint` limpios.
+
+**Verificado manualmente** con Playwright, una sola sesión (Administrador vinculado a un Profesional, para satisfacer permisos administrativos y clínicos a la vez): "Editar paciente" visible en `ASIGNADO`/`ATENDIENDO`/`FINALIZADO`; selector de Diagnóstico visible en las tres fases; diagnóstico creado inline durante `ATENDIENDO` queda seleccionado y se guarda junto con la evolución; tras finalizar, el mismo diagnóstico sigue disponible en la lista (confirma que es por paciente, no por turno); evolución cargada con el turno ya `FINALIZADO` se guarda correctamente; el turno permanece `FINALIZADO` después de esa carga (no se reabre ni se modifica su estado).
+
+---
+
+## Unificar Paciente/Atención, Nombre completo, imágenes en Evoluciones
+
+Ronda de tres partes.
+
+**1) Pantalla única de Paciente/Atención**: `AttentionPage.tsx` eliminado. `PatientDetailPage.tsx` recibe `activeTurno?`/`onUpdateEstado?` opcionales — con turno activo se agrega, de forma puramente aditiva (nunca reemplazando JSX de la pantalla base), una barra de sesión (pill de estado, timer cuando `Atendiendo`, "Finalizar atención") y el vínculo evolución↔turno; sin `activeTurno` el comportamiento es idéntico al de antes. Esto garantiza por construcción tabs/edad/"Editar paciente"/Diagnóstico/layout idénticos en cualquier contexto — ver `docs/modules/clinical-history.md` y `docs/modules/appointments.md`.
+
+**2) Nombre completo**: `PatientFormModal.tsx` y el alta rápida desde Turno (`FormFields.tsx`) piden un único campo "Nombre completo" en vez de Nombre/Apellido separados. **Decisión de schema**: se mantuvieron `Paciente.nombre`/`Paciente.apellido` sin cambios (evita migración/backfill) — el valor se guarda completo en `nombre`, `apellido` queda `''`. Sin parseo ingenuo: nunca se intenta separar "primera palabra = nombre, resto = apellido" (pierde información en nombres como "María de los Ángeles Pérez"). Un solo helper, `frontend/src/utils/patient.ts` (`patientFullName()`), arma el nombre en toda la app — funciona igual para pacientes viejos (nombre+apellido reales) y nuevos (todo en `nombre`); editar un paciente viejo lo migra a "todo en nombre" al guardar. Backend: `POST`/`PATCH /api/pacientes` ahora solo exigen `nombre`; el listado ordena por `nombre` en vez de `apellido, nombre`. Ver `docs/modules/patients.md`.
+
+**3) Imágenes en Evoluciones**: hasta 5 imágenes por evolución (JPG/PNG/WEBP, ≤10MB c/u), subidas a **Vercel Blob** (`@vercel/blob`, nunca binarios en MySQL) vía un endpoint nuevo (`POST`/`DELETE /api/evoluciones/:evolucionId/imagenes[/:imagenId]`, `multer` con `memoryStorage`). Modelo nuevo `EvolucionImagen` (solo la referencia: `url`, `pathname`, `nombreOriginal`, `mimeType`, `sizeBytes`). Como el endpoint necesita una evolución ya creada, el alta de una evolución nueva con imágenes primero crea la evolución y recién después sube lo seleccionado (que hasta ese momento vive solo en memoria del navegador). UI compartida `EvolucionImages.tsx` (miniaturas + lightbox) reutilizada en alta/edición/vista histórica. Antes de esto no existía ninguna infraestructura real de subida de archivos en el proyecto (la de Estudios era un placeholder explícito) — ver "Not implemented yet" más abajo, ya no aplica a Evoluciones. Ver `docs/modules/clinical-history.md` y `docs/database.md`.
+
+**Producción**: se agregó una tabla nueva (`EvolucionImagen`), migración `20260817154449_evolucion_imagenes`, puramente aditiva. Aplicada al dev DB a mano (mismo patrón que rondas anteriores: `migrate diff` → `db execute` → `migrate resolve --applied`). **No** aplicada a producción (Aiven) — correr manualmente:
+```bash
+npx prisma migrate status
+npx prisma migrate deploy
+```
+Además, producción necesita la variable de entorno `BLOB_READ_WRITE_TOKEN` (Vercel Blob) configurada tanto en el proyecto de Vercel como, para desarrollo local, en `backend/.env` — sin ella, la subida de imágenes falla (con mensaje amigable, la evolución en sí se guarda igual) pero el resto de la app funciona sin cambios.
+
+**Tests**: backend 179 → 188 (+9: 3 de Nombre completo/validación de `nombre` en Pacientes, 6 de imágenes en Evoluciones — subida, tipo inválido, límite de 5, permisos cruzados por profesional y por consultorio, borrado — con `@vercel/blob` mockeado vía `vi.mock`, sin token real ni red). Frontend 85 → 90 (+5: `patient.test.ts` para `patientFullName()`, `evolucionImageValidation.test.ts` para la validación de cantidad/tipo/tamaño). `tsc -b`/`npm run build`/`lint` limpios en ambos paquetes.
+
+**Verificado manualmente** con Playwright (registro de un consultorio nuevo, un paciente, un profesional vinculado): form "Nuevo paciente" muestra "Nombre completo" y no "Apellido"; un paciente con nombre de 4 palabras aparece íntegro en el listado y en el header; orden de tabs Ficha inicial→Evoluciones→Turnos→Estudios; "Editar paciente" visible sin turno activo; botón "+ Imagen" visible en "Nueva evolución"; seleccionar una imagen la deja en staging (miniatura visible antes de guardar); guardar la evolución con la imagen adjunta persiste el texto correctamente (sin `BLOB_READ_WRITE_TOKEN` local, la subida de imagen en sí no se pudo probar de punta a punta — comportamiento esperado, no un bug).
+
+---
+
 ## Known gaps / next priorities
 
 - **Pre-existing bug found during manual verification of this round, not fixed (out of scope — not touched by this work):** the Inicio/home dashboard's mini-calendar renders a React "duplicate key" console warning (`Encountered two children with the same key... "M"`) on every load — almost certainly the weekday-initial header (L, M, M, J, V, S, D) using the letter itself as the React `key` instead of an index, so the two `M`s (Martes/Miércoles) collide. Confirmed via isolated console-error-count checkpoints that this fires during the post-login home render, before any Estadísticas/Turnos navigation — unrelated to the new code in this round. Cosmetic/non-crashing, but worth a one-line fix (`key={index}`) next time that file is touched.
@@ -319,7 +354,7 @@ Nunca `prisma db push` ni `prisma migrate reset`.
 ## Not implemented yet (explicitly out of scope until a real spec exists)
 
 - Firma profesional / firma digital, audit trail, evolution version history.
-- Treatment model, real documents/file uploads (the Estudios tab has a real CRUD list; only the "Subir archivo" attachment action per row is a placeholder, with no upload infra).
+- Treatment model, real documents/file uploads at the paciente/turno/tratamiento/estudio level (the Estudios tab has a real CRUD list; its own "Subir archivo" attachment action per row is still a placeholder). Upload infra now exists for one specific case — images attached to Evoluciones, via Vercel Blob, see the "Unificar Paciente/Atención, Nombre completo, imágenes en Evoluciones" entry above — but it isn't wired to Estudios or any other module yet.
 - Advanced clinical timeline, coded diagnoses, clinical discharge.
 - Configurable templates, clinical AI, voice-to-text, patient portal, export/print, multi-site, granular permissions, specialty-specific fields.
 - Full sidebar redesign or app-wide redesign (this session only touched the attention + patient-detail screens, by design).

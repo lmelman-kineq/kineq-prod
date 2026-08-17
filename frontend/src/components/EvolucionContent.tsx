@@ -1,8 +1,9 @@
 import { sanitizeRichTextHtml } from '../utils/richTextSanitize'
 import type { Evolucion } from '../types/domain'
+import EvolucionImages from './EvolucionImages'
 
 type Props = {
-  evolucion: Pick<Evolucion, 'contenido' | 'contenidoHtml'>
+  evolucion: Pick<Evolucion, 'contenido' | 'contenidoHtml' | 'imagenes'>
 }
 
 // Vista de solo lectura del contenido completo de una evolución (detalle
@@ -11,13 +12,19 @@ type Props = {
 // vino sanitizado del backend. Evoluciones sin formato (todas las
 // anteriores a esta función) siguen mostrando texto plano, sin cambios.
 export default function EvolucionContent({ evolucion }: Props) {
-  if (evolucion.contenidoHtml) {
-    return (
-      <div
-        className="evolution-item-preview evolution-rich-content"
-        dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(evolucion.contenidoHtml) }}
-      />
-    )
-  }
-  return <p className="evolution-item-preview">{evolucion.contenido}</p>
+  return (
+    <>
+      {evolucion.contenidoHtml ? (
+        <div
+          className="evolution-item-preview evolution-rich-content"
+          dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(evolucion.contenidoHtml) }}
+        />
+      ) : (
+        <p className="evolution-item-preview">{evolucion.contenido}</p>
+      )}
+      {evolucion.imagenes?.length ? (
+        <EvolucionImages items={evolucion.imagenes.map((img) => ({ key: String(img.id), url: img.url, name: img.nombreOriginal }))} />
+      ) : null}
+    </>
+  )
 }

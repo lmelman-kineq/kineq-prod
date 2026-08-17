@@ -48,7 +48,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FichaEstudioComplementarioOrderByRelevanceFieldEnum = exports.FichaMedicacionOrderByRelevanceFieldEnum = exports.FichaAlergiaOrderByRelevanceFieldEnum = exports.FichaAntecedenteOrderByRelevanceFieldEnum = exports.CatalogoClinicoItemOrderByRelevanceFieldEnum = exports.FichaAlertaCampoOrderByRelevanceFieldEnum = exports.FichaInicialOrderByRelevanceFieldEnum = exports.GrupoEvolucionOrderByRelevanceFieldEnum = exports.EvolucionOrderByRelevanceFieldEnum = exports.TurnoOrderByRelevanceFieldEnum = exports.ObraSocialOrderByRelevanceFieldEnum = exports.EspecialidadOrderByRelevanceFieldEnum = exports.ProfesionalOrderByRelevanceFieldEnum = exports.PacienteOrderByRelevanceFieldEnum = exports.UsuarioOrderByRelevanceFieldEnum = exports.ConsultorioOrderByRelevanceFieldEnum = exports.NullsOrder = exports.SortOrder = exports.FichaSeccionEstadoScalarFieldEnum = exports.FichaEstudioComplementarioScalarFieldEnum = exports.FichaMedicacionScalarFieldEnum = exports.FichaAlergiaScalarFieldEnum = exports.FichaAntecedenteScalarFieldEnum = exports.CatalogoClinicoItemScalarFieldEnum = exports.FichaAlertaCampoScalarFieldEnum = exports.FichaInicialScalarFieldEnum = exports.GrupoEvolucionScalarFieldEnum = exports.EvolucionScalarFieldEnum = exports.TurnoScalarFieldEnum = exports.ConsultorioObraSocialOcultaScalarFieldEnum = exports.ObraSocialScalarFieldEnum = exports.ProfesionalEspecialidadScalarFieldEnum = exports.ConsultorioEspecialidadOcultaScalarFieldEnum = exports.EspecialidadScalarFieldEnum = exports.ProfesionalScalarFieldEnum = exports.PacienteScalarFieldEnum = exports.UsuarioScalarFieldEnum = exports.ConsultorioScalarFieldEnum = exports.TransactionIsolationLevel = exports.ModelName = exports.AnyNull = exports.JsonNull = exports.DbNull = exports.NullTypes = exports.Decimal = void 0;
+exports.FichaEstudioComplementarioOrderByRelevanceFieldEnum = exports.FichaMedicacionOrderByRelevanceFieldEnum = exports.FichaAlergiaOrderByRelevanceFieldEnum = exports.FichaAntecedenteOrderByRelevanceFieldEnum = exports.CatalogoClinicoItemOrderByRelevanceFieldEnum = exports.FichaAlertaCampoOrderByRelevanceFieldEnum = exports.FichaInicialOrderByRelevanceFieldEnum = exports.GrupoEvolucionOrderByRelevanceFieldEnum = exports.EvolucionImagenOrderByRelevanceFieldEnum = exports.EvolucionOrderByRelevanceFieldEnum = exports.TurnoOrderByRelevanceFieldEnum = exports.ObraSocialOrderByRelevanceFieldEnum = exports.EspecialidadOrderByRelevanceFieldEnum = exports.ProfesionalOrderByRelevanceFieldEnum = exports.PacienteOrderByRelevanceFieldEnum = exports.UsuarioOrderByRelevanceFieldEnum = exports.ConsultorioOrderByRelevanceFieldEnum = exports.NullsOrder = exports.SortOrder = exports.FichaSeccionEstadoScalarFieldEnum = exports.FichaEstudioComplementarioScalarFieldEnum = exports.FichaMedicacionScalarFieldEnum = exports.FichaAlergiaScalarFieldEnum = exports.FichaAntecedenteScalarFieldEnum = exports.CatalogoClinicoItemScalarFieldEnum = exports.FichaAlertaCampoScalarFieldEnum = exports.FichaInicialScalarFieldEnum = exports.GrupoEvolucionScalarFieldEnum = exports.EvolucionImagenScalarFieldEnum = exports.EvolucionScalarFieldEnum = exports.TurnoScalarFieldEnum = exports.ConsultorioObraSocialOcultaScalarFieldEnum = exports.ObraSocialScalarFieldEnum = exports.ProfesionalEspecialidadScalarFieldEnum = exports.ConsultorioEspecialidadOcultaScalarFieldEnum = exports.EspecialidadScalarFieldEnum = exports.ProfesionalScalarFieldEnum = exports.PacienteScalarFieldEnum = exports.UsuarioScalarFieldEnum = exports.ConsultorioScalarFieldEnum = exports.TransactionIsolationLevel = exports.ModelName = exports.AnyNull = exports.JsonNull = exports.DbNull = exports.NullTypes = exports.Decimal = void 0;
 const runtime = __importStar(require("@prisma/client/runtime/index-browser"));
 exports.Decimal = runtime.Decimal;
 exports.NullTypes = {
@@ -86,6 +86,7 @@ exports.ModelName = {
     ConsultorioObraSocialOculta: 'ConsultorioObraSocialOculta',
     Turno: 'Turno',
     Evolucion: 'Evolucion',
+    EvolucionImagen: 'EvolucionImagen',
     GrupoEvolucion: 'GrupoEvolucion',
     FichaInicial: 'FichaInicial',
     FichaAlertaCampo: 'FichaAlertaCampo',
@@ -228,6 +229,18 @@ exports.EvolucionScalarFieldEnum = {
     activo: 'activo',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
+};
+exports.EvolucionImagenScalarFieldEnum = {
+    id: 'id',
+    consultorioId: 'consultorioId',
+    pacienteId: 'pacienteId',
+    evolucionId: 'evolucionId',
+    url: 'url',
+    pathname: 'pathname',
+    nombreOriginal: 'nombreOriginal',
+    mimeType: 'mimeType',
+    sizeBytes: 'sizeBytes',
+    createdAt: 'createdAt'
 };
 exports.GrupoEvolucionScalarFieldEnum = {
     id: 'id',
@@ -421,6 +434,12 @@ exports.TurnoOrderByRelevanceFieldEnum = {
 exports.EvolucionOrderByRelevanceFieldEnum = {
     contenido: 'contenido',
     contenidoHtml: 'contenidoHtml'
+};
+exports.EvolucionImagenOrderByRelevanceFieldEnum = {
+    url: 'url',
+    pathname: 'pathname',
+    nombreOriginal: 'nombreOriginal',
+    mimeType: 'mimeType'
 };
 exports.GrupoEvolucionOrderByRelevanceFieldEnum = {
     nombre: 'nombre',

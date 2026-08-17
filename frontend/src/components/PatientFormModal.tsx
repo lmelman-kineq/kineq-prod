@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import * as api from '../services/api'
 import type { ObraSocial, Paciente, PacienteInput } from '../types/domain'
 import { toDateInputValue } from '../utils/dateFormat'
+import { patientFullName } from '../utils/patient'
 import AddressAutocompleteInput from './AddressAutocompleteInput'
 import DateInput from './DateInput'
 
@@ -13,8 +14,7 @@ type PatientFormModalProps = {
 }
 
 type FormState = {
-  nombre: string
-  apellido: string
+  nombreCompleto: string
   documento: string
   fechaNacimiento: string
   email: string
@@ -28,8 +28,7 @@ type FormState = {
 
 function formFromPatient(patient?: Paciente): FormState {
   return {
-    nombre: patient?.nombre ?? '',
-    apellido: patient?.apellido ?? '',
+    nombreCompleto: patient ? patientFullName(patient) : '',
     documento: patient?.documento ?? '',
     fechaNacimiento: toDateInputValue(patient?.fechaNacimiento),
     email: patient?.email ?? '',
@@ -67,8 +66,8 @@ export default function PatientFormModal({ patient, canEditObservaciones, onClos
   const update = (patch: Partial<FormState>) => setForm((current) => ({ ...current, ...patch }))
 
   const submit = async () => {
-    if (!form.nombre.trim() || !form.apellido.trim()) {
-      setError('Nombre y apellido son obligatorios.')
+    if (!form.nombreCompleto.trim()) {
+      setError('El nombre completo es obligatorio.')
       return
     }
 
@@ -76,8 +75,8 @@ export default function PatientFormModal({ patient, canEditObservaciones, onClos
     setError(null)
 
     const payload: PacienteInput = {
-      nombre: form.nombre.trim(),
-      apellido: form.apellido.trim(),
+      nombre: form.nombreCompleto.trim(),
+      apellido: '',
       documento: form.documento.trim() || null,
       fechaNacimiento: form.fechaNacimiento || null,
       email: form.email.trim() || null,
@@ -111,7 +110,7 @@ export default function PatientFormModal({ patient, canEditObservaciones, onClos
             </span>
             <div>
               <h3>{isCreate ? 'Nuevo paciente' : 'Editar paciente'}</h3>
-              <p>{isCreate ? 'Alta de un paciente en el consultorio' : `Datos administrativos de ${patient.nombre} ${patient.apellido}`}</p>
+              <p>{isCreate ? 'Alta de un paciente en el consultorio' : `Datos administrativos de ${patientFullName(patient)}`}</p>
             </div>
           </div>
           <button type="button" className="close-button" aria-label="Cerrar" onClick={onClose}>&times;</button>
@@ -119,12 +118,8 @@ export default function PatientFormModal({ patient, canEditObservaciones, onClos
 
         <div className="modal-body">
           <label>
-            Nombre
-            <input type="text" value={form.nombre} onChange={(event) => update({ nombre: event.target.value })} />
-          </label>
-          <label>
-            Apellido
-            <input type="text" value={form.apellido} onChange={(event) => update({ apellido: event.target.value })} />
+            Nombre completo
+            <input type="text" value={form.nombreCompleto} onChange={(event) => update({ nombreCompleto: event.target.value })} />
           </label>
           <label>
             Documento

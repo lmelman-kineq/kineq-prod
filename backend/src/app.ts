@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser'
 import prisma from './prisma'
 import authRoutes from './authRoutes'
 import estadisticasRoutes from './estadisticasRoutes'
+import evolucionImagenesRoutes from './evolucionImagenesRoutes'
 import { sanitizeRichText, stripToPlainText } from './sanitizeRichText'
 import {
   ADMIN_DATA_ROLES,
@@ -269,7 +270,7 @@ app.get('/api/pacientes', async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
   const pacientes = await prisma.paciente.findMany({
     where: { consultorioId, activo: true },
-    orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
+    orderBy: [{ nombre: 'asc' }],
   })
   res.json(pacientes)
 })
@@ -287,14 +288,14 @@ app.get('/api/pacientes/:pacienteId', async (req, res) => {
 app.post('/api/pacientes', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
   const { nombre, apellido, documento, fechaNacimiento, direccion, email, telefono, obraSocialId, numeroAfiliado } = req.body
-  if (!nombre || !apellido) return res.status(400).json({ error: 'nombre and apellido required' })
+  if (!nombre) return res.status(400).json({ error: 'nombre required' })
 
   try {
     const paciente = await prisma.paciente.create({
       data: {
         consultorioId,
         nombre,
-        apellido,
+        apellido: apellido || '',
         documento: documento || null,
         fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : null,
         direccion: direccion || null,
@@ -335,6 +336,12 @@ app.patch(
     // unique(consultorioId, documento) ni divergir de cómo lo guarda el POST.
     if ('documento' in allowed) {
       allowed.documento = allowed.documento || null
+    }
+    if ('apellido' in allowed) {
+      allowed.apellido = allowed.apellido || ''
+    }
+    if ('nombre' in allowed && !allowed.nombre) {
+      return res.status(400).json({ error: 'nombre required' })
     }
 
     try {
@@ -1019,6 +1026,8 @@ app.patch(
 
 // EVOLUCIONES
 // Contenido clínico: solo administrador y profesional. Recepción y supervisor no acceden.
+app.use('/api/evoluciones/:evolucionId/imagenes', evolucionImagenesRoutes)
+
 app.get('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
   const pacienteId = req.query.pacienteId ? Number(req.query.pacienteId) : undefined
@@ -1026,7 +1035,7 @@ app.get('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) => 
   const where: any = { consultorioId, activo: true }
   if (pacienteId) where.pacienteId = pacienteId
 
-  const evoluciones = await prisma.evolucion.findMany({ where, include: { profesional: true, grupo: true } })
+  const evoluciones = await prisma.evolucion.findMany({ where, include: { profesional: true, grupo: true, imagenes: true } })
   res.json(evoluciones)
 })
 
@@ -1076,7 +1085,7 @@ app.post('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) =>
 
     const ev = await prisma.evolucion.create({
       data: { consultorioId, pacienteId, profesionalId, turnoId: turnoId || null, contenido, contenidoHtml, grupoId: grupoId || null },
-      include: { profesional: true, grupo: true },
+      include: { profesional: true, grupo: true, imagenes: true },
     })
     res.status(201).json(ev)
   } catch (err) {
@@ -1143,7 +1152,7 @@ app.patch('/api/evoluciones/:evolucionId', requireRole(...CLINICAL_ROLES), async
       }
     }
 
-    const updated = await prisma.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true } })
+    const updated = await prisma.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true, imagenes: true } })
     res.json(updated)
   } catch (err) {
     console.error('failed to update evolucion', err)

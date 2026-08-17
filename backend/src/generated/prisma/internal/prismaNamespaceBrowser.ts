@@ -62,6 +62,7 @@ export const ModelName = {
   ConsultorioObraSocialOculta: 'ConsultorioObraSocialOculta',
   Turno: 'Turno',
   Evolucion: 'Evolucion',
+  EvolucionImagen: 'EvolucionImagen',
   GrupoEvolucion: 'GrupoEvolucion',
   FichaInicial: 'FichaInicial',
   FichaAlertaCampo: 'FichaAlertaCampo',
@@ -255,6 +256,22 @@ export const EvolucionScalarFieldEnum = {
 } as const
 
 export type EvolucionScalarFieldEnum = (typeof EvolucionScalarFieldEnum)[keyof typeof EvolucionScalarFieldEnum]
+
+
+export const EvolucionImagenScalarFieldEnum = {
+  id: 'id',
+  consultorioId: 'consultorioId',
+  pacienteId: 'pacienteId',
+  evolucionId: 'evolucionId',
+  url: 'url',
+  pathname: 'pathname',
+  nombreOriginal: 'nombreOriginal',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  createdAt: 'createdAt'
+} as const
+
+export type EvolucionImagenScalarFieldEnum = (typeof EvolucionImagenScalarFieldEnum)[keyof typeof EvolucionImagenScalarFieldEnum]
 
 
 export const GrupoEvolucionScalarFieldEnum = {
@@ -524,6 +541,16 @@ export const EvolucionOrderByRelevanceFieldEnum = {
 } as const
 
 export type EvolucionOrderByRelevanceFieldEnum = (typeof EvolucionOrderByRelevanceFieldEnum)[keyof typeof EvolucionOrderByRelevanceFieldEnum]
+
+
+export const EvolucionImagenOrderByRelevanceFieldEnum = {
+  url: 'url',
+  pathname: 'pathname',
+  nombreOriginal: 'nombreOriginal',
+  mimeType: 'mimeType'
+} as const
+
+export type EvolucionImagenOrderByRelevanceFieldEnum = (typeof EvolucionImagenOrderByRelevanceFieldEnum)[keyof typeof EvolucionImagenOrderByRelevanceFieldEnum]
 
 
 export const GrupoEvolucionOrderByRelevanceFieldEnum = {

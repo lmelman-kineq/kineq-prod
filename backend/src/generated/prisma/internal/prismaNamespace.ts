@@ -408,6 +408,7 @@ export const ModelName = {
   ConsultorioObraSocialOculta: 'ConsultorioObraSocialOculta',
   Turno: 'Turno',
   Evolucion: 'Evolucion',
+  EvolucionImagen: 'EvolucionImagen',
   GrupoEvolucion: 'GrupoEvolucion',
   FichaInicial: 'FichaInicial',
   FichaAlertaCampo: 'FichaAlertaCampo',
@@ -432,7 +433,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "consultorio" | "usuario" | "paciente" | "profesional" | "especialidad" | "consultorioEspecialidadOculta" | "profesionalEspecialidad" | "obraSocial" | "consultorioObraSocialOculta" | "turno" | "evolucion" | "grupoEvolucion" | "fichaInicial" | "fichaAlertaCampo" | "catalogoClinicoItem" | "fichaAntecedente" | "fichaAlergia" | "fichaMedicacion" | "fichaEstudioComplementario" | "fichaSeccionEstado"
+    modelProps: "consultorio" | "usuario" | "paciente" | "profesional" | "especialidad" | "consultorioEspecialidadOculta" | "profesionalEspecialidad" | "obraSocial" | "consultorioObraSocialOculta" | "turno" | "evolucion" | "evolucionImagen" | "grupoEvolucion" | "fichaInicial" | "fichaAlertaCampo" | "catalogoClinicoItem" | "fichaAntecedente" | "fichaAlergia" | "fichaMedicacion" | "fichaEstudioComplementario" | "fichaSeccionEstado"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1159,6 +1160,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.EvolucionCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.EvolucionCountAggregateOutputType> | number
+        }
+      }
+    }
+    EvolucionImagen: {
+      payload: Prisma.$EvolucionImagenPayload<ExtArgs>
+      fields: Prisma.EvolucionImagenFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EvolucionImagenFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvolucionImagenPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EvolucionImagenFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvolucionImagenPayload>
+        }
+        findFirst: {
+          args: Prisma.EvolucionImagenFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvolucionImagenPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EvolucionImagenFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvolucionImagenPayload>
+        }
+        findMany: {
+          args: Prisma.EvolucionImagenFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvolucionImagenPayload>[]
+        }
+        create: {
+          args: Prisma.EvolucionImagenCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvolucionImagenPayload>
+        }
+        createMany: {
+          args: Prisma.EvolucionImagenCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.EvolucionImagenDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvolucionImagenPayload>
+        }
+        update: {
+          args: Prisma.EvolucionImagenUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvolucionImagenPayload>
+        }
+        deleteMany: {
+          args: Prisma.EvolucionImagenDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EvolucionImagenUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.EvolucionImagenUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvolucionImagenPayload>
+        }
+        aggregate: {
+          args: Prisma.EvolucionImagenAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEvolucionImagen>
+        }
+        groupBy: {
+          args: Prisma.EvolucionImagenGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EvolucionImagenGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EvolucionImagenCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EvolucionImagenCountAggregateOutputType> | number
         }
       }
     }
@@ -1963,6 +2030,22 @@ export const EvolucionScalarFieldEnum = {
 export type EvolucionScalarFieldEnum = (typeof EvolucionScalarFieldEnum)[keyof typeof EvolucionScalarFieldEnum]
 
 
+export const EvolucionImagenScalarFieldEnum = {
+  id: 'id',
+  consultorioId: 'consultorioId',
+  pacienteId: 'pacienteId',
+  evolucionId: 'evolucionId',
+  url: 'url',
+  pathname: 'pathname',
+  nombreOriginal: 'nombreOriginal',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  createdAt: 'createdAt'
+} as const
+
+export type EvolucionImagenScalarFieldEnum = (typeof EvolucionImagenScalarFieldEnum)[keyof typeof EvolucionImagenScalarFieldEnum]
+
+
 export const GrupoEvolucionScalarFieldEnum = {
   id: 'id',
   consultorioId: 'consultorioId',
@@ -2230,6 +2313,16 @@ export const EvolucionOrderByRelevanceFieldEnum = {
 } as const
 
 export type EvolucionOrderByRelevanceFieldEnum = (typeof EvolucionOrderByRelevanceFieldEnum)[keyof typeof EvolucionOrderByRelevanceFieldEnum]
+
+
+export const EvolucionImagenOrderByRelevanceFieldEnum = {
+  url: 'url',
+  pathname: 'pathname',
+  nombreOriginal: 'nombreOriginal',
+  mimeType: 'mimeType'
+} as const
+
+export type EvolucionImagenOrderByRelevanceFieldEnum = (typeof EvolucionImagenOrderByRelevanceFieldEnum)[keyof typeof EvolucionImagenOrderByRelevanceFieldEnum]
 
 
 export const GrupoEvolucionOrderByRelevanceFieldEnum = {
@@ -2577,6 +2670,7 @@ export type GlobalOmitConfig = {
   consultorioObraSocialOculta?: Prisma.ConsultorioObraSocialOcultaOmit
   turno?: Prisma.TurnoOmit
   evolucion?: Prisma.EvolucionOmit
+  evolucionImagen?: Prisma.EvolucionImagenOmit
   grupoEvolucion?: Prisma.GrupoEvolucionOmit
   fichaInicial?: Prisma.FichaInicialOmit
   fichaAlertaCampo?: Prisma.FichaAlertaCampoOmit

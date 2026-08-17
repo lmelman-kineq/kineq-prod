@@ -2768,10 +2768,11 @@ select:disabled {
 
 /* Resumen clínico (.patient-detail-stack) a la derecha, tabs/contenido
    (.clinical-workspace) a la izquierda — estable entre Ficha inicial/
-   Evoluciones/Turnos/Estudios porque ambos componentes (PatientDetailPage,
-   AttentionPage) comparten este mismo grid, nunca reordenan su propio JSX.
-   En el breakpoint de una columna (1170px, ver media query) el orden decide
-   además el apilado vertical: tabs primero, resumen después. */
+   Evoluciones/Turnos/Estudios y entre contexto normal/atención, porque
+   PatientDetailPage.tsx es la única pantalla de Paciente (con o sin
+   `activeTurno`) y nunca reordena su propio JSX. En el breakpoint de una
+   columna (1170px, ver media query) el orden decide además el apilado
+   vertical: tabs primero, resumen después. */
 .patient-detail-stack {
   display: grid;
   gap: 24px;
@@ -3085,6 +3086,95 @@ select:disabled {
   margin: 0;
   color: var(--color-danger);
   font-size: 13px;
+}
+
+.evolucion-images {
+  display: grid;
+  gap: 8px;
+}
+
+.evolucion-images-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.evolucion-image-thumb {
+  position: relative;
+  width: 84px;
+  height: 84px;
+}
+
+.evolucion-image-thumb-open {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-surface-muted);
+  cursor: pointer;
+}
+
+.evolucion-image-thumb-open img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.evolucion-image-thumb-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.evolucion-image-add {
+  width: 84px;
+  height: 84px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.evolucion-image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: grid;
+  place-items: center;
+  background: var(--color-overlay);
+}
+
+.evolucion-image-lightbox img {
+  max-width: min(90vw, 900px);
+  max-height: 85vh;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.evolucion-image-lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  color: #fff;
 }
 
 .rich-text-editor {

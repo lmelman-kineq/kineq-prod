@@ -17,7 +17,6 @@ import TurnoFormFields, {
 import TurnosPage, { type TurnosPageItem } from './components/TurnosPage'
 import PatientsPage from './components/PatientsPage'
 import PatientDetailPage from './components/PatientDetailPage'
-import AttentionPage from './components/AttentionPage'
 import ConfiguracionPage from './components/ConfiguracionPage'
 import EstadisticasPage from './components/EstadisticasPage'
 import * as api from './services/api'
@@ -33,6 +32,7 @@ import { WAITING_ALERT_MINUTES, formatMinutesAgo, getElapsedMinutes } from './ut
 import { mapEstadoToStatus, statusClass } from './utils/turnoStatus'
 import { getSpecialtyColor } from './utils/specialtyColors'
 import { layoutTurnos } from './utils/turnoLayout'
+import { patientFullName } from './utils/patient'
 import { professionalName } from './utils/professional'
 import { utcIsoToZonedParts } from './utils/timezone'
 
@@ -386,7 +386,7 @@ function Dashboard() {
       date,
       time,
       duration: t.duracionMinutos,
-      patientDisplay: `${t.paciente.nombre} ${t.paciente.apellido}`,
+      patientDisplay: patientFullName(t.paciente),
       patientId: t.paciente.id,
       professionalDisplay: professionalName(t.profesional),
       professionalId: t.profesional.id,
@@ -442,7 +442,7 @@ function Dashboard() {
         setPacientesState(
           pacientes.map((paciente: Paciente) => ({
             id: paciente.id,
-            displayName: `${paciente.nombre} ${paciente.apellido}`,
+            displayName: patientFullName(paciente),
           })),
         )
         setProfesionalesState(
@@ -731,14 +731,14 @@ function Dashboard() {
   // Alta rápida de Paciente desde Crear/Editar Turno: mismo patrón que
   // createSpecialty arriba — crea, agrega al listado ya cargado y devuelve
   // el Item para que el selector lo marque como elegido sin recargar nada.
-  const createPatientQuick = async (data: { nombre: string; apellido: string; documento?: string; telefono?: string }) => {
+  const createPatientQuick = async (data: { nombreCompleto: string; documento?: string; telefono?: string }) => {
     const created = await api.createPaciente({
-      nombre: data.nombre,
-      apellido: data.apellido,
+      nombre: data.nombreCompleto,
+      apellido: '',
       documento: data.documento || null,
       telefono: data.telefono || null,
     })
-    const next = { id: created.id, displayName: `${created.nombre} ${created.apellido}` }
+    const next = { id: created.id, displayName: patientFullName(created) }
     setPacientesState((s) => [...s, next])
     return next
   }
@@ -1640,12 +1640,18 @@ function Dashboard() {
             onRequestConfirm={setConfirmDialog}
           />
         ) : activePage === 'atencion' && attentionTurno !== null ? (
-          <AttentionPage
-            turno={attentionTurno}
+          // Misma pantalla que "paciente-detalle" — nunca una variante
+          // separada — con `activeTurno`/`onUpdateEstado` agregando el
+          // contexto de sesión (timer, Finalizar atención, evolución
+          // vinculada al turno) de forma aditiva. Ver PatientDetailPage.tsx.
+          <PatientDetailPage
+            patientId={attentionTurno.patientId}
+            patientSocialWorkById={patientSocialWorkById}
             refreshKey={turnosPageRefreshKey}
             onBack={closeAttentionScreen}
-            onUpdateEstado={updateTurnoEstado}
             onRequestConfirm={setConfirmDialog}
+            activeTurno={attentionTurno}
+            onUpdateEstado={updateTurnoEstado}
           />
         ) : activePage === 'estadisticas' ? (
           <EstadisticasPage />

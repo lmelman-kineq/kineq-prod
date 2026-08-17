@@ -1081,3 +1081,87 @@ npx prisma migrate deploy
 ```
 
 Con `DATABASE_URL` apuntando a Aiven. Nunca `db push` ni `migrate reset`.
+
+---
+
+## Sesión: Diagnóstico en Evoluciones dentro de Atención, sin depender del estado del turno
+
+Se reportó "con el turno FINALIZADO desaparece Editar paciente y no hay
+selector de Diagnóstico". Verificado en vivo antes de tocar nada: "Editar
+paciente" **ya funcionaba** en las 4 fases del turno, sin condición sobre
+`turno.estado` — no hizo falta cambiarlo. El gap real: `AttentionPage.tsx`
+nunca había tenido el selector de Diagnóstico (crear ni editar evolución),
+en ningún estado — `EvolutionTable.tsx` ya soportaba las props para esto,
+`PatientDetailPage.tsx` las usaba, `AttentionPage.tsx` nunca las pasó.
+
+**Fix**: mismo `DiagnosticoSelect` agregado a `AttentionPage.tsx` (alta y
+edición de evolución), dependiendo solo de `turno.patientId`, nunca de
+`turno.estado`. "Evolución post-sesión" con turno `FINALIZADO` ya
+funcionaba a nivel backend — solo faltaba la UI.
+
+Sin cambios de backend (179 tests, sin tocar). Frontend sigue en 81.
+
+Verificado con Playwright: Editar paciente + selector de Diagnóstico
+visibles en ASIGNADO/ATENDIENDO/FINALIZADO; diagnóstico creado inline
+durante ATENDIENDO se guarda con la evolución y sigue disponible después de
+finalizar (confirma que es por paciente); evolución post-sesión se guarda
+sin reabrir ni modificar el estado del turno.
+
+---
+
+## Sesión: Unificar Paciente/Atención, Nombre completo, imágenes en Evoluciones
+
+Ronda de tres partes, pedida como un solo prompt grande.
+
+**1) Pantalla única de Paciente/Atención**: `AttentionPage.tsx` eliminado
+por completo. `PatientDetailPage.tsx` es ahora el único componente — recibe
+`activeTurno?`/`onUpdateEstado?` opcionales; con turno activo se agrega
+(nunca se reemplaza JSX de la pantalla base) una barra de sesión: pill de
+estado, timer si `Atendiendo`, "Finalizar atención", vínculo evolución↔turno.
+Sin `activeTurno`, comportamiento idéntico a antes. Por construcción, tabs
+(Ficha inicial→Evoluciones→Turnos→Estudios), edad, "Editar paciente",
+Diagnóstico y layout de Resumen clínico quedan garantizados idénticos en
+cualquier contexto — no hay dos implementaciones que puedan divergir.
+
+**2) Nombre completo**: `PatientFormModal.tsx` y el alta rápida desde Turno
+piden un único campo "Nombre completo". Decisión de schema: se mantuvo
+`Paciente.nombre`/`apellido` sin cambios — el nombre completo se guarda
+entero en `nombre`, `apellido` queda `''`. Sin parseo ingenuo (nunca se
+intenta separar "primera palabra = nombre" — pierde información en nombres
+reales de varias palabras). Un solo helper (`utils/patient.ts`,
+`patientFullName()`) arma el nombre para mostrar en toda la app, funciona
+igual para pacientes viejos y nuevos; editar un paciente viejo lo migra a
+"todo en `nombre`" al guardar, sin backfill masivo. Backend: `POST`/`PATCH
+/api/pacientes` ahora solo exigen `nombre`.
+
+**3) Imágenes en Evoluciones**: hasta 5 imágenes por evolución (JPG/PNG/WEBP,
+≤10MB c/u) vía **Vercel Blob** (`@vercel/blob`, nunca binarios en MySQL).
+Modelo nuevo `EvolucionImagen` (solo la referencia). Endpoint nuevo
+(`POST`/`DELETE /api/evoluciones/:evolucionId/imagenes[/:imagenId]`,
+`multer` memoryStorage). Como la subida necesita una evolución ya creada, el
+alta de una evolución nueva con imágenes primero crea la evolución y recién
+después sube lo seleccionado (hasta entonces solo vive en memoria del
+navegador — "sacar antes de guardar" es sacarlo de ese array local). UI
+compartida `EvolucionImages.tsx` (miniaturas + lightbox), reutilizada en
+alta/edición/vista histórica. No existía ninguna infraestructura real de
+subida de archivos en el proyecto hasta ahora.
+
+**Producción**: migración nueva y puramente aditiva
+(`20260817154449_evolucion_imagenes`), aplicada al dev DB a mano, **no**
+aplicada a Aiven — correr manualmente `npx prisma migrate status` y luego
+`npx prisma migrate deploy`. Además hace falta configurar
+`BLOB_READ_WRITE_TOKEN` (Vercel Blob) en el proyecto de Vercel y, para
+desarrollo local, en `backend/.env` — sin ese token la subida de imágenes
+falla con un mensaje amigable pero el resto de la app sigue funcionando.
+
+Backend 179→188 tests (+9). Frontend 85→90 (+5). `tsc -b`/`build`/`lint`
+limpios en ambos paquetes.
+
+Verificado con Playwright (consultorio nuevo, paciente, profesional
+vinculado): form "Nuevo paciente" con "Nombre completo" y sin "Apellido";
+nombre de 4 palabras aparece íntegro en listado y header; orden de tabs
+correcto; "Editar paciente" visible; botón "+ Imagen" visible en "Nueva
+evolución"; imagen seleccionada queda en staging con miniatura antes de
+guardar; evolución con imagen adjunta se guarda correctamente (sin token de
+Blob local, la subida en sí no se pudo probar de punta a punta — esperado,
+no es un bug).

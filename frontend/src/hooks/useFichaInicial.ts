@@ -17,8 +17,8 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 // Autoguardado + CRUD de antecedentes/alergias/medicación/estudios/secciones
-// de la Ficha Inicial. Antes vivía duplicado (~40 líneas casi idénticas) en
-// PatientDetailPage y AttentionPage; ahora es un solo hook que ambas usan.
+// de la Ficha Inicial. Usado por PatientDetailPage.tsx (única pantalla de
+// Paciente, con o sin turno activo — ver `activeTurno` en ese componente).
 // `canEditClinical` gobierna la lectura (según rol); `canWriteClinical`
 // gobierna la escritura (además necesita profesional vinculado) — el backend
 // vuelve a validar todo esto, acá solo evitamos autoguardar en vano.
@@ -65,8 +65,8 @@ export function useFichaInicial(patientId: number, canEditClinical: boolean, ref
   useEffect(() => {
     let cancelled = false
     // Fetch-on-mount con guarda de cancelación; mismo patrón ya usado sin
-    // objeción en PatientDetailPage/AttentionPage, el linter solo lo marca
-    // acá por vivir dentro de un hook `use*`.
+    // objeción en PatientDetailPage.tsx, el linter solo lo marca acá por
+    // vivir dentro de un hook `use*`.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh().finally(() => {
       if (!cancelled) setLoading(false)

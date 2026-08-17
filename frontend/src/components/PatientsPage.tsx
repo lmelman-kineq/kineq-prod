@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import PatientFormModal from './PatientFormModal'
 import { SkeletonTableRows } from './Skeleton'
 import { getCachedData, setCachedData } from '../utils/dataCache'
+import { patientFullName } from '../utils/patient'
 
 const PATIENTS_CACHE_KEY = 'patients-page-list'
 
@@ -131,7 +132,7 @@ export default function PatientsPage({ refreshKey, patientSocialWorkById, onOpen
     const term = search.trim().toLowerCase()
 
     const filtered = patients.filter((patient) => {
-      const fullName = `${patient.nombre} ${patient.apellido}`.toLowerCase()
+      const fullName = patientFullName(patient).toLowerCase()
       const matchesSearch = !term || fullName.includes(term) || (patient.documento ?? '').toLowerCase().includes(term)
       if (!matchesSearch) return false
 
@@ -341,7 +342,7 @@ export default function PatientsPage({ refreshKey, patientSocialWorkById, onOpen
                             <path d="M5 20c.8-4.1 3.2-6.2 7-6.2s6.2 2.1 7 6.2" />
                           </svg>
                         </span>
-                        <strong>{patient.nombre} {patient.apellido}</strong>
+                        <strong>{patientFullName(patient)}</strong>
                       </div>
                     </td>
                     <td data-label="Documento">{patient.documento ?? '—'}</td>

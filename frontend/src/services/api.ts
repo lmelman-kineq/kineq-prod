@@ -9,6 +9,7 @@ import type {
   EstadisticasFiltros,
   EstadisticasResumen,
   Evolucion,
+  EvolucionImagen,
   FichaAlergia,
   FichaAlergiaInput,
   FichaAlertaCampo,
@@ -74,7 +75,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     credentials: 'include',
     headers: {
       Accept: 'application/json',
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      // FormData (subida de imágenes) necesita que el navegador arme el
+      // Content-Type con el boundary del multipart — si lo forzamos acá a
+      // application/json, el backend no puede parsear el body.
+      ...(init?.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
       ...init?.headers,
     },
   })
@@ -369,6 +373,19 @@ export function patchEvolucion(evolucionId: number, data: { contenido?: string; 
 
 export function deleteEvolucion(evolucionId: number): Promise<void> {
   return request(`/api/evoluciones/${evolucionId}`, { method: 'DELETE' })
+}
+
+export function uploadEvolucionImagenes(evolucionId: number, files: File[]): Promise<EvolucionImagen[]> {
+  const formData = new FormData()
+  files.forEach((file) => formData.append('imagenes', file))
+  return request(`/api/evoluciones/${evolucionId}/imagenes`, {
+    method: 'POST',
+    body: formData,
+  })
+}
+
+export function deleteEvolucionImagen(evolucionId: number, imagenId: number): Promise<void> {
+  return request(`/api/evoluciones/${evolucionId}/imagenes/${imagenId}`, { method: 'DELETE' })
 }
 
 export function getGruposEvolucion(pacienteId: number): Promise<GrupoEvolucion[]> {

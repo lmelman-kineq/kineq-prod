@@ -28,8 +28,7 @@ export type SpecialtyOption = {
 }
 
 export type NewPatientInput = {
-  nombre: string
-  apellido: string
+  nombreCompleto: string
   documento?: string
   telefono?: string
 }
@@ -97,7 +96,7 @@ export function TurnoFormFields({
   const [addingSpecialty, setAddingSpecialty] = useState(false)
   const [newSpecialtyName, setNewSpecialtyName] = useState('')
   const [addingPatient, setAddingPatient] = useState(false)
-  const [newPatient, setNewPatient] = useState<NewPatientInput>({ nombre: '', apellido: '', documento: '', telefono: '' })
+  const [newPatient, setNewPatient] = useState<NewPatientInput>({ nombreCompleto: '', documento: '', telefono: '' })
   const [creatingPatient, setCreatingPatient] = useState(false)
   const [newPatientError, setNewPatientError] = useState<string | null>(null)
 
@@ -196,22 +195,20 @@ export function TurnoFormFields({
   }
 
   const createPatient = async () => {
-    const nombre = newPatient.nombre.trim()
-    const apellido = newPatient.apellido.trim()
-    if (!nombre || !apellido || !onCreatePatient) return
+    const nombreCompleto = newPatient.nombreCompleto.trim()
+    if (!nombreCompleto || !onCreatePatient) return
 
     setCreatingPatient(true)
     setNewPatientError(null)
     try {
       const created = await onCreatePatient({
-        nombre,
-        apellido,
+        nombreCompleto,
         documento: newPatient.documento?.trim() || undefined,
         telefono: newPatient.telefono?.trim() || undefined,
       })
       setPatientSearch(created.displayName)
       updateValue({ patientId: created.id })
-      setNewPatient({ nombre: '', apellido: '', documento: '', telefono: '' })
+      setNewPatient({ nombreCompleto: '', documento: '', telefono: '' })
       setAddingPatient(false)
       setActiveDropdown(null)
     } catch (error) {
@@ -455,14 +452,9 @@ export function TurnoFormFields({
                   <div className="dropdown-footer-edit dropdown-footer-edit--patient">
                     <input
                       autoFocus
-                      value={newPatient.nombre}
-                      placeholder="Nombre *"
-                      onChange={(event) => setNewPatient((current) => ({ ...current, nombre: event.target.value }))}
-                    />
-                    <input
-                      value={newPatient.apellido}
-                      placeholder="Apellido *"
-                      onChange={(event) => setNewPatient((current) => ({ ...current, apellido: event.target.value }))}
+                      value={newPatient.nombreCompleto}
+                      placeholder="Nombre completo *"
+                      onChange={(event) => setNewPatient((current) => ({ ...current, nombreCompleto: event.target.value }))}
                     />
                     <input
                       value={newPatient.documento}
@@ -482,7 +474,7 @@ export function TurnoFormFields({
                       <button
                         type="button"
                         className="add-button"
-                        disabled={!newPatient.nombre.trim() || !newPatient.apellido.trim() || creatingPatient}
+                        disabled={!newPatient.nombreCompleto.trim() || creatingPatient}
                         onClick={createPatient}
                       >
                         {creatingPatient ? 'Creando...' : 'Agregar'}
@@ -491,7 +483,7 @@ export function TurnoFormFields({
                         type="button"
                         className="cancel-button"
                         onClick={() => {
-                          setNewPatient({ nombre: '', apellido: '', documento: '', telefono: '' })
+                          setNewPatient({ nombreCompleto: '', documento: '', telefono: '' })
                           setNewPatientError(null)
                           setAddingPatient(false)
                         }}

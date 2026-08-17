@@ -5,6 +5,7 @@ import type { Turno as ApiTurno } from '../types/domain'
 import { WAITING_ALERT_MINUTES, getElapsedMinutes } from '../utils/turnoTimers'
 import { mapEstadoToStatus, statusClass, compareByAttentionPriority } from '../utils/turnoStatus'
 import { professionalName } from '../utils/professional'
+import { patientFullName } from '../utils/patient'
 import { utcIsoToZonedParts } from '../utils/timezone'
 import DateInput from './DateInput'
 import { SkeletonTableRows } from './Skeleton'
@@ -98,7 +99,7 @@ function mapApiTurno(
     date,
     time,
     duration: turno.duracionMinutos,
-    patientDisplay: `${turno.paciente.nombre} ${turno.paciente.apellido}`,
+    patientDisplay: patientFullName(turno.paciente),
     patientId: turno.pacienteId,
     professionalDisplay: professionalName(turno.profesional),
     professionalId: turno.profesionalId,

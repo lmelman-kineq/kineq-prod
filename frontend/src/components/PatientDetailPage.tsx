@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import * as api from '../services/api'
-import type { Evolucion, GrupoEvolucion, Paciente, Profesional, Turno } from '../types/domain'
-import type { ConfirmDialogOptions } from '../App'
+import type { Evolucion, EstadoTurno, GrupoEvolucion, Paciente, Profesional, Turno } from '../types/domain'
+import type { ConfirmDialogOptions, Turno as SessionTurno } from '../App'
 import { useAuth } from '../auth/AuthContext'
+import { statusClass } from '../utils/turnoStatus'
+import { formatPlainDate } from '../utils/dateFormat'
 import PatientProfileHeader from './PatientProfileHeader'
 import PatientSummaryCards from './PatientSummaryCards'
 import ClinicalSummaryPanel from './ClinicalSummaryPanel'
 import ClinicalTabs, { type ClinicalTab } from './ClinicalTabs'
 import EvolutionTable, { GrupoChip } from './EvolutionTable'
+import EvolucionImages from './EvolucionImages'
+import { validateNewEvolucionImages } from '../utils/evolucionImageValidation'
 import GrupoEvolucionModal from './GrupoEvolucionModal'
 import GestionarGruposModal from './GestionarGruposModal'
 import DiagnosticoSelect from './DiagnosticoSelect'
@@ -28,8 +32,16 @@ type PatientDetailPageProps = {
   patientSocialWorkById: Record<number, string | null>
   refreshKey: number
   onBack: () => void
-  onNewTurno: (patientId: number) => void
+  onNewTurno?: (patientId: number) => void
   onRequestConfirm: (dialog: ConfirmDialogOptions) => void
+  // Contexto de sesión: cuando se entra desde un turno (Iniciar/Continuar
+  // atención), esta es la MISMA pantalla de Paciente — nunca una variante
+  // separada — con estos dos props opcionales agregando información/
+  // acciones aditivas (timer, "Finalizar atención", vínculo automático de
+  // la evolución al turno). Sin `activeTurno`, el comportamiento es
+  // idéntico al de siempre.
+  activeTurno?: SessionTurno | null
+  onUpdateEstado?: (turnoId: number, estado: EstadoTurno) => Promise<SessionTurno | null>
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -44,6 +56,8 @@ export default function PatientDetailPage({
   onBack,
   onNewTurno,
   onRequestConfirm,
+  activeTurno = null,
+  onUpdateEstado,
 }: PatientDetailPageProps) {
   const { user } = useAuth()
   const canEditClinical = user?.rol === 'ADMINISTRADOR' || user?.rol === 'PROFESIONAL'
@@ -61,12 +75,24 @@ export default function PatientDetailPage({
   const [activeTab, setActiveTab] = useState(() => (canEditClinical ? 'ficha' : 'turnos'))
   const [editPatientOpen, setEditPatientOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [finalizing, setFinalizing] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
 
   const [newEvolucionText, setNewEvolucionText] = useState('')
   const [newEvolucionHtml, setNewEvolucionHtml] = useState('')
   const [savingEvolucion, setSavingEvolucion] = useState(false)
   const [evolucionError, setEvolucionError] = useState<string | null>(null)
   const [propioProfesional, setPropioProfesional] = useState<Profesional | null>(null)
+
+  // Imágenes de la evolución en creación: se suben recién después de crear
+  // la evolución (el endpoint de subida necesita un evolucionId real) —
+  // hasta entonces quedan acá como archivos locales con su preview, así que
+  // "sacar antes de guardar" es simplemente sacarlas de este array. Se
+  // revocan los object URLs al sacar/limpiar para no perder memoria.
+  const [stagedImages, setStagedImages] = useState<{ file: File; previewUrl: string }[]>([])
+  const [stagedImagesError, setStagedImagesError] = useState<string | null>(null)
+  const [imagesUploading, setImagesUploading] = useState(false)
+  const [imagesError, setImagesError] = useState<string | null>(null)
 
   const [editingEvolucionId, setEditingEvolucionId] = useState<number | null>(null)
   const [editingEvolucionText, setEditingEvolucionText] = useState('')
@@ -96,6 +122,15 @@ export default function PatientDetailPage({
   }
 
   const fichaHook = useFichaInicial(patientId, canEditClinical, refreshKey, canWriteClinical)
+
+  // Libera los object URLs de las imágenes en staging si se desmonta la
+  // pantalla con el formulario de "Nueva evolución" a medio completar.
+  useEffect(() => {
+    return () => {
+      stagedImages.forEach((staged) => URL.revokeObjectURL(staged.previewUrl))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadGrupos = async () => {
     if (!canEditClinical) return
@@ -152,6 +187,71 @@ export default function PatientDetailPage({
     })
   }
 
+  // Timer de atención — solo corre con turno activo en ATENDIENDO (contexto
+  // de sesión); sin `activeTurno`, este efecto nunca arranca.
+  useEffect(() => {
+    if (!activeTurno || activeTurno.status !== 'Atendiendo' || !activeTurno.startAttention) return undefined
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+    // Solo status/startAttention importan acá — activeTurno cambia de
+    // identidad en cada refetch del turno aunque nada relevante haya cambiado.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTurno?.status, activeTurno?.startAttention])
+
+  const elapsedSeconds =
+    activeTurno?.status === 'Atendiendo' && activeTurno.startAttention
+      ? Math.max(0, Math.floor((now - new Date(activeTurno.startAttention).getTime()) / 1000))
+      : 0
+
+  const doFinalize = async () => {
+    if (!activeTurno || !onUpdateEstado) return
+    setFinalizing(true)
+    const updated = await onUpdateEstado(activeTurno.id, 'FINALIZADO')
+    setFinalizing(false)
+    if (updated) onBack()
+  }
+
+  // Único punto donde se pide confirmar "Finalizar atención" — reutilizado
+  // sea cual sea la superficie desde la que se entró a este turno.
+  const finalizarAtencion = () => {
+    if (!activeTurno) return
+    const hasUnsavedDraft = newEvolucionText.trim().length > 0 || fichaHook.pending || editingEvolucionId !== null || stagedImages.length > 0
+
+    if (hasUnsavedDraft) {
+      onRequestConfirm({
+        title: 'Tenés cambios sin guardar',
+        description: 'Si finalizás ahora, la evolución o la ficha inicial que estás editando se van a perder. ¿Querés finalizar igual?',
+        confirmLabel: 'Finalizar igual',
+        cancelLabel: 'Volver',
+        destructive: true,
+        onConfirm: () => { void doFinalize() },
+      })
+      return
+    }
+
+    const hasEvolucionDelTurnoActivo = evoluciones.some((evolucion) => evolucion.turnoId === activeTurno.id)
+    if (!hasEvolucionDelTurnoActivo) {
+      onRequestConfirm({
+        title: 'Este turno no tiene una evolución cargada',
+        description: '¿Querés finalizar igualmente?',
+        confirmLabel: 'Finalizar igualmente',
+        cancelLabel: 'Volver y cargar evolución',
+        destructive: true,
+        onConfirm: () => { void doFinalize() },
+      })
+      return
+    }
+
+    onRequestConfirm({
+      title: 'Finalizar atención',
+      description: '¿Seguro que querés finalizar la atención de este paciente? El turno quedará marcado como finalizado.',
+      confirmLabel: 'Finalizar atención',
+      cancelLabel: 'Cancelar',
+      destructive: false,
+      onConfirm: () => { void doFinalize() },
+    })
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -191,6 +291,28 @@ export default function PatientDetailPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId, refreshKey])
 
+  const clearStagedImages = () => {
+    stagedImages.forEach((staged) => URL.revokeObjectURL(staged.previewUrl))
+    setStagedImages([])
+    setStagedImagesError(null)
+  }
+
+  const addStagedImages = (files: File[]) => {
+    const validationError = validateNewEvolucionImages(stagedImages.length, files)
+    setStagedImagesError(validationError)
+    if (validationError) return
+    setStagedImages((current) => [...current, ...files.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }))])
+  }
+
+  const removeStagedImage = (key: string) => {
+    const index = Number(key)
+    setStagedImages((current) => {
+      const target = current[index]
+      if (target) URL.revokeObjectURL(target.previewUrl)
+      return current.filter((_, i) => i !== index)
+    })
+  }
+
   const submitEvolucion = async () => {
     const contenido = newEvolucionText.trim()
     if (!contenido || !user?.profesionalId) return
@@ -199,21 +321,56 @@ export default function PatientDetailPage({
     setEvolucionError(null)
 
     try {
-      await api.createEvolucion({
+      const created = await api.createEvolucion({
         pacienteId: patientId,
         profesionalId: user.profesionalId,
+        turnoId: activeTurno?.id,
         contenido,
         contenidoHtml: newEvolucionHtml || null,
         grupoId: nuevaEvolucionGrupoId || null,
       })
+      if (stagedImages.length > 0) {
+        try {
+          await api.uploadEvolucionImagenes(created.id, stagedImages.map((s) => s.file))
+        } catch (uploadError) {
+          setEvolucionError(getErrorMessage(uploadError, 'La evolución se guardó, pero no se pudieron subir las imágenes.'))
+        }
+      }
       setNewEvolucionText('')
       setNewEvolucionHtml('')
       setNuevaEvolucionGrupoId('')
+      clearStagedImages()
       await loadEvoluciones()
     } catch (createError) {
       setEvolucionError(getErrorMessage(createError, 'No se pudo guardar la evolución.'))
     } finally {
       setSavingEvolucion(false)
+    }
+  }
+
+  const addImagesToEvolucion = async (evolucion: Evolucion, files: File[]) => {
+    const validationError = validateNewEvolucionImages(evolucion.imagenes?.length ?? 0, files)
+    setImagesError(validationError)
+    if (validationError) return
+
+    setImagesUploading(true)
+    try {
+      await api.uploadEvolucionImagenes(evolucion.id, files)
+      await loadEvoluciones()
+    } catch (uploadError) {
+      setImagesError(getErrorMessage(uploadError, 'No se pudieron subir las imágenes.'))
+    } finally {
+      setImagesUploading(false)
+    }
+  }
+
+  const removeImageFromEvolucion = async (evolucion: Evolucion, imagenId: number) => {
+    setImagesError(null)
+    try {
+      await api.deleteEvolucionImagen(evolucion.id, imagenId)
+      await loadEvoluciones()
+    } catch (deleteError) {
+      setImagesError(getErrorMessage(deleteError, 'No se pudo eliminar la imagen.'))
     }
   }
 
@@ -328,6 +485,7 @@ export default function PatientDetailPage({
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
   const lastEvolucion = sortedEvoluciones[0] ?? null
+  const hasEvolucionDelTurnoActivo = activeTurno ? evoluciones.some((evolucion) => evolucion.turnoId === activeTurno.id) : false
   const socialWorkName = patient.obraSocial?.nombre ?? patientSocialWorkById[patient.id] ?? null
   const fichaStatus = computeFichaCompletionStatus(fichaHook.form)
 
@@ -358,6 +516,10 @@ export default function PatientDetailPage({
     grupos,
     editingGrupoId: editingEvolucionGrupoId,
     onChangeEditingGrupoId: setEditingEvolucionGrupoId,
+    onAddImages: addImagesToEvolucion,
+    onRemoveImage: removeImageFromEvolucion,
+    imagesUploading,
+    imagesError,
   }
 
   // Filtro por grupo: acota qué se ve en la tab Evoluciones (ambas vistas),
@@ -394,6 +556,12 @@ export default function PatientDetailPage({
               value={nuevaEvolucionGrupoId}
               onChange={setNuevaEvolucionGrupoId}
               onCreate={createDiagnosticoInline}
+            />
+            <EvolucionImages
+              items={stagedImages.map((s, i) => ({ key: String(i), url: s.previewUrl, name: s.file.name }))}
+              onAdd={addStagedImages}
+              onRemove={removeStagedImage}
+              error={stagedImagesError}
             />
             <button
               type="button"
@@ -568,10 +736,10 @@ export default function PatientDetailPage({
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M15 6l-6 6 6 6" />
           </svg>
-          Volver a Pacientes
+          {activeTurno ? 'Volver' : 'Volver a Pacientes'}
         </button>
 
-        {canEditAdmin ? (
+        {canEditAdmin && !activeTurno ? (
           <button
             type="button"
             className="icon-button--danger"
@@ -599,12 +767,52 @@ export default function PatientDetailPage({
                 Editar paciente
               </button>
             ) : null}
-            <button type="button" className="new-turn-button" onClick={() => onNewTurno(patient.id)}>
-              Nuevo turno
-            </button>
+            {!activeTurno && onNewTurno ? (
+              <button type="button" className="new-turn-button" onClick={() => onNewTurno(patient.id)}>
+                Nuevo turno
+              </button>
+            ) : null}
           </>
         }
       />
+
+      {/* Contexto de sesión — aditivo, nunca reemplaza el header/datos del
+          paciente de arriba. Reutiliza las clases ya existentes de la vieja
+          pantalla de Atención (.attention-header/.attention-timer), ahora
+          como una franja propia en vez de todo el header. */}
+      {activeTurno ? (
+        <div className="patient-detail-header attention-header">
+          <div>
+            <span className={`turnos-status-pill turnos-status-pill--${statusClass(activeTurno.status)}`}>
+              {activeTurno.status}
+            </span>
+            <p className="patient-detail-subtitle">
+              {formatPlainDate(activeTurno.date)} · {activeTurno.time} — {activeTurno.professionalDisplay ?? 'Profesional no disponible'}
+              {activeTurno.specialtyName ? ` · ${activeTurno.specialtyName}` : ''}
+              {activeTurno.sessionNumber != null ? ` · Sesión ${activeTurno.sessionNumber}` : ''}
+            </p>
+          </div>
+          <div className="attention-header-actions">
+            {activeTurno.status === 'Atendiendo' && activeTurno.startAttention ? (
+              <div className="attention-timer">
+                <p className="details-label">Tiempo atendiendo</p>
+                <strong>{new Date(elapsedSeconds * 1000).toISOString().slice(11, 19)}</strong>
+                <span className="details-duration-hint">Reservado: {activeTurno.duration} min</span>
+              </div>
+            ) : (
+              <div className="attention-timer attention-timer--static">
+                <p className="details-label">Duración reservada</p>
+                <strong>{activeTurno.duration} min</strong>
+              </div>
+            )}
+            {activeTurno.status === 'Atendiendo' ? (
+              <button type="button" className="primary-button" disabled={finalizing} onClick={finalizarAtencion}>
+                {finalizing ? 'Finalizando...' : 'Finalizar atención'}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <PatientSummaryCards
         turnos={turnos}
@@ -626,6 +834,7 @@ export default function PatientDetailPage({
                 lastEvolucionDate={lastEvolucion?.createdAt ?? null}
                 nextTurnoDate={nextTurno?.inicio ?? null}
                 onGoToFicha={() => setActiveTab('ficha')}
+                showNoEvolucionAlert={activeTurno?.status === 'Atendiendo' && !hasEvolucionDelTurnoActivo}
               />
             </section>
           </div>

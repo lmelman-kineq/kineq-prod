@@ -289,6 +289,7 @@ export type EvolucionWhereInput = {
   profesional?: Prisma.XOR<Prisma.ProfesionalScalarRelationFilter, Prisma.ProfesionalWhereInput>
   turno?: Prisma.XOR<Prisma.TurnoNullableScalarRelationFilter, Prisma.TurnoWhereInput> | null
   grupo?: Prisma.XOR<Prisma.GrupoEvolucionNullableScalarRelationFilter, Prisma.GrupoEvolucionWhereInput> | null
+  imagenes?: Prisma.EvolucionImagenListRelationFilter
 }
 
 export type EvolucionOrderByWithRelationInput = {
@@ -308,6 +309,7 @@ export type EvolucionOrderByWithRelationInput = {
   profesional?: Prisma.ProfesionalOrderByWithRelationInput
   turno?: Prisma.TurnoOrderByWithRelationInput
   grupo?: Prisma.GrupoEvolucionOrderByWithRelationInput
+  imagenes?: Prisma.EvolucionImagenOrderByRelationAggregateInput
   _relevance?: Prisma.EvolucionOrderByRelevanceInput
 }
 
@@ -331,6 +333,7 @@ export type EvolucionWhereUniqueInput = Prisma.AtLeast<{
   profesional?: Prisma.XOR<Prisma.ProfesionalScalarRelationFilter, Prisma.ProfesionalWhereInput>
   turno?: Prisma.XOR<Prisma.TurnoNullableScalarRelationFilter, Prisma.TurnoWhereInput> | null
   grupo?: Prisma.XOR<Prisma.GrupoEvolucionNullableScalarRelationFilter, Prisma.GrupoEvolucionWhereInput> | null
+  imagenes?: Prisma.EvolucionImagenListRelationFilter
 }, "id">
 
 export type EvolucionOrderByWithAggregationInput = {
@@ -380,6 +383,7 @@ export type EvolucionCreateInput = {
   profesional: Prisma.ProfesionalCreateNestedOneWithoutEvolucionesInput
   turno?: Prisma.TurnoCreateNestedOneWithoutEvolucionesInput
   grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutEvolucionesInput
+  imagenes?: Prisma.EvolucionImagenCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionUncheckedCreateInput = {
@@ -394,6 +398,7 @@ export type EvolucionUncheckedCreateInput = {
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionUpdateInput = {
@@ -407,6 +412,7 @@ export type EvolucionUpdateInput = {
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutEvolucionesNestedInput
   turno?: Prisma.TurnoUpdateOneWithoutEvolucionesNestedInput
   grupo?: Prisma.GrupoEvolucionUpdateOneWithoutEvolucionesNestedInput
+  imagenes?: Prisma.EvolucionImagenUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateInput = {
@@ -421,6 +427,7 @@ export type EvolucionUncheckedUpdateInput = {
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionCreateManyInput = {
@@ -533,6 +540,11 @@ export type EvolucionSumOrderByAggregateInput = {
   profesionalId?: Prisma.SortOrder
   turnoId?: Prisma.SortOrder
   grupoId?: Prisma.SortOrder
+}
+
+export type EvolucionScalarRelationFilter = {
+  is?: Prisma.EvolucionWhereInput
+  isNot?: Prisma.EvolucionWhereInput
 }
 
 export type EvolucionCreateNestedManyWithoutConsultorioInput = {
@@ -703,6 +715,20 @@ export type EvolucionUncheckedUpdateManyWithoutTurnoNestedInput = {
   deleteMany?: Prisma.EvolucionScalarWhereInput | Prisma.EvolucionScalarWhereInput[]
 }
 
+export type EvolucionCreateNestedOneWithoutImagenesInput = {
+  create?: Prisma.XOR<Prisma.EvolucionCreateWithoutImagenesInput, Prisma.EvolucionUncheckedCreateWithoutImagenesInput>
+  connectOrCreate?: Prisma.EvolucionCreateOrConnectWithoutImagenesInput
+  connect?: Prisma.EvolucionWhereUniqueInput
+}
+
+export type EvolucionUpdateOneRequiredWithoutImagenesNestedInput = {
+  create?: Prisma.XOR<Prisma.EvolucionCreateWithoutImagenesInput, Prisma.EvolucionUncheckedCreateWithoutImagenesInput>
+  connectOrCreate?: Prisma.EvolucionCreateOrConnectWithoutImagenesInput
+  upsert?: Prisma.EvolucionUpsertWithoutImagenesInput
+  connect?: Prisma.EvolucionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EvolucionUpdateToOneWithWhereWithoutImagenesInput, Prisma.EvolucionUpdateWithoutImagenesInput>, Prisma.EvolucionUncheckedUpdateWithoutImagenesInput>
+}
+
 export type EvolucionCreateNestedManyWithoutGrupoInput = {
   create?: Prisma.XOR<Prisma.EvolucionCreateWithoutGrupoInput, Prisma.EvolucionUncheckedCreateWithoutGrupoInput> | Prisma.EvolucionCreateWithoutGrupoInput[] | Prisma.EvolucionUncheckedCreateWithoutGrupoInput[]
   connectOrCreate?: Prisma.EvolucionCreateOrConnectWithoutGrupoInput | Prisma.EvolucionCreateOrConnectWithoutGrupoInput[]
@@ -755,6 +781,7 @@ export type EvolucionCreateWithoutConsultorioInput = {
   profesional: Prisma.ProfesionalCreateNestedOneWithoutEvolucionesInput
   turno?: Prisma.TurnoCreateNestedOneWithoutEvolucionesInput
   grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutEvolucionesInput
+  imagenes?: Prisma.EvolucionImagenCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionUncheckedCreateWithoutConsultorioInput = {
@@ -768,6 +795,7 @@ export type EvolucionUncheckedCreateWithoutConsultorioInput = {
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionCreateOrConnectWithoutConsultorioInput = {
@@ -823,6 +851,7 @@ export type EvolucionCreateWithoutPacienteInput = {
   profesional: Prisma.ProfesionalCreateNestedOneWithoutEvolucionesInput
   turno?: Prisma.TurnoCreateNestedOneWithoutEvolucionesInput
   grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutEvolucionesInput
+  imagenes?: Prisma.EvolucionImagenCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionUncheckedCreateWithoutPacienteInput = {
@@ -836,6 +865,7 @@ export type EvolucionUncheckedCreateWithoutPacienteInput = {
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionCreateOrConnectWithoutPacienteInput = {
@@ -874,6 +904,7 @@ export type EvolucionCreateWithoutProfesionalInput = {
   paciente: Prisma.PacienteCreateNestedOneWithoutEvolucionesInput
   turno?: Prisma.TurnoCreateNestedOneWithoutEvolucionesInput
   grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutEvolucionesInput
+  imagenes?: Prisma.EvolucionImagenCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionUncheckedCreateWithoutProfesionalInput = {
@@ -887,6 +918,7 @@ export type EvolucionUncheckedCreateWithoutProfesionalInput = {
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionCreateOrConnectWithoutProfesionalInput = {
@@ -925,6 +957,7 @@ export type EvolucionCreateWithoutTurnoInput = {
   paciente: Prisma.PacienteCreateNestedOneWithoutEvolucionesInput
   profesional: Prisma.ProfesionalCreateNestedOneWithoutEvolucionesInput
   grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutEvolucionesInput
+  imagenes?: Prisma.EvolucionImagenCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionUncheckedCreateWithoutTurnoInput = {
@@ -938,6 +971,7 @@ export type EvolucionUncheckedCreateWithoutTurnoInput = {
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionCreateOrConnectWithoutTurnoInput = {
@@ -966,6 +1000,76 @@ export type EvolucionUpdateManyWithWhereWithoutTurnoInput = {
   data: Prisma.XOR<Prisma.EvolucionUpdateManyMutationInput, Prisma.EvolucionUncheckedUpdateManyWithoutTurnoInput>
 }
 
+export type EvolucionCreateWithoutImagenesInput = {
+  contenido: string
+  contenidoHtml?: string | null
+  activo?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  consultorio: Prisma.ConsultorioCreateNestedOneWithoutEvolucionesInput
+  paciente: Prisma.PacienteCreateNestedOneWithoutEvolucionesInput
+  profesional: Prisma.ProfesionalCreateNestedOneWithoutEvolucionesInput
+  turno?: Prisma.TurnoCreateNestedOneWithoutEvolucionesInput
+  grupo?: Prisma.GrupoEvolucionCreateNestedOneWithoutEvolucionesInput
+}
+
+export type EvolucionUncheckedCreateWithoutImagenesInput = {
+  id?: number
+  consultorioId: number
+  pacienteId: number
+  profesionalId: number
+  turnoId?: number | null
+  grupoId?: number | null
+  contenido: string
+  contenidoHtml?: string | null
+  activo?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type EvolucionCreateOrConnectWithoutImagenesInput = {
+  where: Prisma.EvolucionWhereUniqueInput
+  create: Prisma.XOR<Prisma.EvolucionCreateWithoutImagenesInput, Prisma.EvolucionUncheckedCreateWithoutImagenesInput>
+}
+
+export type EvolucionUpsertWithoutImagenesInput = {
+  update: Prisma.XOR<Prisma.EvolucionUpdateWithoutImagenesInput, Prisma.EvolucionUncheckedUpdateWithoutImagenesInput>
+  create: Prisma.XOR<Prisma.EvolucionCreateWithoutImagenesInput, Prisma.EvolucionUncheckedCreateWithoutImagenesInput>
+  where?: Prisma.EvolucionWhereInput
+}
+
+export type EvolucionUpdateToOneWithWhereWithoutImagenesInput = {
+  where?: Prisma.EvolucionWhereInput
+  data: Prisma.XOR<Prisma.EvolucionUpdateWithoutImagenesInput, Prisma.EvolucionUncheckedUpdateWithoutImagenesInput>
+}
+
+export type EvolucionUpdateWithoutImagenesInput = {
+  contenido?: Prisma.StringFieldUpdateOperationsInput | string
+  contenidoHtml?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutEvolucionesNestedInput
+  paciente?: Prisma.PacienteUpdateOneRequiredWithoutEvolucionesNestedInput
+  profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutEvolucionesNestedInput
+  turno?: Prisma.TurnoUpdateOneWithoutEvolucionesNestedInput
+  grupo?: Prisma.GrupoEvolucionUpdateOneWithoutEvolucionesNestedInput
+}
+
+export type EvolucionUncheckedUpdateWithoutImagenesInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
+  pacienteId?: Prisma.IntFieldUpdateOperationsInput | number
+  profesionalId?: Prisma.IntFieldUpdateOperationsInput | number
+  turnoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  grupoId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  contenido?: Prisma.StringFieldUpdateOperationsInput | string
+  contenidoHtml?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type EvolucionCreateWithoutGrupoInput = {
   contenido: string
   contenidoHtml?: string | null
@@ -976,6 +1080,7 @@ export type EvolucionCreateWithoutGrupoInput = {
   paciente: Prisma.PacienteCreateNestedOneWithoutEvolucionesInput
   profesional: Prisma.ProfesionalCreateNestedOneWithoutEvolucionesInput
   turno?: Prisma.TurnoCreateNestedOneWithoutEvolucionesInput
+  imagenes?: Prisma.EvolucionImagenCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionUncheckedCreateWithoutGrupoInput = {
@@ -989,6 +1094,7 @@ export type EvolucionUncheckedCreateWithoutGrupoInput = {
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedCreateNestedManyWithoutEvolucionInput
 }
 
 export type EvolucionCreateOrConnectWithoutGrupoInput = {
@@ -1040,6 +1146,7 @@ export type EvolucionUpdateWithoutConsultorioInput = {
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutEvolucionesNestedInput
   turno?: Prisma.TurnoUpdateOneWithoutEvolucionesNestedInput
   grupo?: Prisma.GrupoEvolucionUpdateOneWithoutEvolucionesNestedInput
+  imagenes?: Prisma.EvolucionImagenUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateWithoutConsultorioInput = {
@@ -1053,6 +1160,7 @@ export type EvolucionUncheckedUpdateWithoutConsultorioInput = {
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateManyWithoutConsultorioInput = {
@@ -1091,6 +1199,7 @@ export type EvolucionUpdateWithoutPacienteInput = {
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutEvolucionesNestedInput
   turno?: Prisma.TurnoUpdateOneWithoutEvolucionesNestedInput
   grupo?: Prisma.GrupoEvolucionUpdateOneWithoutEvolucionesNestedInput
+  imagenes?: Prisma.EvolucionImagenUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateWithoutPacienteInput = {
@@ -1104,6 +1213,7 @@ export type EvolucionUncheckedUpdateWithoutPacienteInput = {
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateManyWithoutPacienteInput = {
@@ -1142,6 +1252,7 @@ export type EvolucionUpdateWithoutProfesionalInput = {
   paciente?: Prisma.PacienteUpdateOneRequiredWithoutEvolucionesNestedInput
   turno?: Prisma.TurnoUpdateOneWithoutEvolucionesNestedInput
   grupo?: Prisma.GrupoEvolucionUpdateOneWithoutEvolucionesNestedInput
+  imagenes?: Prisma.EvolucionImagenUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateWithoutProfesionalInput = {
@@ -1155,6 +1266,7 @@ export type EvolucionUncheckedUpdateWithoutProfesionalInput = {
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateManyWithoutProfesionalInput = {
@@ -1193,6 +1305,7 @@ export type EvolucionUpdateWithoutTurnoInput = {
   paciente?: Prisma.PacienteUpdateOneRequiredWithoutEvolucionesNestedInput
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutEvolucionesNestedInput
   grupo?: Prisma.GrupoEvolucionUpdateOneWithoutEvolucionesNestedInput
+  imagenes?: Prisma.EvolucionImagenUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateWithoutTurnoInput = {
@@ -1206,6 +1319,7 @@ export type EvolucionUncheckedUpdateWithoutTurnoInput = {
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateManyWithoutTurnoInput = {
@@ -1244,6 +1358,7 @@ export type EvolucionUpdateWithoutGrupoInput = {
   paciente?: Prisma.PacienteUpdateOneRequiredWithoutEvolucionesNestedInput
   profesional?: Prisma.ProfesionalUpdateOneRequiredWithoutEvolucionesNestedInput
   turno?: Prisma.TurnoUpdateOneWithoutEvolucionesNestedInput
+  imagenes?: Prisma.EvolucionImagenUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateWithoutGrupoInput = {
@@ -1257,6 +1372,7 @@ export type EvolucionUncheckedUpdateWithoutGrupoInput = {
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imagenes?: Prisma.EvolucionImagenUncheckedUpdateManyWithoutEvolucionNestedInput
 }
 
 export type EvolucionUncheckedUpdateManyWithoutGrupoInput = {
@@ -1272,6 +1388,35 @@ export type EvolucionUncheckedUpdateManyWithoutGrupoInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+
+/**
+ * Count Type EvolucionCountOutputType
+ */
+
+export type EvolucionCountOutputType = {
+  imagenes: number
+}
+
+export type EvolucionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  imagenes?: boolean | EvolucionCountOutputTypeCountImagenesArgs
+}
+
+/**
+ * EvolucionCountOutputType without action
+ */
+export type EvolucionCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EvolucionCountOutputType
+   */
+  select?: Prisma.EvolucionCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * EvolucionCountOutputType without action
+ */
+export type EvolucionCountOutputTypeCountImagenesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EvolucionImagenWhereInput
+}
 
 
 export type EvolucionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1291,6 +1436,8 @@ export type EvolucionSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   profesional?: boolean | Prisma.ProfesionalDefaultArgs<ExtArgs>
   turno?: boolean | Prisma.Evolucion$turnoArgs<ExtArgs>
   grupo?: boolean | Prisma.Evolucion$grupoArgs<ExtArgs>
+  imagenes?: boolean | Prisma.Evolucion$imagenesArgs<ExtArgs>
+  _count?: boolean | Prisma.EvolucionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evolucion"]>
 
 
@@ -1316,6 +1463,8 @@ export type EvolucionInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   profesional?: boolean | Prisma.ProfesionalDefaultArgs<ExtArgs>
   turno?: boolean | Prisma.Evolucion$turnoArgs<ExtArgs>
   grupo?: boolean | Prisma.Evolucion$grupoArgs<ExtArgs>
+  imagenes?: boolean | Prisma.Evolucion$imagenesArgs<ExtArgs>
+  _count?: boolean | Prisma.EvolucionCountOutputTypeDefaultArgs<ExtArgs>
 }
 
 export type $EvolucionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1326,6 +1475,7 @@ export type $EvolucionPayload<ExtArgs extends runtime.Types.Extensions.InternalA
     profesional: Prisma.$ProfesionalPayload<ExtArgs>
     turno: Prisma.$TurnoPayload<ExtArgs> | null
     grupo: Prisma.$GrupoEvolucionPayload<ExtArgs> | null
+    imagenes: Prisma.$EvolucionImagenPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1684,6 +1834,7 @@ export interface Prisma__EvolucionClient<T, Null = never, ExtArgs extends runtim
   profesional<T extends Prisma.ProfesionalDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProfesionalDefaultArgs<ExtArgs>>): Prisma.Prisma__ProfesionalClient<runtime.Types.Result.GetResult<Prisma.$ProfesionalPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   turno<T extends Prisma.Evolucion$turnoArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Evolucion$turnoArgs<ExtArgs>>): Prisma.Prisma__TurnoClient<runtime.Types.Result.GetResult<Prisma.$TurnoPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   grupo<T extends Prisma.Evolucion$grupoArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Evolucion$grupoArgs<ExtArgs>>): Prisma.Prisma__GrupoEvolucionClient<runtime.Types.Result.GetResult<Prisma.$GrupoEvolucionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  imagenes<T extends Prisma.Evolucion$imagenesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Evolucion$imagenesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvolucionImagenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2107,6 +2258,30 @@ export type Evolucion$grupoArgs<ExtArgs extends runtime.Types.Extensions.Interna
    */
   include?: Prisma.GrupoEvolucionInclude<ExtArgs> | null
   where?: Prisma.GrupoEvolucionWhereInput
+}
+
+/**
+ * Evolucion.imagenes
+ */
+export type Evolucion$imagenesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EvolucionImagen
+   */
+  select?: Prisma.EvolucionImagenSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the EvolucionImagen
+   */
+  omit?: Prisma.EvolucionImagenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvolucionImagenInclude<ExtArgs> | null
+  where?: Prisma.EvolucionImagenWhereInput
+  orderBy?: Prisma.EvolucionImagenOrderByWithRelationInput | Prisma.EvolucionImagenOrderByWithRelationInput[]
+  cursor?: Prisma.EvolucionImagenWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EvolucionImagenScalarFieldEnum | Prisma.EvolucionImagenScalarFieldEnum[]
 }
 
 /**

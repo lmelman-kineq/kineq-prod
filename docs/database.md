@@ -10,6 +10,10 @@ Migration `20260817123951_paciente_documento_unico`: `Paciente.documento` went f
 
 Migration `20260817145447_evolucion_contenido_text`: `Evolucion.contenido` went from `String` (no native type override — Prisma's MySQL default is `VARCHAR(191)`) to `String @db.Text`. A clinical note longer than 191 characters made the `INSERT` fail at the database level ("Data too long for column 'contenido'"), surfaced to the client as a bare `500` with no logged exception. `contenidoHtml` already used `@db.Text` since the rich-text migration (`20260814233921_add_evolucion_contenido_html`) — this was the same fix applied to the original field, which had been missed. `ALTER TABLE Evolucion MODIFY contenido TEXT NOT NULL` — non-destructive, widens the column type in place, no data loss/truncation for existing rows. See `docs/modules/clinical-history.md`.
 
+New table, migration `20260817154449_evolucion_imagenes` (purely additive): `EvolucionImagen` (`id`, `consultorioId`, `pacienteId`, `evolucionId`, `url`, `pathname` — both `@db.Text` — `nombreOriginal`, `mimeType`, `sizeBytes`, `createdAt`), FK to `Evolucion` with `onDelete: Cascade`. Only the reference to the file is stored here — the binary itself lives in Vercel Blob, never in MySQL. See "Imágenes adjuntas" in `docs/modules/clinical-history.md`.
+
+**`Paciente.nombre`/`Paciente.apellido` — no schema change for "Nombre completo"**: the UI now asks for a single "Nombre completo" field (see `docs/modules/patients.md`), but the schema still has both `nombre` and `apellido` as separate `String` columns, unchanged. New patients (and any patient re-saved through the edit form) get the full name stored in `nombre`, with `apellido` set to `''`. This was a deliberate choice to avoid a migration/backfill and to avoid guessing how to split an existing full name back into first/last name (which loses information for real names with multiple words) — display always goes through `frontend/src/utils/patient.ts`'s `patientFullName()`, which just concatenates both fields and works the same for old split-name rows and new single-field rows.
+
 Main entities (original draft, generic names, not the real schema):
 
 - User

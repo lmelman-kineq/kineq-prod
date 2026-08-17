@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { Paciente } from '../types/domain'
 import { calculateAge } from '../utils/dateFormat'
+import { patientFullName } from '../utils/patient'
 import PatientAvatar from './PatientAvatar'
 
 type PatientProfileHeaderProps = {
@@ -51,7 +52,7 @@ export default function PatientProfileHeader({ patient, socialWorkName, actions 
         </div>
         <div className="patient-profile-info">
           <div className="patient-detail-title-row">
-            <h1>{patient.nombre} {patient.apellido}</h1>
+            <h1>{patientFullName(patient)}</h1>
             <span className={`turnos-status-pill ${patient.activo ? 'turnos-status-pill--finalizado' : 'turnos-status-pill--cancelado'}`}>
               {patient.activo ? 'Activo' : 'Inactivo'}
             </span>
