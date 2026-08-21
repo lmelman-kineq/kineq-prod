@@ -54,6 +54,15 @@ vi.mock('@vercel/blob', () => ({
   }),
 }))
 
+// El upload real (navegador → Vercel Blob, ver blobStorage.ts →
+// issueClientUploadToken) nunca pasa por esta función Serverless — acá solo
+// hace falta que el servidor pueda emitir un token fake. La "subida" en sí
+// se simula escribiendo directo en fakeBlobStore (ver simulateClientUpload
+// más abajo), como si el navegador ya la hubiera hecho.
+vi.mock('@vercel/blob/client', () => ({
+  generateClientTokenFromReadWriteToken: vi.fn(async ({ pathname }: { pathname: string }) => `fake-client-token-for-${pathname}`),
+}))
+
 const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const PASSWORD = 'Password123'
 
@@ -66,6 +75,51 @@ function cookieFrom(res: request.Response): string {
   const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie
   if (!cookie) throw new Error('login sin cookie de sesión')
   return cookie.split(';')[0]
+}
+
+type FakeFile = { filename: string; contentType: string; buffer: Buffer }
+
+// Simula el flujo real de 3 pasos (upload-token → subida directa del
+// navegador a Blob → confirm) para un archivo único (foto/estudio) — la
+// "subida directa" se simula escribiendo el buffer en fakeBlobStore con el
+// pathname que devolvió el token, ya que ese paso corre en el navegador y
+// nunca pasa por este backend. Si el paso de token falla (400/403/404),
+// devuelve esa respuesta tal cual — mismo criterio que un `POST` único de
+// antes, para minimizar el cambio en las aserciones de los tests.
+async function simulateClientUpload(cookie: string, basePath: string, file: FakeFile): Promise<request.Response> {
+  const tokenRes = await request(app)
+    .post(`${basePath}/upload-token`)
+    .set('Cookie', cookie)
+    .send({ nombreOriginal: file.filename, mimeType: file.contentType, sizeBytes: file.buffer.length })
+  if (tokenRes.status !== 200) return tokenRes
+
+  const { pathname } = tokenRes.body
+  fakeBlobStore.set(pathname, file.buffer)
+
+  return request(app)
+    .post(`${basePath}/confirm`)
+    .set('Cookie', cookie)
+    .send({ pathname, nombreOriginal: file.filename, mimeType: file.contentType, sizeBytes: file.buffer.length })
+}
+
+// Mismo patrón que simulateClientUpload, para el caso de varias imágenes de
+// Evolución en una sola operación (upload-tokens plural + confirm con items).
+async function simulateEvolucionImagenesUpload(cookie: string, evolucionId: number, files: FakeFile[]): Promise<request.Response> {
+  const tokenRes = await request(app)
+    .post(`/api/evoluciones/${evolucionId}/imagenes/upload-tokens`)
+    .set('Cookie', cookie)
+    .send({ files: files.map((f) => ({ nombreOriginal: f.filename, mimeType: f.contentType, sizeBytes: f.buffer.length })) })
+  if (tokenRes.status !== 200) return tokenRes
+
+  const items = (tokenRes.body.items as Array<{ token: string; pathname: string }>).map((item, i) => {
+    fakeBlobStore.set(item.pathname, files[i].buffer)
+    return { pathname: item.pathname, nombreOriginal: files[i].filename, mimeType: files[i].contentType, sizeBytes: files[i].buffer.length }
+  })
+
+  return request(app)
+    .post(`/api/evoluciones/${evolucionId}/imagenes/confirm`)
+    .set('Cookie', cookie)
+    .send({ items })
 }
 
 describe('registro público', () => {
@@ -594,7 +648,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
   })
 
   describe('evoluciones: imágenes', () => {
-    const fakeImage = () => Buffer.from('fake-image-bytes')
+    const fakeImage = (): FakeFile => ({ filename: 'foto.jpg', contentType: 'image/jpeg', buffer: Buffer.from('fake-image-bytes') })
 
     it('profesional sube una imagen a su propia evolución', async () => {
       const created = await request(app)
@@ -603,10 +657,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
         .send({ pacienteId: pacienteAId, contenido: 'con imagen' })
       expect(created.status).toBe(201)
 
-      const res = await request(app)
-        .post(`/api/evoluciones/${created.body.id}/imagenes`)
-        .set('Cookie', cookies.profesionalA)
-        .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
+      const res = await simulateEvolucionImagenesUpload(cookies.profesionalA, created.body.id, [fakeImage()])
       expect(res.status).toBe(201)
       expect(res.body).toHaveLength(1)
       // Nunca la URL cruda de Vercel Blob (privado) — solo la ruta propia
@@ -624,7 +675,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
       const contenido = await request(app).get(res.body[0].url).set('Cookie', cookies.profesionalA)
       expect(contenido.status).toBe(200)
       expect(contenido.headers['content-type']).toContain('image/jpeg')
-      expect(contenido.body.equals(fakeImage())).toBe(true)
+      expect(contenido.body.equals(fakeImage().buffer)).toBe(true)
 
       await prisma.evolucion.delete({ where: { id: created.body.id } })
     })
@@ -636,10 +687,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
         .send({ pacienteId: pacienteAId, contenido: 'con imagen privada' })
       expect(created.status).toBe(201)
 
-      const uploaded = await request(app)
-        .post(`/api/evoluciones/${created.body.id}/imagenes`)
-        .set('Cookie', cookies.profesionalA)
-        .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
+      const uploaded = await simulateEvolucionImagenesUpload(cookies.profesionalA, created.body.id, [fakeImage()])
       expect(uploaded.status).toBe(201)
 
       const res = await request(app).get(uploaded.body[0].url).set('Cookie', cookies.adminB)
@@ -655,10 +703,9 @@ describe('auth, roles y aislamiento por consultorio', () => {
         .send({ pacienteId: pacienteAId, contenido: 'con adjunto invalido' })
       expect(created.status).toBe(201)
 
-      const res = await request(app)
-        .post(`/api/evoluciones/${created.body.id}/imagenes`)
-        .set('Cookie', cookies.profesionalA)
-        .attach('imagenes', fakeImage(), { filename: 'doc.pdf', contentType: 'application/pdf' })
+      const res = await simulateEvolucionImagenesUpload(cookies.profesionalA, created.body.id, [
+        { filename: 'doc.pdf', contentType: 'application/pdf', buffer: Buffer.from('fake-image-bytes') },
+      ])
       expect(res.status).toBe(400)
 
       await prisma.evolucion.delete({ where: { id: created.body.id } })
@@ -683,10 +730,9 @@ describe('auth, roles y aislamiento por consultorio', () => {
         })),
       })
 
-      const res = await request(app)
-        .post(`/api/evoluciones/${created.body.id}/imagenes`)
-        .set('Cookie', cookies.profesionalA)
-        .attach('imagenes', fakeImage(), { filename: 'sexta.jpg', contentType: 'image/jpeg' })
+      const res = await simulateEvolucionImagenesUpload(cookies.profesionalA, created.body.id, [
+        { filename: 'sexta.jpg', contentType: 'image/jpeg', buffer: Buffer.from('fake-image-bytes') },
+      ])
       expect(res.status).toBe(400)
 
       await prisma.evolucionImagen.deleteMany({ where: { evolucionId: created.body.id } })
@@ -705,10 +751,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
       // 1:1 con Usuario, así que no se puede crear un segundo vínculo).
       const otroCookie = cookieFrom(await loginRequest(`otro-profesional-${RUN_ID}@test.local`))
 
-      const res = await request(app)
-        .post(`/api/evoluciones/${created.body.id}/imagenes`)
-        .set('Cookie', otroCookie)
-        .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
+      const res = await simulateEvolucionImagenesUpload(otroCookie, created.body.id, [fakeImage()])
       expect(res.status).toBe(403)
 
       await prisma.evolucion.delete({ where: { id: created.body.id } })
@@ -721,10 +764,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
         .send({ pacienteId: pacienteAId, contenido: 'para borrar imagen' })
       expect(created.status).toBe(201)
 
-      const uploaded = await request(app)
-        .post(`/api/evoluciones/${created.body.id}/imagenes`)
-        .set('Cookie', cookies.profesionalA)
-        .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
+      const uploaded = await simulateEvolucionImagenesUpload(cookies.profesionalA, created.body.id, [fakeImage()])
       expect(uploaded.status).toBe(201)
       const imagenId = uploaded.body[0].id
 
@@ -746,10 +786,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
         .send({ pacienteId: pacienteAId, contenido: 'de consultorio A' })
       expect(created.status).toBe(201)
 
-      const res = await request(app)
-        .post(`/api/evoluciones/${created.body.id}/imagenes`)
-        .set('Cookie', cookies.adminB)
-        .attach('imagenes', fakeImage(), { filename: 'foto.jpg', contentType: 'image/jpeg' })
+      const res = await simulateEvolucionImagenesUpload(cookies.adminB, created.body.id, [fakeImage()])
       expect(res.status).toBe(404)
 
       await prisma.evolucion.delete({ where: { id: created.body.id } })
@@ -1036,6 +1073,154 @@ describe('auth, roles y aislamiento por consultorio', () => {
       expect(res.status).toBe(404)
 
       await prisma.grupoEvolucion.delete({ where: { id: grupoDeB.id } })
+    })
+
+    it('un turno marcado esSesionConsulta nunca recibe numeroSesion, ni automático ni explícito', async () => {
+      const grupo = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Consulta ${RUN_ID}`, color: 'var(--appointment-purple)' },
+      })
+
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          inicio: '2026-09-09T14:00:00.000Z', duracionMinutos: 30, grupoId: grupo.id, numeroSesion: 5, esSesionConsulta: true,
+        })
+      expect(res.status).toBe(201)
+      expect(res.body.esSesionConsulta).toBe(true)
+      expect(res.body.numeroSesion).toBeNull()
+
+      await prisma.turno.delete({ where: { id: res.body.id } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
+    })
+
+    it('una sesión de consulta FINALIZADA no cuenta para el número de las demás sesiones del mismo diagnóstico', async () => {
+      const grupo = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Consulta cuenta ${RUN_ID}`, color: 'var(--appointment-sky)' },
+      })
+      const consulta = await prisma.turno.create({
+        data: {
+          consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          grupoId: grupo.id, inicio: new Date('2026-09-10T14:00:00.000Z'), duracionMinutos: 30, estado: 'FINALIZADO', esSesionConsulta: true,
+        },
+      })
+
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          inicio: '2026-09-11T14:00:00.000Z', duracionMinutos: 30, grupoId: grupo.id,
+        })
+      expect(res.status).toBe(201)
+      expect(res.body.numeroSesion).toBe(1)
+
+      await prisma.turno.deleteMany({ where: { id: { in: [consulta.id, res.body.id] } } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
+    })
+
+    it('marcar esSesionConsulta al editar un turno limpia el numeroSesion que ya tenía', async () => {
+      const grupo = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Editar a consulta ${RUN_ID}`, color: 'var(--appointment-teal)' },
+      })
+      const turno = await prisma.turno.create({
+        data: {
+          consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          grupoId: grupo.id, inicio: new Date('2026-09-12T14:00:00.000Z'), duracionMinutos: 30, numeroSesion: 3,
+        },
+      })
+
+      const patch = await request(app)
+        .patch(`/api/turnos/${turno.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ esSesionConsulta: true })
+      expect(patch.status).toBe(200)
+      expect(patch.body.esSesionConsulta).toBe(true)
+      expect(patch.body.numeroSesion).toBeNull()
+
+      await prisma.turno.delete({ where: { id: turno.id } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
+    })
+
+    it('el auto-cálculo de numeroSesion no depende de cantidadSesionesPlanificadas (funciona aunque el diagnóstico no la tenga configurada)', async () => {
+      const grupo = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Sin plan ${RUN_ID}`, color: 'var(--appointment-pink)' },
+      })
+      expect(grupo.cantidadSesionesPlanificadas).toBeNull()
+
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          inicio: '2026-09-13T14:00:00.000Z', duracionMinutos: 30, grupoId: grupo.id,
+        })
+      expect(res.status).toBe(201)
+      expect(res.body.numeroSesion).toBe(1)
+
+      await prisma.turno.delete({ where: { id: res.body.id } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
+    })
+  })
+
+  describe('Turno: monto', () => {
+    it('crea un turno con monto y lo devuelve tal cual', async () => {
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          inicio: '2026-09-14T14:00:00.000Z', duracionMinutos: 30, monto: 1500.5,
+        })
+      expect(res.status).toBe(201)
+      expect(res.body.monto).toBe(1500.5)
+
+      await prisma.turno.delete({ where: { id: res.body.id } })
+    })
+
+    it('monto es opcional — un turno sin monto sigue funcionando igual', async () => {
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          inicio: '2026-09-15T14:00:00.000Z', duracionMinutos: 30,
+        })
+      expect(res.status).toBe(201)
+      expect(res.body.monto).toBeNull()
+
+      await prisma.turno.delete({ where: { id: res.body.id } })
+    })
+
+    it('rechaza un monto negativo, tanto al crear como al editar', async () => {
+      const crear = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({
+          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
+          inicio: '2026-09-16T14:00:00.000Z', duracionMinutos: 30, monto: -5,
+        })
+      expect(crear.status).toBe(400)
+
+      const turno = await prisma.turno.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: profesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-09-17T14:00:00.000Z'), duracionMinutos: 30 },
+      })
+      const editar = await request(app).patch(`/api/turnos/${turno.id}`).set('Cookie', cookies.adminA).send({ monto: -1 })
+      expect(editar.status).toBe(400)
+
+      await prisma.turno.delete({ where: { id: turno.id } })
+    })
+
+    it('permite editar el monto de un turno existente', async () => {
+      const turno = await prisma.turno.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: profesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-09-18T14:00:00.000Z'), duracionMinutos: 30, monto: 1000 },
+      })
+      const res = await request(app).patch(`/api/turnos/${turno.id}`).set('Cookie', cookies.adminA).send({ monto: 2500.75 })
+      expect(res.status).toBe(200)
+      expect(res.body.monto).toBe(2500.75)
+
+      await prisma.turno.delete({ where: { id: turno.id } })
     })
   })
 
@@ -1864,6 +2049,20 @@ describe('auth, roles y aislamiento por consultorio', () => {
 
       await prisma.turno.delete({ where: { id: turno.id } })
     })
+
+    it('un turno finalizado/cancelado/ausente sigue editable en campos que no son estado', async () => {
+      for (const estado of ['FINALIZADO', 'CANCELADO', 'AUSENTE'] as const) {
+        const turno = await prisma.turno.create({
+          data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: profesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-08-01T18:00:00.000Z'), duracionMinutos: 60, estado },
+        })
+
+        const res = await request(app).patch(`/api/turnos/${turno.id}`).set('Cookie', cookies.adminA).send({ notas: `editado en estado ${estado}` })
+        expect(res.status).toBe(200)
+        expect(res.body.notas).toBe(`editado en estado ${estado}`)
+
+        await prisma.turno.delete({ where: { id: turno.id } })
+      }
+    })
   })
 
   it('se puede crear una evolución asociada a un turno', async () => {
@@ -1976,7 +2175,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
   })
 
   describe('estudios: archivo adjunto', () => {
-    const fakeFile = () => Buffer.from('fake-pdf-bytes')
+    const fakeFile = (): FakeFile => ({ filename: 'rx.pdf', contentType: 'application/pdf', buffer: Buffer.from('fake-pdf-bytes') })
 
     async function crearEstudio() {
       const res = await request(app)
@@ -1990,10 +2189,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
     it('sube un archivo, sirve el contenido y no expone archivoPathname', async () => {
       const estudioId = await crearEstudio()
 
-      const res = await request(app)
-        .post(`/api/ficha-estudios/${estudioId}/archivo`)
-        .set('Cookie', cookies.profesionalA)
-        .attach('archivo', fakeFile(), { filename: 'rx.pdf', contentType: 'application/pdf' })
+      const res = await simulateClientUpload(cookies.profesionalA, `/api/ficha-estudios/${estudioId}/archivo`, fakeFile())
       expect(res.status).toBe(201)
       expect(res.body.archivoUrl).toBe(`/api/ficha-estudios/${estudioId}/archivo/contenido`)
       expect(res.body).not.toHaveProperty('archivoPathname')
@@ -2001,7 +2197,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
       const contenido = await request(app).get(res.body.archivoUrl).set('Cookie', cookies.adminA)
       expect(contenido.status).toBe(200)
       expect(contenido.headers['content-type']).toContain('application/pdf')
-      expect(contenido.body.equals(fakeFile())).toBe(true)
+      expect(contenido.body.equals(fakeFile().buffer)).toBe(true)
 
       const ficha = await request(app).get(`/api/pacientes/${pacienteAId}/ficha-inicial`).set('Cookie', cookies.adminA)
       const estudioEnFicha = ficha.body.estudios.find((e: any) => e.id === estudioId)
@@ -2014,10 +2210,9 @@ describe('auth, roles y aislamiento por consultorio', () => {
     it('rechaza un formato no permitido (400)', async () => {
       const estudioId = await crearEstudio()
 
-      const res = await request(app)
-        .post(`/api/ficha-estudios/${estudioId}/archivo`)
-        .set('Cookie', cookies.profesionalA)
-        .attach('archivo', fakeFile(), { filename: 'nota.txt', contentType: 'text/plain' })
+      const res = await simulateClientUpload(cookies.profesionalA, `/api/ficha-estudios/${estudioId}/archivo`, {
+        filename: 'nota.txt', contentType: 'text/plain', buffer: Buffer.from('fake-pdf-bytes'),
+      })
       expect(res.status).toBe(400)
 
       await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
@@ -2026,10 +2221,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
     it('un usuario sin profesional vinculado no puede subir el archivo', async () => {
       const estudioId = await crearEstudio()
 
-      const res = await request(app)
-        .post(`/api/ficha-estudios/${estudioId}/archivo`)
-        .set('Cookie', cookies.profesionalSinVinculo)
-        .attach('archivo', fakeFile(), { filename: 'rx.pdf', contentType: 'application/pdf' })
+      const res = await simulateClientUpload(cookies.profesionalSinVinculo, `/api/ficha-estudios/${estudioId}/archivo`, fakeFile())
       expect(res.status).toBe(403)
 
       await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
@@ -2038,16 +2230,10 @@ describe('auth, roles y aislamiento por consultorio', () => {
     it('no se puede subir ni ver el archivo de un estudio de otro consultorio', async () => {
       const estudioId = await crearEstudio()
 
-      const subida = await request(app)
-        .post(`/api/ficha-estudios/${estudioId}/archivo`)
-        .set('Cookie', cookies.adminB)
-        .attach('archivo', fakeFile(), { filename: 'rx.pdf', contentType: 'application/pdf' })
+      const subida = await simulateClientUpload(cookies.adminB, `/api/ficha-estudios/${estudioId}/archivo`, fakeFile())
       expect(subida.status).toBe(404)
 
-      await request(app)
-        .post(`/api/ficha-estudios/${estudioId}/archivo`)
-        .set('Cookie', cookies.profesionalA)
-        .attach('archivo', fakeFile(), { filename: 'rx.pdf', contentType: 'application/pdf' })
+      await simulateClientUpload(cookies.profesionalA, `/api/ficha-estudios/${estudioId}/archivo`, fakeFile())
 
       const lectura = await request(app).get(`/api/ficha-estudios/${estudioId}/archivo/contenido`).set('Cookie', cookies.adminB)
       expect(lectura.status).toBe(404)
@@ -2058,16 +2244,14 @@ describe('auth, roles y aislamiento por consultorio', () => {
     it('reemplaza el archivo existente y lo elimina', async () => {
       const estudioId = await crearEstudio()
 
-      const primero = await request(app)
-        .post(`/api/ficha-estudios/${estudioId}/archivo`)
-        .set('Cookie', cookies.profesionalA)
-        .attach('archivo', fakeFile(), { filename: 'v1.pdf', contentType: 'application/pdf' })
+      const primero = await simulateClientUpload(cookies.profesionalA, `/api/ficha-estudios/${estudioId}/archivo`, {
+        filename: 'v1.pdf', contentType: 'application/pdf', buffer: Buffer.from('fake-pdf-bytes'),
+      })
       expect(primero.status).toBe(201)
 
-      const segundo = await request(app)
-        .post(`/api/ficha-estudios/${estudioId}/archivo`)
-        .set('Cookie', cookies.profesionalA)
-        .attach('archivo', Buffer.from('otro contenido'), { filename: 'v2.pdf', contentType: 'application/pdf' })
+      const segundo = await simulateClientUpload(cookies.profesionalA, `/api/ficha-estudios/${estudioId}/archivo`, {
+        filename: 'v2.pdf', contentType: 'application/pdf', buffer: Buffer.from('otro contenido'),
+      })
       expect(segundo.status).toBe(201)
 
       const del = await request(app).delete(`/api/ficha-estudios/${estudioId}/archivo`).set('Cookie', cookies.profesionalA)
@@ -2363,6 +2547,26 @@ describe('auth, roles y aislamiento por consultorio', () => {
 
       await prisma.profesional.delete({ where: { id: res.body.id } })
     })
+
+    it('crea un profesional solo con nombre, sin apellido (Nombre completo) — como lo envía ProfesionalFormModal', async () => {
+      const res = await request(app)
+        .post('/api/profesionales')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: `Nombre Completo${RUN_ID}`, apellido: '' })
+      expect(res.status).toBe(201)
+      expect(res.body.nombre).toBe(`Nombre Completo${RUN_ID}`)
+      expect(res.body.apellido).toBe('')
+
+      await prisma.profesional.delete({ where: { id: res.body.id } })
+    })
+
+    it('rechaza crear un profesional sin nombre', async () => {
+      const res = await request(app)
+        .post('/api/profesionales')
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: '', apellido: '' })
+      expect(res.status).toBe(400)
+    })
   })
 
   describe('Pacientes: Nombre completo (solo nombre es obligatorio)', () => {
@@ -2467,21 +2671,18 @@ describe('auth, roles y aislamiento por consultorio', () => {
   })
 
   describe('Pacientes: foto', () => {
-    const fakePhoto = () => Buffer.from('fake-avatar-bytes')
+    const fakePhoto = (): FakeFile => ({ filename: 'avatar.png', contentType: 'image/png', buffer: Buffer.from('fake-avatar-bytes') })
 
     it('sube una foto, la sirve y no expone fotoPathname en ningún response de paciente', async () => {
       const creado = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'ConFoto', apellido: '' } })
 
-      const res = await request(app)
-        .post(`/api/pacientes/${creado.id}/foto`)
-        .set('Cookie', cookies.recepcionA)
-        .attach('foto', fakePhoto(), { filename: 'avatar.png', contentType: 'image/png' })
+      const res = await simulateClientUpload(cookies.recepcionA, `/api/pacientes/${creado.id}/foto`, fakePhoto())
       expect(res.status).toBe(201)
       expect(res.body.fotoUrl).toBe(`/api/pacientes/${creado.id}/foto/contenido`)
 
       const contenido = await request(app).get(res.body.fotoUrl).set('Cookie', cookies.profesionalA)
       expect(contenido.status).toBe(200)
-      expect(contenido.body.equals(fakePhoto())).toBe(true)
+      expect(contenido.body.equals(fakePhoto().buffer)).toBe(true)
 
       const get = await request(app).get(`/api/pacientes/${creado.id}`).set('Cookie', cookies.adminA)
       expect(get.body.fotoUrl).toBe(`/api/pacientes/${creado.id}/foto/contenido`)
@@ -2494,10 +2695,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
     it('no se puede subir ni ver la foto de un paciente de otro consultorio', async () => {
       const creado = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'Aislado', apellido: '' } })
 
-      const subida = await request(app)
-        .post(`/api/pacientes/${creado.id}/foto`)
-        .set('Cookie', cookies.adminB)
-        .attach('foto', fakePhoto(), { filename: 'avatar.png', contentType: 'image/png' })
+      const subida = await simulateClientUpload(cookies.adminB, `/api/pacientes/${creado.id}/foto`, fakePhoto())
       expect(subida.status).toBe(404)
 
       const lectura = await request(app).get(`/api/pacientes/${creado.id}/foto/contenido`).set('Cookie', cookies.adminB)
@@ -2520,10 +2718,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
 
     it('elimina la foto', async () => {
       const creado = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'ParaBorrar', apellido: '' } })
-      await request(app)
-        .post(`/api/pacientes/${creado.id}/foto`)
-        .set('Cookie', cookies.adminA)
-        .attach('foto', fakePhoto(), { filename: 'avatar.png', contentType: 'image/png' })
+      await simulateClientUpload(cookies.adminA, `/api/pacientes/${creado.id}/foto`, fakePhoto())
 
       const del = await request(app).delete(`/api/pacientes/${creado.id}/foto`).set('Cookie', cookies.adminA)
       expect(del.status).toBe(204)
@@ -2536,19 +2731,16 @@ describe('auth, roles y aislamiento por consultorio', () => {
   })
 
   describe('Usuario: foto de perfil (propia)', () => {
-    const fakePhoto = () => Buffer.from('fake-user-avatar-bytes')
+    const fakePhoto = (): FakeFile => ({ filename: 'yo.png', contentType: 'image/png', buffer: Buffer.from('fake-user-avatar-bytes') })
 
     it('sube su propia foto, la sirve, y GET /auth/me la refleja sin exponer fotoPathname', async () => {
-      const res = await request(app)
-        .post('/api/usuarios/me/foto')
-        .set('Cookie', cookies.profesionalA)
-        .attach('foto', fakePhoto(), { filename: 'yo.png', contentType: 'image/png' })
+      const res = await simulateClientUpload(cookies.profesionalA, '/api/usuarios/me/foto', fakePhoto())
       expect(res.status).toBe(201)
       expect(res.body.fotoUrl).toBe('/api/usuarios/me/foto/contenido')
 
       const contenido = await request(app).get('/api/usuarios/me/foto/contenido').set('Cookie', cookies.profesionalA)
       expect(contenido.status).toBe(200)
-      expect(contenido.body.equals(fakePhoto())).toBe(true)
+      expect(contenido.body.equals(fakePhoto().buffer)).toBe(true)
 
       const me = await request(app).get('/auth/me').set('Cookie', cookies.profesionalA)
       expect(me.body.fotoUrl).toBe('/api/usuarios/me/foto/contenido')
@@ -2558,10 +2750,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
     })
 
     it('la ruta "me" nunca expone la foto de otro usuario', async () => {
-      await request(app)
-        .post('/api/usuarios/me/foto')
-        .set('Cookie', cookies.profesionalA)
-        .attach('foto', fakePhoto(), { filename: 'yo.png', contentType: 'image/png' })
+      await simulateClientUpload(cookies.profesionalA, '/api/usuarios/me/foto', fakePhoto())
 
       // adminA (usuario distinto, sin foto propia todavía) pide "su" foto —
       // por diseño la ruta no acepta un id, así que jamás puede terminar
@@ -2573,10 +2762,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
     })
 
     it('elimina su propia foto', async () => {
-      await request(app)
-        .post('/api/usuarios/me/foto')
-        .set('Cookie', cookies.recepcionA)
-        .attach('foto', fakePhoto(), { filename: 'yo.png', contentType: 'image/png' })
+      await simulateClientUpload(cookies.recepcionA, '/api/usuarios/me/foto', fakePhoto())
 
       const del = await request(app).delete('/api/usuarios/me/foto').set('Cookie', cookies.recepcionA)
       expect(del.status).toBe(204)

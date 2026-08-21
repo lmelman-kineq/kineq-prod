@@ -27,6 +27,8 @@ export type TurnosPageItem = {
   specialtyName?: string
   socialWorkDisplay?: string | null
   sessionNumber?: number
+  esSesionConsulta?: boolean
+  monto?: number | null
   grupoId?: number | null
   status: TurnoStatus
   startAttention?: string | null
@@ -108,6 +110,8 @@ function mapApiTurno(
     specialtyName: turno.especialidad.nombre,
     socialWorkDisplay: patientSocialWork,
     sessionNumber: turno.numeroSesion ?? undefined,
+    esSesionConsulta: turno.esSesionConsulta ?? false,
+    monto: turno.monto ?? null,
     grupoId: turno.grupoId ?? null,
     status: mapEstadoToStatus(turno.estado),
     startAttention: turno.inicioAtencion ?? null,

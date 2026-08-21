@@ -26,7 +26,6 @@ import { useAuth } from './auth/AuthContext'
 import LoginPage from './auth/LoginPage'
 import RegisterPage from './auth/RegisterPage'
 import KineqIsologo from './assets/branding/KineqIsologo'
-import KineqIsologotipo from './assets/branding/KineqIsologotipo'
 import BootScreen from './components/BootScreen'
 import { useBootPhase } from './components/useBootPhase'
 import { WAITING_ALERT_MINUTES, formatMinutesAgo, getElapsedMinutes } from './utils/turnoTimers'
@@ -35,7 +34,7 @@ import { getSpecialtyColor, SPECIALTY_COLOR_TOKENS } from './utils/specialtyColo
 import { layoutTurnos } from './utils/turnoLayout'
 import { patientFullName } from './utils/patient'
 import { professionalName } from './utils/professional'
-import { utcIsoToZonedParts, todayInTimeZone } from './utils/timezone'
+import { utcIsoToZonedParts, todayInTimeZone, todayDateInTimeZone } from './utils/timezone'
 
 export type Turno = TurnosPageItem & {
   socialWorkId?: number | null
@@ -234,7 +233,10 @@ function getMonthDays(date: Date) {
   const month = date.getMonth()
   const firstDay = new Date(year, month, 1)
   const totalDays = new Date(year, month + 1, 0).getDate()
-  const startWeekday = firstDay.getDay()
+  // getDay() es domingo-primero (0=Dom..6=Sáb); la fila de encabezado es
+  // lunes-primero (L,M,M,J,V,S,D), así que hay que correr el offset para
+  // que el primer día caiga en la columna correcta.
+  const startWeekday = (firstDay.getDay() + 6) % 7
   const days: Array<number | null> = []
 
   for (let i = 0; i < startWeekday; i += 1) {
@@ -277,6 +279,21 @@ function Dashboard() {
   const { user, logout, refreshUser } = useAuth()
   const [activePage, setActivePage] = useState<AppPage>('home')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  // Sidebar comprimida a solo íconos (desktop): en vez de tooltips CSS
+  // puros (`::after` con `content: attr(...)`), que quedarían recortados
+  // por el `overflow-y: auto` de `.sidebar` (ver comentario en App.css —
+  // fijar solo un eje a un valor no-visible hace que el otro eje compute a
+  // `auto` también, aunque nunca se haya declarado explícito), se computa
+  // la posición con `getBoundingClientRect` sobre el elemento en hover/foco
+  // y se renderiza un único tooltip `position: fixed` — mismo patrón ya
+  // usado en la app para dropdowns/menús contextuales, así que escapa de
+  // cualquier ancestro con overflow recortado sin tocar ese overflow.
+  const [sidebarTooltip, setSidebarTooltip] = useState<{ label: string; top: number; left: number } | null>(null)
+  const showSidebarTooltip = (label: string) => (event: { currentTarget: HTMLElement }) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setSidebarTooltip({ label, top: rect.top + rect.height / 2, left: rect.right + 12 })
+  }
+  const hideSidebarTooltip = () => setSidebarTooltip(null)
   const [profilePhotoInfoOpen, setProfilePhotoInfoOpen] = useState(false)
   const [profilePhotoUploading, setProfilePhotoUploading] = useState(false)
   const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null)
@@ -294,7 +311,13 @@ function Dashboard() {
   // Turnos devolviera a Inicio en lugar de a Turnos.
   const [attentionReturnPage, setAttentionReturnPage] = useState<AppPage>('home')
   const [selectedTurnoId, setSelectedTurnoId] = useState<number>(0)
-  const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date())
+  // Ancla el mes/año inicial del mini calendario a la zona horaria del
+  // consultorio (no `new Date()` crudo, que es hora del navegador) — si no,
+  // la grilla se arma en un marco horario (local) y la comparación de "hoy"
+  // más abajo (`todayEnZonaConsultorio`, siempre en la zona del consultorio)
+  // en otro, y el día resaltado puede quedar corrido cuando el navegador y
+  // el consultorio están en zonas distintas. Mismo criterio que `selectedDate`.
+  const [currentMonthDate, setCurrentMonthDate] = useState<Date>(() => todayDateInTimeZone(api.getConsultorioTimeZone()))
   // "Hoy" en la zona horaria del consultorio, no la del navegador — antes
   // de que cargue el consultorio real, api.getConsultorioTimeZone() ya
   // devuelve el default (Buenos Aires), razonable para el primer render.
@@ -349,6 +372,8 @@ function Dashboard() {
     professionalId: null,
     specialtyId: 0,
     sessionNumber: 1,
+    esSesionConsulta: false,
+    monto: '',
     grupoId: null,
     status: 'Asignado',
     duration: 60,
@@ -414,6 +439,8 @@ function Dashboard() {
       socialWorkId: t.obraSocial?.id ?? null,
       socialWorkDisplay: t.paciente.obraSocial?.nombre ?? patientSocialWorkById[t.paciente.id] ?? t.obraSocial?.nombre ?? null,
       sessionNumber: t.numeroSesion ?? undefined,
+      esSesionConsulta: t.esSesionConsulta ?? false,
+      monto: t.monto ?? null,
       grupoId: t.grupoId ?? null,
       notes: t.notas ?? undefined,
       status: mapEstadoToStatus(t.estado),
@@ -431,6 +458,8 @@ function Dashboard() {
       professionalId: turno.professionalId ?? null,
       specialtyId: turno.specialtyId ?? 0,
       sessionNumber: turno.sessionNumber ?? 1,
+      esSesionConsulta: turno.esSesionConsulta ?? false,
+      monto: turno.monto != null ? String(turno.monto) : '',
       grupoId: turno.grupoId ?? null,
       status: turno.status,
       duration: turno.duration,
@@ -761,6 +790,8 @@ function Dashboard() {
       professionalId: user?.rol === 'PROFESIONAL' ? user.profesionalId ?? null : null,
       specialtyId: specialtiesState[0]?.id ?? 0,
       sessionNumber: 1,
+      esSesionConsulta: false,
+      monto: '',
       grupoId: null,
       status: 'Asignado',
       duration: 60,
@@ -903,6 +934,8 @@ function Dashboard() {
         time: newTurnoForm.time,
         duracionMinutos: newTurnoForm.duration,
         numeroSesion: newTurnoForm.sessionNumber,
+        esSesionConsulta: newTurnoForm.esSesionConsulta,
+        monto: newTurnoForm.monto.trim() ? Number(newTurnoForm.monto) : null,
         grupoId: newTurnoForm.grupoId,
         estado: mapUiStatusToApi(newTurnoForm.status),
       })
@@ -1155,6 +1188,8 @@ function Dashboard() {
         time: editingTurnoForm.time,
         duracionMinutos: editingTurnoForm.duration,
         numeroSesion: editingTurnoForm.sessionNumber,
+        esSesionConsulta: editingTurnoForm.esSesionConsulta,
+        monto: editingTurnoForm.monto.trim() ? Number(editingTurnoForm.monto) : null,
         grupoId: editingTurnoForm.grupoId,
         estado: mapUiStatusToApi(editingTurnoForm.status),
       })
@@ -1456,11 +1491,20 @@ function Dashboard() {
             }
           }}
         >
-          <KineqIsologotipo />
+          <KineqIsologo />
         </div>
 
         <div className="sidebar-brand">
-          <div className="avatar-wrapper" ref={avatarWrapperRef}>
+          <div
+            className="avatar-wrapper"
+            ref={avatarWrapperRef}
+            tabIndex={0}
+            aria-label={fullName}
+            onMouseEnter={showSidebarTooltip(fullName)}
+            onMouseLeave={hideSidebarTooltip}
+            onFocus={showSidebarTooltip(fullName)}
+            onBlur={hideSidebarTooltip}
+          >
             {user?.fotoUrl ? (
               <div className="avatar avatar--photo">
                 <AuthorizedImg src={user.fotoUrl} alt="" />
@@ -1508,7 +1552,7 @@ function Dashboard() {
               </div>
             ) : null}
           </div>
-          <div>
+          <div className="sidebar-brand-text">
             <p className="user-role">{roleLabel}</p>
             <strong>{fullName}</strong>
           </div>
@@ -1526,6 +1570,7 @@ function Dashboard() {
             <button
               key={item.label}
               type="button"
+              aria-label={item.label}
               className={`nav-item ${
                 item.page === activePage ||
                 (item.page === 'pacientes' && activePage === 'paciente-detalle')
@@ -1536,11 +1581,15 @@ function Dashboard() {
                 if (item.page) setActivePage(item.page)
                 setMobileMenuOpen(false)
               }}
+              onMouseEnter={showSidebarTooltip(item.label)}
+              onMouseLeave={hideSidebarTooltip}
+              onFocus={showSidebarTooltip(item.label)}
+              onBlur={hideSidebarTooltip}
             >
               <span className="nav-icon" aria-hidden="true">
                 <item.Icon focusable="false" />
               </span>
-              <span>{item.label}</span>
+              <span className="nav-label">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -1551,16 +1600,42 @@ function Dashboard() {
           aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
           aria-pressed={theme === 'dark'}
           onClick={toggleTheme}
+          onMouseEnter={showSidebarTooltip(theme === 'dark' ? 'Modo claro' : 'Modo oscuro')}
+          onMouseLeave={hideSidebarTooltip}
+          onFocus={showSidebarTooltip(theme === 'dark' ? 'Modo claro' : 'Modo oscuro')}
+          onBlur={hideSidebarTooltip}
         >
           <span className="theme-toggle-icon">
             <ThemeIcon theme={theme} />
           </span>
-          <span>{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>
+          <span className="nav-label">{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>
         </button>
 
-        <button type="button" className="secondary-button sidebar-logout" onClick={() => { void logout() }}>
-          Cerrar sesión
+        <button
+          type="button"
+          className="secondary-button sidebar-logout"
+          aria-label="Cerrar sesión"
+          onClick={() => { void logout() }}
+          onMouseEnter={showSidebarTooltip('Cerrar sesión')}
+          onMouseLeave={hideSidebarTooltip}
+          onFocus={showSidebarTooltip('Cerrar sesión')}
+          onBlur={hideSidebarTooltip}
+        >
+          <span className="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <path d="M16 17l5-5-5-5" />
+              <path d="M21 12H9" />
+            </svg>
+          </span>
+          <span className="nav-label">Cerrar sesión</span>
         </button>
+
+        {sidebarTooltip ? (
+          <div className="sidebar-tooltip" style={{ top: sidebarTooltip.top, left: sidebarTooltip.left }}>
+            {sidebarTooltip.label}
+          </div>
+        ) : null}
       </aside>
 
       <main
@@ -1774,13 +1849,13 @@ function Dashboard() {
                       e.preventDefault()
                       e.stopPropagation()
 
-                      // "Ver Historia Clínica" siempre está disponible (solo
-                      // navega, no cambia estado) — el menú ya no se
+                      // "Editar Turno" y "Ver Historia Clínica" siempre están
+                      // disponibles (no cambian estado) — el menú ya no se
                       // suprime solo porque no haya acciones de estado para
                       // este rol/turno.
                       const actions = getTurnoQuickActions(turno)
                       const menuWidth = 190
-                      const menuHeight = (actions.length + 1) * 40 + 12
+                      const menuHeight = (actions.length + 2) * 40 + 12
                       setContextMenu({
                         turnoId: turno.id,
                         x: Math.max(8, Math.min(e.clientX, window.innerWidth - menuWidth - 8)),
@@ -2051,7 +2126,15 @@ function Dashboard() {
 
         {contextMenu ? (() => {
           const menuTurno = turnosState.find((item) => item.id === contextMenu.turnoId)
-          const actions = menuTurno ? getTurnoQuickActions(menuTurno) : []
+          const allActions = menuTurno ? getTurnoQuickActions(menuTurno) : []
+          // Orden fijo pedido para este menú, sin importar el estado: Editar
+          // Turno / [acciones de estado] / Ver Historia Clínica / Eliminar
+          // Turno. "Eliminar" se saca de la lista de acciones de estado acá
+          // para reubicarlo siempre al final — el filtro por rol que ya
+          // aplica getTurnoQuickActions (quién ve "eliminar") se respeta
+          // igual, solo cambia dónde se renderiza.
+          const stateActions = allActions.filter((action) => action.key !== 'eliminar')
+          const eliminarAction = allActions.find((action) => action.key === 'eliminar')
 
           return (
             <div
@@ -2059,7 +2142,19 @@ function Dashboard() {
               ref={contextMenuRef}
               style={{ top: contextMenu.y, left: contextMenu.x }}
             >
-              {actions.map((action) => (
+              {menuTurno ? (
+                <button
+                  type="button"
+                  className="context-menu-item"
+                  onClick={() => {
+                    setContextMenu(null)
+                    openTurnoDetails(menuTurno)
+                  }}
+                >
+                  Editar Turno
+                </button>
+              ) : null}
+              {stateActions.map((action) => (
                 <button
                   key={action.key}
                   type="button"
@@ -2079,6 +2174,15 @@ function Dashboard() {
                   }}
                 >
                   Ver Historia Clínica
+                </button>
+              ) : null}
+              {eliminarAction ? (
+                <button
+                  type="button"
+                  className={`context-menu-item context-menu-item--${eliminarAction.tone}`}
+                  onClick={eliminarAction.onClick}
+                >
+                  Eliminar Turno
                 </button>
               ) : null}
             </div>
@@ -2126,8 +2230,8 @@ function Dashboard() {
               <button className="small-button" onClick={nextMonth}>&#9654;</button>
           </div>
           <div className="weekdays-row">
-            {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day) => (
-              <div key={day} className="weekday-cell">
+            {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, index) => (
+              <div key={index} className="weekday-cell">
                 {day}
               </div>
             ))}

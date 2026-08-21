@@ -8,6 +8,11 @@ type PatientAppointmentsTableProps = {
   onEditTurno?: (turno: Turno) => void
 }
 
+function formatMonto(monto: number | null | undefined): string {
+  if (monto == null) return '—'
+  return `$${monto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
 export default function PatientAppointmentsTable({ turnos, onEditTurno }: PatientAppointmentsTableProps) {
   if (turnos.length === 0) {
     return (
@@ -29,6 +34,7 @@ export default function PatientAppointmentsTable({ turnos, onEditTurno }: Patien
             <th>Profesional</th>
             <th>Especialidad</th>
             <th>Sesión</th>
+            <th>Monto</th>
             <th>Estado</th>
           </tr>
         </thead>
@@ -59,6 +65,7 @@ export default function PatientAppointmentsTable({ turnos, onEditTurno }: Patien
                 </span>
               </td>
               <td data-label="Sesión">{turno.numeroSesion ?? '—'}</td>
+              <td data-label="Monto">{formatMonto(turno.monto)}</td>
               <td data-label="Estado">
                 <span className={`turnos-status-pill turnos-status-pill--${statusClass(mapEstadoToStatus(turno.estado))}`}>
                   {mapEstadoToStatus(turno.estado)}

@@ -102,3 +102,18 @@ export function utcIsoToZonedParts(isoString: string, timeZone: string): { date:
 export function todayInTimeZone(timeZone: string): string {
   return utcIsoToZonedParts(new Date().toISOString(), timeZone).date
 }
+
+/**
+ * "Hoy" como objeto `Date` local, construido a partir del día/mes/año de
+ * `timeZone` (no de la hora del navegador). Pensado para sembrar estado que
+ * arma una grilla de calendario en términos de mes/año (ej. el mini
+ * calendario de Home) — la grilla en sí puede seguir usando getters locales
+ * sin problema, siempre que el mes/año de partida ya esté anclado a la zona
+ * correcta; lo contrario (grilla en hora local, comparación de "hoy" en la
+ * zona del consultorio) es justamente el bug que esto corrige: compara dos
+ * marcos horarios distintos y puede resaltar el día equivocado.
+ */
+export function todayDateInTimeZone(timeZone: string): Date {
+  const [year, month, day] = todayInTimeZone(timeZone).split('-').map(Number)
+  return new Date(year, month - 1, day)
+}

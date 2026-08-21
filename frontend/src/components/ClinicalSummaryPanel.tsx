@@ -39,8 +39,9 @@ export default function ClinicalSummaryPanel({
   if (loading) return <p>Cargando resumen clínico...</p>
 
   const completionStatus = computeFichaCompletionStatus(fichaForm)
-  // Misma fuente de verdad que la card "Alertas clínicas" (PatientSummaryCards)
-  // y su popup de detalle (ClinicalAlertsDetail) — antes este panel tenía su
+  // Misma fuente de verdad que PatientAlertsBadge (el indicador compacto del
+  // header del paciente) y su popup de detalle (ClinicalAlertsDetail) —
+  // antes este panel tenía su
   // propio cálculo ad-hoc (solo alergias + "algún antecedente positivo", sin
   // contemplar medicación/otras alertas manuales, y contando cualquier
   // antecedente positivo como alerta aunque no estuviera marcado como tal)
@@ -68,14 +69,23 @@ export default function ClinicalSummaryPanel({
         ) : null}
       </div>
 
-      <div className="patient-info-field">
+      <div className="patient-info-field clinical-summary-antecedentes">
         <p className="details-label">Antecedentes</p>
         <AntecedentesSummaryGroups groups={antecedentesGroups} seccionRevisada={antecedentesRevisado} />
       </div>
 
-      <InfoField label="Estado de ficha inicial" value={FICHA_COMPLETION_LABELS[completionStatus]} />
-      <InfoField label="Última evolución" value={lastEvolucionDate ? formatDateTime(lastEvolucionDate) : 'Sin evoluciones'} />
-      <InfoField label="Próximo turno" value={nextTurnoDate ? formatDateTime(nextTurnoDate) : 'Sin turnos próximos'} />
+      {/* Grid propio de 2 columnas, separado del resto (alertas/antecedentes/
+          link, que ocupan el ancho completo arriba/abajo) — mezclar ítems de
+          ancho completo con ítems de a-dos en un mismo grid implícito
+          depende de cuántos ítems haya y en qué orden, lo que puede
+          "desacomodar" cuál campo queda solo en su fila. Con un grid propio
+          solo para estos 3 campos, el acomodo de a-dos es siempre
+          predecible sin importar el resto del panel. */}
+      <div className="clinical-summary-fields">
+        <InfoField label="Estado de ficha inicial" value={FICHA_COMPLETION_LABELS[completionStatus]} />
+        <InfoField label="Última evolución" value={lastEvolucionDate ? formatDateTime(lastEvolucionDate) : 'Sin evoluciones'} />
+        <InfoField label="Próximo turno" value={nextTurnoDate ? formatDateTime(nextTurnoDate) : 'Sin turnos próximos'} />
+      </div>
 
       <button type="button" className="clinical-summary-link" onClick={onGoToFicha}>
         Ir a ficha inicial →

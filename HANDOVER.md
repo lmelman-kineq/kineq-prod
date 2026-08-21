@@ -1366,3 +1366,118 @@ rondas anteriores) — no se instaló Playwright ni se probaron los 6
 breakpoints pedidos (1920×1080 a 390×844) ni el click-through completo de
 ninguno de los seis puntos de arriba. Esto queda como el gap más grande
 de la ronda — ver "Known gaps" en `docs/tasks.md`.
+
+---
+
+## Sesión: scroll del editor, menú de Home, sesión de consulta, mini calendario, diagnóstico de uploads, layout del Paciente
+
+Ronda de doce partes sobre la ronda anterior. Una migración nueva y aditiva:
+`20260821100057_turno_es_sesion_consulta`.
+
+**1) Scroll del editor de Evolución (bug real)**: `RichTextEditor.tsx`
+reasignaba `el.innerHTML` en cada tecla cuando DOMPurify normalizaba algo
+(frecuente) — eso le hace perder el cursor al navegador y salta el scroll.
+Ya no reescribe el DOM mientras se tipea; pegar contenido externo ahora
+siempre entra como texto plano.
+
+**2) Menú de Home**: orden fijo Editar Turno → acciones de estado → Ver
+Historia Clínica → Eliminar Turno, sin importar el estado. Se preguntó al
+usuario antes de tocar esto, porque la primera lectura del pedido hubiera
+significado sacar las acciones rápidas de estado del menú — la respuesta
+fue mantenerlas y solo agregar "Editar Turno" fijo al principio.
+
+**3) "Última atención"**: ya calculaba bien (solo `FINALIZADO`) — verificado,
+no era un bug. Extraído a función pura testeada.
+
+**4) Catálogo de Antecedentes**: nueva fila "+ Agregar antecedente" al
+final del catálogo completo, mismo endpoint que ya usaba el buscador rápido.
+
+**5) Numeración automática de sesiones (bug real)**: el backend siempre
+calculó bien el número automático; el frontend solo lo pedía si el
+diagnóstico tenía `cantidadSesionesPlanificadas` — para cualquier otro, el
+default `1` se mandaba como valor explícito y ganaba para siempre.
+Corregido: el auto-fetch dispara para cualquier diagnóstico. Nuevo
+`Turno.esSesionConsulta` + checkbox "Sesión de consulta": nunca tiene
+`numeroSesion`, no cuenta para las demás sesiones del mismo diagnóstico.
+
+**6) Mini calendario de Home (bug real, no un parche superficial)**: el
+"hoy" resaltado ya se calculaba en la zona del consultorio, pero la grilla
+de días se armaba con `new Date()` de hora del navegador — dos marcos
+horarios distintos en la misma comparación. Nuevo `todayDateInTimeZone()`
+ancla ambos lados a la misma zona.
+
+**7) Upload de archivos — diagnóstico completo**: auditoría de punta a
+punta, sin bugs de código encontrados en las 4 superficies. Confirmado (con
+una reproducción real del error) que `BLOB_READ_WRITE_TOKEN` sigue sin
+configurar en ningún ambiente. **Hallazgo nuevo**: sin `vercel.json`, el
+deploy corre con el límite de ~4.5MB de body de Vercel Serverless
+Functions — bastante menor que los límites propios de la app (hasta 50MB
+por request de Evolución, 15MB Estudio, 5MB foto). No corregido a
+propósito: la solución real es upload directo cliente→Blob
+(`@vercel/blob/client`), un cambio de arquitectura que no se implementó a
+ciegas sin poder probarlo contra Vercel real. Detalle completo en
+`docs/architecture.md`.
+
+**8) Cualquier turno editable sin importar el estado**: ya era así —
+verificado y agregado un test explícito.
+
+**9) Reorganización de la pantalla del Paciente**: se sacó la card lateral
+de "Resumen clínico" — la card principal ocupa todo el ancho, y ese mismo
+panel pasó a ser la primera tab (Resumen clínico → Ficha inicial →
+Evoluciones → Turnos → Estudios). Ficha Inicial perdió su propia subpestaña
+"Resumen" (quedaba duplicada) — ahora siempre abre en "Antecedentes".
+
+**10) Dropdown de Diagnóstico**: ya tenía la implementación custom completa
+de una ronda anterior — verificado, sin cambios nuevos necesarios.
+
+**11) Click en Evolución = editar**: mismo handler que el lápiz si el
+usuario puede editar esa evolución.
+
+**12) Alta de Evolución colapsada**: arranca oculta detrás de "+ Cargar
+evolución"; guardar/cancelar la vuelve a ocultar y limpia todo el estado.
+
+**Producción**: dos migraciones aditivas pendientes de Aiven —
+`20260817170811_turno_eliminado_at` (ronda anterior) y
+`20260821100057_turno_es_sesion_consulta` (esta ronda).
+
+Backend 215→220 tests (+5). Frontend 94→99 (+5). `tsc -b`/`build`/`lint`
+limpios en ambos paquetes — único error de lint, el mismo preexistente de
+siempre (`AuthContext.tsx`).
+
+**Sin verificación con navegador real, otra vez** — mismo gap que la ronda
+anterior. Ver "Known gaps" en `docs/tasks.md` para el detalle completo,
+incluido el hallazgo del límite de body de Vercel.
+
+---
+
+## Sesión: Resumen clínico en dos columnas, Motivo eliminado, upload directo cliente→Blob
+
+Tres pedidos puntuales. Sin migraciones nuevas.
+
+**Resumen clínico en dos columnas**: `.clinical-summary` pasó a grid de 2
+columnas; alertas/Antecedentes/el link de ficha ocupan el ancho completo,
+el resto se acomoda de a dos. Colapsa a una columna en mobile.
+
+**"Motivo y contexto" eliminado de la UI**: se sacó la sección completa y
+sus 6 campos de la tab Antecedentes — las columnas de Prisma no se
+tocaron. Se sacaron también de `FICHA_FORM_FIELDS` para que "Ficha
+completa" siga siendo alcanzable (si no, ningún paciente nuevo podría
+llegar nunca a ese estado).
+
+**Upload directo cliente→Blob**: implementado el hallazgo de la ronda
+anterior (límite de ~4.5MB de las funciones Serverless de Vercel). Las 4
+superficies de archivos pasaron de subir por el backend (`multer`/buffer)
+a un flujo de 3 pasos: pedir token acotado → el navegador sube directo a
+Blob → confirmar para guardar la referencia. `multer` se sacó del todo
+(sin uso). **Antes de implementar, se consultó con el usuario un hallazgo
+de seguridad sin verificar**: el tipo del SDK para emitir el token de
+cliente no tiene ningún campo `access` — `private` queda hardcodeado solo
+del lado del código del navegador, sin forma de confirmar desde acá que
+el servidor también lo fuerza (no hay token real para probarlo). El
+usuario decidió avanzar igual, entendiendo que hay que verificarlo apenas
+exista un token real — instrucciones concretas en `docs/architecture.md`.
+
+Backend sigue en 220 tests (12 tests de upload reescritos al flujo nuevo,
+mismos casos cubiertos). Frontend sigue en 98 (los componentes que llaman
+a `api.uploadXxx()` no cambiaron — misma firma de función). `tsc -b`/
+`build`/`lint` limpios en ambos paquetes.

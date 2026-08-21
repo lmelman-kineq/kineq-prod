@@ -243,6 +243,8 @@ exports.TurnoScalarFieldEnum = {
     inicio: 'inicio',
     duracionMinutos: 'duracionMinutos',
     numeroSesion: 'numeroSesion',
+    esSesionConsulta: 'esSesionConsulta',
+    monto: 'monto',
     notas: 'notas',
     estado: 'estado',
     inicioAtencion: 'inicioAtencion',

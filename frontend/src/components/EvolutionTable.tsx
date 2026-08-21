@@ -108,6 +108,15 @@ export default function EvolutionTable({
     onStartEdit(evolucion)
   }
 
+  // Click en la fila entra directo a edición (mismo handler que el lápiz)
+  // cuando el usuario puede editar esa evolución; si no puede, sigue
+  // funcionando como antes (expandir a solo lectura) — nunca deja el click
+  // sin efecto.
+  const handleRowClick = (evolucion: Evolucion) => {
+    if (canEdit(evolucion)) startEdit(evolucion)
+    else toggleExpand(evolucion.id)
+  }
+
   return (
     <div className="turnos-table-scroll">
       <table className="turnos-table evolution-table">
@@ -131,11 +140,11 @@ export default function EvolutionTable({
                 <tr
                   className="evolution-row"
                   tabIndex={0}
-                  onClick={() => toggleExpand(evolucion.id)}
+                  onClick={() => handleRowClick(evolucion)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
-                      toggleExpand(evolucion.id)
+                      handleRowClick(evolucion)
                     }
                   }}
                 >

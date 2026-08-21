@@ -1,42 +1,68 @@
 import { Router } from 'express'
 import prisma from './prisma'
-import { createUploadHandler } from './uploadMiddleware'
-import { uploadToBlob, deleteFromBlob, streamBlobToResponse } from './blobStorage'
+import { issueClientUploadToken, deleteFromBlob, streamBlobToResponse } from './blobStorage'
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
-const uploadHandler = createUploadHandler('foto', {
-  allowedMimeTypes: ALLOWED_MIME_TYPES,
-  maxSizeBytes: MAX_FILE_SIZE_BYTES,
-  maxFiles: 1,
-  formatosLabel: 'imágenes JPG, PNG o WEBP',
-})
-
 const router = Router()
+
+function pathnameFor(consultorioId: number, usuarioId: number, nombreOriginal: string) {
+  return `usuarios/${consultorioId}/${usuarioId}/foto-${nombreOriginal}`
+}
 
 // Foto de perfil: siempre la propia (`req.usuario!.id`), nunca un id
 // recibido del cliente — no existe hoy ninguna ruta de autoedición de
 // Usuario (PATCH /api/usuarios/:id es solo ADMINISTRADOR), así que esta es
 // la única superficie de "edito mis propios datos" y se mantiene acotada a
 // la foto, sin abrir edición de otros campos.
-router.post('/', uploadHandler, async (req, res) => {
+//
+// Upload directo navegador → Vercel Blob (nunca pasa el archivo por esta
+// función): 1) el cliente pide un token acá, 2) sube directo con ese
+// token, 3) confirma con /confirm para que quede guardada la referencia.
+router.post('/upload-token', async (req, res) => {
   const usuarioId = req.usuario!.id
-  const file = req.file as Express.Multer.File | undefined
-  if (!file) return res.status(400).json({ error: 'No se recibió ninguna imagen.' })
+  const { nombreOriginal, mimeType, sizeBytes } = req.body
+  if (!nombreOriginal || !mimeType) return res.status(400).json({ error: 'Faltan datos del archivo.' })
+  if (!ALLOWED_MIME_TYPES.includes(mimeType)) return res.status(400).json({ error: 'Formato no permitido. Solo se aceptan imágenes JPG, PNG o WEBP.' })
+  if (typeof sizeBytes === 'number' && sizeBytes > MAX_FILE_SIZE_BYTES) {
+    return res.status(400).json({ error: `El archivo debe pesar como máximo ${Math.round(MAX_FILE_SIZE_BYTES / (1024 * 1024))}MB.` })
+  }
 
   try {
     const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } })
     if (!usuario) return res.status(404).json({ error: 'usuario not found' })
 
-    const blob = await uploadToBlob(`usuarios/${usuario.consultorioId}/${usuarioId}/foto-${file.originalname}`, file.buffer, file.mimetype)
-    if (usuario.fotoPathname) await deleteFromBlob(usuario.fotoPathname)
+    const pathname = pathnameFor(usuario.consultorioId, usuarioId, String(nombreOriginal))
+    const token = await issueClientUploadToken(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES })
+    res.json({ token, pathname })
+  } catch (err) {
+    console.error('failed to issue usuario foto upload token', err)
+    res.status(500).json({ error: 'No se pudo iniciar la subida. Volvé a intentar.' })
+  }
+})
 
-    await prisma.usuario.update({ where: { id: usuarioId }, data: { fotoPathname: blob.pathname, fotoMimeType: file.mimetype } })
+router.post('/confirm', async (req, res) => {
+  const usuarioId = req.usuario!.id
+  const { pathname, mimeType } = req.body
+  if (!pathname || !mimeType) return res.status(400).json({ error: 'Faltan datos del archivo.' })
+
+  try {
+    const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } })
+    if (!usuario) return res.status(404).json({ error: 'usuario not found' })
+
+    // Defensa en profundidad: el token ya restringía dónde se pudo haber
+    // escrito el blob, esto evita además que /confirm acepte metadata de
+    // un pathname ajeno.
+    const expectedPrefix = `usuarios/${usuario.consultorioId}/${usuarioId}/`
+    if (!String(pathname).startsWith(expectedPrefix)) return res.status(400).json({ error: 'pathname inválido' })
+
+    if (usuario.fotoPathname) await deleteFromBlob(usuario.fotoPathname)
+    await prisma.usuario.update({ where: { id: usuarioId }, data: { fotoPathname: String(pathname), fotoMimeType: String(mimeType) } })
     res.status(201).json({ fotoUrl: '/api/usuarios/me/foto/contenido' })
   } catch (err) {
-    console.error('failed to upload usuario foto', err)
-    res.status(500).json({ error: 'No se pudo subir la foto. Volvé a intentar.' })
+    console.error('failed to confirm usuario foto upload', err)
+    res.status(500).json({ error: 'No se pudo guardar la foto. Volvé a intentar.' })
   }
 })
 

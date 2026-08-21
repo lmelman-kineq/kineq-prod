@@ -247,7 +247,9 @@ body,
 
 .dashboard-shell {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 320px;
+  /* Sidebar comprimida a solo íconos en desktop (ver sección 3 más abajo) —
+     86px alcanza para el ícono de 40px + padding, sin dejar hueco muerto. */
+  grid-template-columns: 86px minmax(0, 1fr) 320px;
   gap: 24px;
   min-height: 100vh;
   padding: 24px;
@@ -270,8 +272,8 @@ body,
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px;
+  gap: 20px;
+  padding: 20px 12px;
   /*
    * Se ancla al viewport en vez de estirarse con el contenido de la página
    * (calendario, tablas largas, etc). Mismo comportamiento en toda la app,
@@ -284,24 +286,76 @@ body,
   overflow-y: auto;
 }
 
+/* Sidebar comprimida a solo íconos (desktop, ver .dashboard-shell más
+   arriba): cada fila (logo/avatar/ítem de nav/tema/cerrar sesión) centra su
+   propio contenido y esconde el texto (`.nav-label`/`.sidebar-brand-text`),
+   que sigue accesible vía `aria-label` en el control — nunca se saca del
+   todo del DOM salvo con `display:none`, ya cubierto por el aria-label
+   explícito. El nombre/label completo aparece en un tooltip al pasar el
+   mouse o enfocar con teclado (ver `.sidebar-tooltip`, computado en React
+   con `getBoundingClientRect` — un tooltip CSS puro con `content: attr()`
+   hubiera quedado recortado por el `overflow-y: auto` de acá arriba, que
+   por la interacción de overflow-x/overflow-y del spec termina recortando
+   also el eje horizontal aunque nunca se haya declarado explícito). En
+   mobile (≤1170px) el panel deslizable restaura el texto completo — ver
+   la media query correspondiente.  */
+.nav-label,
+.sidebar-brand-text {
+  display: none;
+}
+
+.sidebar-tooltip {
+  position: fixed;
+  /* Estático, no parte de la animación — si quedara solo en el keyframe
+     `to`, al terminar la animación (sin animation-fill-mode) el transform
+     volvería a "none" y el tooltip saltaría de posición. */
+  transform: translateY(-50%);
+  z-index: 60;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow-popover);
+  pointer-events: none;
+  animation: sidebar-tooltip-in 0.16s ease;
+}
+
+@keyframes sidebar-tooltip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .sidebar-logo {
   display: flex;
   align-items: center;
-  padding: 0 4px;
+  /* Centrado por default (desktop, sidebar comprimida a íconos) — el panel
+     mobile (≤1170px) restaura justify-content/padding originales. */
+  justify-content: center;
+  padding: 0;
   color: var(--color-text);
   cursor: pointer;
 }
 
 .sidebar-logo svg {
-  height: 28px;
+  height: 26px;
   width: auto;
   display: block;
 }
 
 .sidebar-brand {
   display: flex;
+  /* Columna, centrado — antes era una fila (avatar + nombre al lado). El
+     panel mobile (≤1170px) restaura la fila original. */
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
 .avatar {
@@ -441,8 +495,12 @@ body,
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  /* Comprimido a solo ícono por default (desktop) — centrado, sin el gap
+     que necesitaba cuando el label estaba siempre visible al lado. El panel
+     mobile (≤1170px) restaura justify-content/gap/padding originales. */
+  justify-content: center;
+  gap: 0;
+  padding: 10px;
   border: 1px solid transparent;
   border-radius: 16px;
   background: transparent;
@@ -548,14 +606,22 @@ body,
 
 .sidebar-theme-toggle {
   width: 100%;
-  justify-content: flex-start;
+  /* Comprimido a solo ícono por default (desktop), como .nav-item — el
+     panel mobile (≤1170px) restaura justify-content/gap originales. */
+  justify-content: center;
+  gap: 0;
   margin-top: auto;
-  padding: 12px 14px;
+  padding: 10px;
   font-weight: 600;
 }
 
 .sidebar-logout {
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 10px;
 }
 
 .mobile-topbar-actions {
@@ -945,6 +1011,17 @@ body,
   min-width: 140px;
 }
 
+.turno-monto-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.turno-monto-symbol {
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
 /* Campo de fecha tipeable (dd/mm/aaaa) con calendario nativo opcional. */
 .date-input-row {
   position: relative;
@@ -1332,6 +1409,27 @@ body,
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+}
+
+/* Mismo look que `.modal-body input`, pero puesto acá para que valga en
+   cualquier contexto — el combobox de Diagnóstico (DiagnosticoSelect) se usa
+   tanto dentro de modales (Nuevo Turno) como inline en la página del
+   paciente ("Nueva evolución"), y ese segundo caso quedaba sin el estilo de
+   caja porque `.modal-body input` nunca lo alcanzaba ahí. */
+.dropdown-input-row input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 15px;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.dropdown-input-row input:focus {
+  border-color: var(--color-primary);
 }
 
 .dropdown-input-row {
@@ -2007,7 +2105,7 @@ select:disabled {
    ========================================================= */
 
 .dashboard-shell--turnos {
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 86px minmax(0, 1fr);
 }
 
 .turnos-main-area {
@@ -2376,6 +2474,11 @@ select:disabled {
 
 .patient-turnos-table th:nth-child(5),
 .patient-turnos-table td:nth-child(5) {
+  width: 100px;
+}
+
+.patient-turnos-table th:nth-child(6),
+.patient-turnos-table td:nth-child(6) {
   width: 110px;
 }
 
@@ -2771,6 +2874,20 @@ select:disabled {
   flex-wrap: wrap;
 }
 
+.patient-detail-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Mismo alto que .icon-button/.icon-button--danger de al lado (44px) —
+   "que se adapte al alto actual de esa fila". */
+.new-turn-button--row {
+  height: 44px;
+  padding: 0 20px;
+}
+
+.icon-button,
 .icon-button--danger {
   width: 44px;
   height: 44px;
@@ -2780,9 +2897,22 @@ select:disabled {
   border: 1px solid var(--color-border);
   border-radius: 14px;
   background: var(--color-control);
-  color: var(--color-danger);
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.icon-button {
+  color: var(--color-text-muted);
+}
+
+.icon-button:hover {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+}
+
+.icon-button--danger {
+  color: var(--color-danger);
 }
 
 .icon-button--danger:hover {
@@ -2790,6 +2920,7 @@ select:disabled {
   border-color: var(--color-danger);
 }
 
+.icon-button svg,
 .icon-button--danger svg {
   width: 19px;
   height: 19px;
@@ -2800,8 +2931,55 @@ select:disabled {
   stroke-linejoin: round;
 }
 
-.patient-detail-layout--full {
-  grid-template-columns: minmax(0, 1fr);
+/* Indicador compacto de Alertas clínicas — vive en el header del paciente,
+   donde antes iban los botones Editar/Nuevo turno (ver
+   .patient-detail-topbar-actions, que ahora los tiene). Mismo cálculo y
+   mismo popup de detalle que la vieja card "Alertas clínicas" — ver
+   PatientAlertsBadge.tsx. */
+.patient-alerts-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-control);
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.patient-alerts-badge svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.patient-alerts-badge--activa {
+  border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  color: var(--color-danger);
+}
+
+.patient-alerts-badge--sin-alertas {
+  border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-border));
+  color: var(--color-text-muted);
+}
+
+.patient-alerts-badge--pendiente {
+  color: var(--color-text-muted);
+}
+
+.patient-alerts-badge:hover {
+  border-color: var(--color-primary-border);
 }
 
 .patient-summary-grid {
@@ -2860,31 +3038,6 @@ select:disabled {
   color: var(--color-primary);
   font-size: 13px;
   font-weight: 600;
-}
-
-.patient-detail-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
-  gap: 24px;
-  align-items: start;
-}
-
-/* Resumen clínico (.patient-detail-stack) a la derecha, tabs/contenido
-   (.clinical-workspace) a la izquierda — estable entre Ficha inicial/
-   Evoluciones/Turnos/Estudios y entre contexto normal/atención, porque
-   PatientDetailPage.tsx es la única pantalla de Paciente (con o sin
-   `activeTurno`) y nunca reordena su propio JSX. En el breakpoint de una
-   columna (1170px, ver media query) el orden decide además el apilado
-   vertical: tabs primero, resumen después. */
-.patient-detail-stack {
-  display: grid;
-  gap: 24px;
-  min-width: 0;
-  order: 2;
-}
-
-.clinical-workspace {
-  order: 1;
 }
 
 .patient-detail-card {
@@ -3186,6 +3339,15 @@ select:disabled {
   border-top: 1px solid var(--color-line-soft);
 }
 
+.evolution-load-button {
+  width: 100%;
+  margin-top: 18px;
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  text-align: center;
+  justify-content: center;
+}
+
 .evolution-form label {
   color: var(--color-text-muted);
   font-size: 13px;
@@ -3449,9 +3611,19 @@ select:disabled {
   gap: 8px;
 }
 
+/* Pila simple de secciones (alertas / antecedentes / los 3 campos de a-dos
+   / link) — cada sección decide su propio layout interno, nunca se mezclan
+   ítems de ancho completo con ítems de a-dos en el mismo grid implícito
+   (ver .clinical-summary-fields, el único que necesita 2 columnas). */
 .clinical-summary {
   display: grid;
-  gap: 12px;
+  gap: 16px;
+}
+
+.clinical-summary-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 24px;
 }
 
 .clinical-alert-badge {
@@ -4539,6 +4711,29 @@ select:disabled {
   padding-right: 4px;
 }
 
+.catalogo-drawer-add-item {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.catalogo-drawer-add-item input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+
+.catalogo-drawer-add-item .secondary-button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .catalogo-drawer-list p {
   grid-column: 1 / -1;
 }
@@ -4610,10 +4805,6 @@ select:disabled {
 
   .turnos-main-area {
     min-height: auto;
-  }
-
-  .patient-detail-layout {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .patient-summary-grid {
@@ -4705,6 +4896,51 @@ select:disabled {
      sin depender de un ícono a la izquierda) — se centra solo acá. */
   .sidebar-theme-toggle {
     justify-content: center;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  /* La sidebar comprimida a solo íconos (ver sección 3, arriba del todo)
+     es un cambio de escritorio únicamente — acá se restaura el panel
+     deslizable de mobile tal como estaba, con texto completo siempre
+     visible (nunca depende de hover, que no existe en touch). */
+  .nav-label,
+  .sidebar-brand-text {
+    display: block;
+  }
+
+  .sidebar-logo {
+    justify-content: flex-start;
+    padding: 0 4px;
+  }
+
+  .sidebar-logo svg {
+    height: 28px;
+  }
+
+  .sidebar-brand {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .nav-item {
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .sidebar-logout {
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 18px;
+  }
+
+  /* El tooltip de hover no tiene sentido en touch (no hay hover) — nunca
+     debería mostrarse en este breakpoint, pero por las dudas queda oculto
+     explícitamente. */
+  .sidebar-tooltip {
+    display: none;
   }
 
   .mobile-menu-close {
@@ -5339,6 +5575,10 @@ select:disabled {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .clinical-summary-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .catalogo-drawer-list {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -5346,6 +5586,10 @@ select:disabled {
   .catalogo-drawer-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .catalogo-drawer-add-item {
+    flex-direction: column;
   }
 }
 

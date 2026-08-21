@@ -25,12 +25,20 @@ export default function RichTextEditor({ id, html, onChange, placeholder, disabl
     if (ref.current.innerHTML !== html) ref.current.innerHTML = html
   }, [html])
 
+  // Nunca reescribe `el.innerHTML` mientras el usuario está tipeando —
+  // reasignar innerHTML de un contentEditable enfocado destruye y recrea los
+  // nodos DOM, lo que le hace perder el cursor al navegador (suele
+  // reposicionarlo al principio) y dispara un salto de scroll hacia arriba
+  // en cada tecla. `sanitizeRichTextHtml` casi siempre devuelve el mismo
+  // HTML que ya produjo el `contentEditable` (tipear + B/I/U vía
+  // execCommand nunca generan markup fuera del allowlist) — la única fuente
+  // real de HTML "sucio" es pegar contenido externo, y eso ya se resuelve
+  // aparte forzando pegado como texto plano (ver onPaste). El backend
+  // vuelve a sanitizar antes de persistir de cualquier forma.
   const emitChange = () => {
     const el = ref.current
     if (!el) return
-    const sanitized = sanitizeRichTextHtml(el.innerHTML)
-    if (sanitized !== el.innerHTML) el.innerHTML = sanitized
-    onChange(sanitized, el.textContent ?? '')
+    onChange(sanitizeRichTextHtml(el.innerHTML), el.textContent ?? '')
   }
 
   const exec = (command: 'bold' | 'italic' | 'underline') => {
@@ -73,6 +81,15 @@ export default function RichTextEditor({ id, html, onChange, placeholder, disabl
         onBlur={() => {
           focusedRef.current = false
           emitChange()
+        }}
+        onPaste={(event) => {
+          // Pegar siempre como texto plano: evita traer markup/estilos de
+          // una fuente externa (Word, una página) que quedarían fuera del
+          // allowlist y forzarían una limpieza — y de paso cierra el único
+          // vector real por el que podría entrar HTML no confiable acá.
+          event.preventDefault()
+          const text = event.clipboardData.getData('text/plain')
+          document.execCommand('insertText', false, text)
         }}
         onKeyDown={(event) => {
           const mod = event.ctrlKey || event.metaKey

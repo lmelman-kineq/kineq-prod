@@ -294,35 +294,49 @@ model ConsultorioObraSocialOculta {
 }
 
 model Turno {
-  id              Int         @id @default(autoincrement())
-  consultorioId   Int
-  pacienteId      Int
-  profesionalId   Int
-  especialidadId  Int
-  obraSocialId    Int?
+  id               Int         @id @default(autoincrement())
+  consultorioId    Int
+  pacienteId       Int
+  profesionalId    Int
+  especialidadId   Int
+  obraSocialId     Int?
   // Diagnóstico (GrupoEvolucion) al que pertenece este turno, opcional. Con
   // un diagnóstico que tiene `cantidadSesionesPlanificadas`, habilita el
   // cálculo automático de `numeroSesion` como "sesión completada + 1" —
   // ver `sesionAutomaticaParaGrupo()` en app.ts. Nunca obligatorio: un
   // turno sin diagnóstico sigue funcionando exactamente igual que antes.
-  grupoId         Int?
-  inicio          DateTime
-  duracionMinutos Int         @default(60)
-  numeroSesion    Int?
-  notas           String?
-  estado          EstadoTurno @default(ASIGNADO)
-  inicioAtencion  DateTime?
-  finAtencion     DateTime?
-  canceladoAt     DateTime?
+  grupoId          Int?
+  inicio           DateTime
+  duracionMinutos  Int         @default(60)
+  numeroSesion     Int?
+  // Turno administrativo/de evaluación que no consume un número de sesión
+  // del plan de tratamiento: nunca recibe numeroSesion automático ni cuenta
+  // para el conteo de otros turnos del mismo paciente+diagnóstico (ver
+  // sesionAutomaticaParaGrupo() en app.ts). Explícito a propósito — nunca se
+  // infiere de numeroSesion === null, que también puede pasar por otros
+  // motivos (turno sin diagnóstico, por ejemplo).
+  esSesionConsulta Boolean     @default(false)
+  // Monto cobrado por el turno, opcional — dato administrativo simple, sin
+  // ningún cálculo/suma agregada pedido todavía (si eso llega a hacer
+  // falta más adelante, ahí sí conviene migrar a Decimal para evitar
+  // arrastre de error de punto flotante en sumas; para un campo mostrado
+  // tal cual, Float alcanza y evita sumarle a este proyecto su primer
+  // campo Decimal, que Prisma serializa como string, no number).
+  monto            Float?
+  notas            String?
+  estado           EstadoTurno @default(ASIGNADO)
+  inicioAtencion   DateTime?
+  finAtencion      DateTime?
+  canceladoAt      DateTime?
   // Baja lógica — nunca DELETE físico. La FK Evolucion.turnoId ya es
   // onDelete: SetNull, así que un delete físico no destruiría evoluciones,
   // pero SÍ desaparecería silenciosamente de estadísticas históricas
   // (sesiones realizadas/ausentismo de meses ya cerrados). Con esto, un
   // turno "eliminado" sale de toda lectura operativa (agenda, Paciente,
   // estadísticas) pero la fila y su `estado`/timestamps quedan intactos.
-  eliminadoAt     DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  eliminadoAt      DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   consultorio  Consultorio     @relation(fields: [consultorioId], references: [id])
   paciente     Paciente        @relation(fields: [pacienteId], references: [id])

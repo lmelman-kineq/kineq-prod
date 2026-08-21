@@ -7,6 +7,7 @@ import {
   zonedTimeToUtcIso,
   utcIsoToZonedParts,
   todayInTimeZone,
+  todayDateInTimeZone,
 } from './timezone'
 
 describe('TIMEZONE_OPTIONS', () => {
@@ -99,5 +100,26 @@ describe('todayInTimeZone', () => {
     vi.setSystemTime(new Date('2026-08-10T02:30:00.000Z'))
     expect(todayInTimeZone('Asia/Tokyo')).toBe('2026-08-10')
     expect(todayInTimeZone('America/Argentina/Buenos_Aires')).toBe('2026-08-09')
+  })
+})
+
+describe('todayDateInTimeZone', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('devuelve un Date cuyo año/mes/día locales coinciden con todayInTimeZone (mismo día que se resalta en el mini calendario)', () => {
+    // Mismo instante que el caso "domingo 23:30 ART sigue domingo" de
+    // arriba: en UTC (o en la zona del navegador si difiere de Argentina)
+    // ya sería lunes. Antes, la grilla del mini calendario se armaba con
+    // `new Date()` (hora del navegador) mientras el resaltado de "hoy"
+    // comparaba contra la zona del consultorio — dos marcos horarios
+    // distintos que podían señalar días distintos. Este helper ancla el
+    // punto de partida de la grilla a la misma zona que el resaltado.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-10T02:30:00.000Z'))
+    const date = todayDateInTimeZone('America/Argentina/Buenos_Aires')
+    const pad = (n: number) => String(n).padStart(2, '0')
+    expect(`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`).toBe('2026-08-09')
   })
 })

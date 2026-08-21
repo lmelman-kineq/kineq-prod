@@ -8,7 +8,7 @@ describe('computeFichaCompletionStatus', () => {
 
   it('está parcial apenas se llena un solo campo', () => {
     const form = fichaFormFromFicha(null)
-    form.motivoConsulta = 'Dolor lumbar'
+    form.actividadFisica = 'Fútbol'
 
     expect(computeFichaCompletionStatus(form)).toBe('parcial')
   })
@@ -18,6 +18,14 @@ describe('computeFichaCompletionStatus', () => {
     for (const field of Object.keys(form)) form[field] = 'x'
 
     expect(computeFichaCompletionStatus(form)).toBe('completa')
+  })
+
+  it('los campos de "Motivo y contexto" (sección eliminada de la UI) ya no cuentan para el cálculo', () => {
+    // Si siguieran contando, ninguna ficha nueva podría llegar a "completa"
+    // — esos campos ya no tienen ningún input desde donde llenarlos.
+    const form = fichaFormFromFicha(null)
+    const motivoFields = ['motivoConsulta', 'fechaInicioProblema', 'diagnosticoDerivacion', 'objetivoPaciente', 'tratamientosPrevios', 'traumatismosAccidentes']
+    for (const field of motivoFields) expect(form).not.toHaveProperty(field)
   })
 })
 
@@ -39,18 +47,6 @@ describe('buildFichaPayload', () => {
     expect(payload).not.toHaveProperty('edadMenarca')
   })
 
-  it('omite fechaInicioProblema cuando está vacía', () => {
-    const form = fichaFormFromFicha(null)
-    const payload = buildFichaPayload(form) as Record<string, unknown>
-    expect(payload).not.toHaveProperty('fechaInicioProblema')
-  })
-
-  it('incluye fechaInicioProblema cuando tiene valor', () => {
-    const form = fichaFormFromFicha(null)
-    form.fechaInicioProblema = '2026-01-15'
-    const payload = buildFichaPayload(form) as Record<string, unknown>
-    expect(payload.fechaInicioProblema).toBe('2026-01-15')
-  })
 })
 
 describe('fichaSeccionesResumen', () => {

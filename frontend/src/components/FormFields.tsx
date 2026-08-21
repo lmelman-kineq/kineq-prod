@@ -19,6 +19,8 @@ export type TurnoFormValue = {
   specialtyId: number
   socialWorkId?: number | null
   sessionNumber: number
+  esSesionConsulta: boolean
+  monto: string
   grupoId: number | null
   status: TurnoStatus
   duration: number
@@ -297,23 +299,35 @@ export function TurnoFormFields({
 
   const selectedGrupo = grupos?.find((grupo) => grupo.id === value.grupoId) ?? null
 
+  const fetchProximaSesion = (grupoId: number) => {
+    if (!onFetchProximaSesion) return
+    setProximaSesionLoading(true)
+    onFetchProximaSesion(grupoId)
+      .then((numeroSesion) => updateValue({ sessionNumber: numeroSesion }))
+      .catch(() => {})
+      .finally(() => setProximaSesionLoading(false))
+  }
+
   const changeGrupo = (grupoId: number | '') => {
-    if (grupoId === '' || !onFetchProximaSesion) {
-      updateValue({ grupoId: grupoId === '' ? null : grupoId })
+    if (grupoId === '') {
+      updateValue({ grupoId: null })
       return
     }
     updateValue({ grupoId })
-    const grupo = grupos?.find((g) => g.id === grupoId)
-    // Solo se pide/pisa el número si el diagnóstico tiene sesiones
-    // planificadas — sin eso, "Sesión X de Y" no aplica y el campo sigue
-    // siendo el número manual de siempre.
-    if (!grupo?.cantidadSesionesPlanificadas) return
+    // Se sugiere el próximo número para cualquier diagnóstico, tenga o no
+    // cantidadSesionesPlanificadas configurada — ese campo solo cambia si se
+    // muestra "Sesión (de Y)" o "Nro. de sesión" a secas, nunca si el
+    // cálculo automático se ofrece o no. No aplica si ya está tildado
+    // "Sesión de consulta" (el número queda oculto de cualquier forma).
+    if (!value.esSesionConsulta) fetchProximaSesion(grupoId)
+  }
 
-    setProximaSesionLoading(true)
-    onFetchProximaSesion(grupoId)
-      .then((numeroSesion) => updateValue({ grupoId, sessionNumber: numeroSesion }))
-      .catch(() => {})
-      .finally(() => setProximaSesionLoading(false))
+  // Al tildar "Sesión de consulta" el número deja de aplicar (se oculta más
+  // abajo); al destildarla, si ya hay un diagnóstico elegido, se vuelve a
+  // sugerir el próximo número — mismo criterio que elegir el diagnóstico.
+  const toggleSesionConsulta = (checked: boolean) => {
+    updateValue({ esSesionConsulta: checked })
+    if (!checked && value.grupoId) fetchProximaSesion(value.grupoId)
   }
 
   const selectedPatient = patients.find((patient) => patient.id === value.patientId)
@@ -566,16 +580,45 @@ export function TurnoFormFields({
         />
       ) : null}
 
-      <label>
-        {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
+      <label className="checkbox-field">
         <input
-          type="number"
-          className="narrow-input"
-          min={1}
-          value={value.sessionNumber}
-          onChange={(event) => updateValue({ sessionNumber: Number(event.target.value) })}
-          disabled={disabled || proximaSesionLoading}
+          type="checkbox"
+          checked={value.esSesionConsulta}
+          onChange={(event) => toggleSesionConsulta(event.target.checked)}
+          disabled={disabled}
         />
+        Sesión de consulta
+      </label>
+
+      {!value.esSesionConsulta ? (
+        <label>
+          {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
+          <input
+            type="number"
+            className="narrow-input"
+            min={1}
+            value={value.sessionNumber}
+            onChange={(event) => updateValue({ sessionNumber: Number(event.target.value) })}
+            disabled={disabled || proximaSesionLoading}
+          />
+        </label>
+      ) : null}
+
+      <label>
+        Monto
+        <div className="turno-monto-field">
+          <span className="turno-monto-symbol" aria-hidden="true">$</span>
+          <input
+            type="number"
+            className="narrow-input"
+            min={0}
+            step={0.01}
+            placeholder="Opcional"
+            value={value.monto}
+            onChange={(event) => updateValue({ monto: event.target.value })}
+            disabled={disabled}
+          />
+        </div>
       </label>
 
       <label>

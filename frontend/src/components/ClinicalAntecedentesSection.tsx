@@ -432,8 +432,34 @@ function CatalogoCompletoDrawer({
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
   const [editingName, setEditingName] = useState('')
   const [itemError, setItemError] = useState<string | null>(null)
+  const [newItemName, setNewItemName] = useState('')
+  const [creatingItem, setCreatingItem] = useState(false)
 
   const reload = () => api.getCatalogoClinico(categoria).then(setItems)
+
+  // Crear un ítem custom del consultorio directamente desde acá, sin tener
+  // que cerrar el catálogo completo y pasar por el buscador de la lista
+  // rápida (que solo ofrece "+ Agregar" cuando la búsqueda no encuentra
+  // nada). Mismo endpoint (`createCatalogoClinicoItem`, esSistema: false,
+  // categoría fija a la del drawer), y lo deja marcado "Sí" de una — igual
+  // que quickAdd() en la búsqueda inline — para no tener que buscarlo de
+  // nuevo apenas se crea.
+  const createItem = async () => {
+    const nombre = newItemName.trim()
+    if (!nombre) return
+    setCreatingItem(true)
+    setItemError(null)
+    try {
+      const item = await api.createCatalogoClinicoItem(categoria, nombre)
+      await onAdd({ catalogoItemId: item.id, estado: 'SI' })
+      await reload()
+      setNewItemName('')
+    } catch (err) {
+      setItemError(err instanceof Error ? err.message : 'No se pudo crear el antecedente.')
+    } finally {
+      setCreatingItem(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -580,6 +606,19 @@ function CatalogoCompletoDrawer({
               )
             })
           )}
+        </div>
+
+        <div className="catalogo-drawer-add-item">
+          <input
+            type="text"
+            placeholder={`Agregar a ${categoriaLabel.toLowerCase()}...`}
+            value={newItemName}
+            onChange={(event) => setNewItemName(event.target.value)}
+            onKeyDown={(event) => { if (event.key === 'Enter') void createItem() }}
+          />
+          <button type="button" className="secondary-button" disabled={!newItemName.trim() || creatingItem} onClick={() => { void createItem() }}>
+            {creatingItem ? 'Agregando...' : '+ Agregar antecedente'}
+          </button>
         </div>
       </div>
     </div>

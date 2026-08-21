@@ -118,6 +118,8 @@ export interface Turno {
   inicio: string
   duracionMinutos: number
   numeroSesion?: number | null
+  esSesionConsulta?: boolean
+  monto?: number | null
   notas?: string | null
   estado: EstadoTurno
   inicioAtencion?: string | null
@@ -440,6 +442,8 @@ export interface CreateTurnoInput {
   time: string
   duracionMinutos: number
   numeroSesion?: number
+  esSesionConsulta?: boolean
+  monto?: number | null
   grupoId?: number | null
   notas?: string
   estado?: EstadoTurno

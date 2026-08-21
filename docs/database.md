@@ -20,7 +20,9 @@ Migration `20260817163218_turno_grupo_y_sesiones_planificadas` (additive): `Grup
 
 Migration `20260817170811_turno_eliminado_at` (additive): `Turno` gained `eliminadoAt DateTime?`. Soft-delete only, never a physical `DELETE` — a physical delete would have been safe for `Evolucion` (its `turnoId` FK is already `onDelete: SetNull`) but would have silently corrupted already-closed historical stats (sesiones realizadas/ausentismo for past periods). `eliminadoAt: null` was added to every operational read path that queries `Turno` (list, overlap check, edit-permission check, session-counter, and `estadisticasService.ts`'s shared `turnoWhere()`) so a deleted turno disappears from agenda/patient-view/stats while the row and its `estado`/timestamps stay intact. See "eliminación real de turnos" in `docs/modules/appointments.md`.
 
-**Not applied to production (Aiven) yet as of this session**: `20260817170811_turno_eliminado_at`. Run `npx prisma migrate status` then `npx prisma migrate deploy` against production to apply — never run automatically by an agent.
+Migration `20260821100057_turno_es_sesion_consulta` (additive): `Turno` gained `esSesionConsulta Boolean @default(false)`. A turno marked this way is an administrative/evaluation visit that never gets a `numeroSesion` (forced to `null` server-side regardless of what the client sends) and is excluded from the count that `sesionAutomaticaParaGrupo()` uses to suggest the next session number for other turnos of the same paciente+diagnóstico. See "Diagnóstico + numeración automática de sesiones" in `docs/modules/appointments.md`.
+
+**Not applied to production (Aiven) yet as of this session**: `20260817170811_turno_eliminado_at`, `20260821100057_turno_es_sesion_consulta`. Run `npx prisma migrate status` then `npx prisma migrate deploy` against production to apply — never run automatically by an agent.
 
 Main entities (original draft, generic names, not the real schema):
 

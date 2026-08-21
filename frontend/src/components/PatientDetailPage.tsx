@@ -6,7 +6,7 @@ import { useAuth } from '../auth/AuthContext'
 import { statusClass } from '../utils/turnoStatus'
 import { formatPlainDate } from '../utils/dateFormat'
 import PatientProfileHeader from './PatientProfileHeader'
-import PatientSummaryCards from './PatientSummaryCards'
+import PatientAlertsBadge from './PatientAlertsBadge'
 import ClinicalSummaryPanel from './ClinicalSummaryPanel'
 import ClinicalTabs, { type ClinicalTab } from './ClinicalTabs'
 import EvolutionTable, { GrupoChip } from './EvolutionTable'
@@ -21,7 +21,6 @@ import FichaEstudiosTab from './FichaEstudiosTab'
 import PatientFormModal from './PatientFormModal'
 import RichTextEditor from './RichTextEditor'
 import { useFichaInicial } from '../hooks/useFichaInicial'
-import { computeFichaCompletionStatus } from '../utils/fichaInicial'
 import { professionalName } from '../utils/professional'
 import { groupEvolucionesByGrupo } from '../utils/groupEvolucionesByGrupo'
 import { SPECIALTY_COLOR_TOKENS } from '../utils/specialtyColors'
@@ -74,12 +73,13 @@ export default function PatientDetailPage({
   const [evoluciones, setEvoluciones] = useState<Evolucion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState(() => (canEditClinical ? 'ficha' : 'turnos'))
+  const [activeTab, setActiveTab] = useState(() => (canEditClinical ? 'resumen' : 'turnos'))
   const [editPatientOpen, setEditPatientOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
   const [now, setNow] = useState(() => Date.now())
 
+  const [showNewEvolucionForm, setShowNewEvolucionForm] = useState(false)
   const [newEvolucionText, setNewEvolucionText] = useState('')
   const [newEvolucionHtml, setNewEvolucionHtml] = useState('')
   const [savingEvolucion, setSavingEvolucion] = useState(false)
@@ -342,12 +342,42 @@ export default function PatientDetailPage({
       setNewEvolucionHtml('')
       setNuevaEvolucionGrupoId('')
       clearStagedImages()
+      setShowNewEvolucionForm(false)
       await loadEvoluciones()
     } catch (createError) {
       setEvolucionError(getErrorMessage(createError, 'No se pudo guardar la evolución.'))
     } finally {
       setSavingEvolucion(false)
     }
+  }
+
+  const discardNewEvolucionForm = () => {
+    setNewEvolucionText('')
+    setNewEvolucionHtml('')
+    setNuevaEvolucionGrupoId('')
+    clearStagedImages()
+    setEvolucionError(null)
+    setShowNewEvolucionForm(false)
+  }
+
+  // "Cargar evolución" abre el formulario vacío; "Cancelar" lo descarta —
+  // con confirmación custom si ya hay algo escrito/adjuntado, mismo patrón
+  // que finalizarAtencion() más arriba.
+  const cancelNewEvolucionForm = () => {
+    const hasContent = newEvolucionText.trim().length > 0 || stagedImages.length > 0 || nuevaEvolucionGrupoId !== ''
+    if (!hasContent) {
+      discardNewEvolucionForm()
+      return
+    }
+
+    onRequestConfirm({
+      title: 'Descartar evolución',
+      description: 'Vas a perder el texto y los archivos que cargaste hasta ahora. ¿Querés descartarla?',
+      confirmLabel: 'Descartar',
+      cancelLabel: 'Seguir editando',
+      destructive: true,
+      onConfirm: discardNewEvolucionForm,
+    })
   }
 
   const addImagesToEvolucion = async (evolucion: Evolucion, files: File[]) => {
@@ -489,13 +519,13 @@ export default function PatientDetailPage({
   const lastEvolucion = sortedEvoluciones[0] ?? null
   const hasEvolucionDelTurnoActivo = activeTurno ? evoluciones.some((evolucion) => evolucion.turnoId === activeTurno.id) : false
   const socialWorkName = patient.obraSocial?.nombre ?? patientSocialWorkById[patient.id] ?? null
-  const fichaStatus = computeFichaCompletionStatus(fichaHook.form)
 
   const nextTurno = turnos
     .filter((turno) => turno.estado === 'ASIGNADO' || turno.estado === 'EN_ESPERA')
     .sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime())[0] ?? null
 
   const tabs: ClinicalTab[] = [
+    ...(canEditClinical ? [{ key: 'resumen', label: 'Resumen clínico' }] : []),
     ...(canEditClinical ? [{ key: 'ficha', label: 'Ficha inicial' }] : []),
     ...(canEditClinical ? [{ key: 'evoluciones', label: 'Evoluciones', badge: evoluciones.length ? String(evoluciones.length) : undefined }] : []),
     { key: 'turnos', label: 'Turnos' },
@@ -537,46 +567,72 @@ export default function PatientDetailPage({
   const { secciones, sinGrupo: evolucionesSinGrupo } = groupEvolucionesByGrupo(evolucionesFiltradas)
 
   const panels: Record<string, ReactNode> = {
+    resumen: (
+      <ClinicalSummaryPanel
+        loading={fichaHook.loading}
+        ficha={fichaHook.ficha}
+        fichaForm={fichaHook.form}
+        lastEvolucionDate={lastEvolucion?.createdAt ?? null}
+        nextTurnoDate={nextTurno?.inicio ?? null}
+        onGoToFicha={() => setActiveTab('ficha')}
+        showNoEvolucionAlert={activeTurno?.status === 'Atendiendo' && !hasEvolucionDelTurnoActivo}
+      />
+    ),
     evoluciones: (
       <>
         {canWriteClinical ? (
-          <div className="evolution-form">
-            <label htmlFor="nueva-evolucion">Nueva evolución</label>
-            <p className="patient-detail-note patient-detail-note--inline">
-              La evolución se va a registrar como {propioProfesional ? professionalName(propioProfesional) : 'tu profesional vinculado'}.
-            </p>
-            <div className="evolution-form-fields-row">
-              <DiagnosticoSelect
-                grupos={grupos}
-                value={nuevaEvolucionGrupoId}
-                onChange={setNuevaEvolucionGrupoId}
-                onCreate={createDiagnosticoInline}
-              />
-              <EvolucionImages
-                items={stagedImages.map((s, i) => ({ key: String(i), url: s.previewUrl, name: s.file.name }))}
-                onAdd={addStagedImages}
-                onRemove={removeStagedImage}
-                error={stagedImagesError}
-              />
-            </div>
-            <RichTextEditor
-              id="nueva-evolucion"
-              html={newEvolucionHtml}
-              placeholder="Qué se observó, qué se trabajó, indicaciones y próximos pasos..."
-              onChange={(html, plainText) => {
-                setNewEvolucionHtml(html)
-                setNewEvolucionText(plainText)
-              }}
-            />
+          !showNewEvolucionForm ? (
             <button
               type="button"
-              className="primary-button"
-              disabled={!newEvolucionText.trim() || savingEvolucion}
-              onClick={() => { void submitEvolucion() }}
+              className="secondary-button evolution-load-button"
+              onClick={() => setShowNewEvolucionForm(true)}
             >
-              {savingEvolucion ? 'Guardando...' : 'Guardar evolución'}
+              + Cargar evolución
             </button>
-          </div>
+          ) : (
+            <div className="evolution-form">
+              <label htmlFor="nueva-evolucion">Nueva evolución</label>
+              <p className="patient-detail-note patient-detail-note--inline">
+                La evolución se va a registrar como {propioProfesional ? professionalName(propioProfesional) : 'tu profesional vinculado'}.
+              </p>
+              <div className="evolution-form-fields-row">
+                <DiagnosticoSelect
+                  grupos={grupos}
+                  value={nuevaEvolucionGrupoId}
+                  onChange={setNuevaEvolucionGrupoId}
+                  onCreate={createDiagnosticoInline}
+                />
+                <EvolucionImages
+                  items={stagedImages.map((s, i) => ({ key: String(i), url: s.previewUrl, name: s.file.name }))}
+                  onAdd={addStagedImages}
+                  onRemove={removeStagedImage}
+                  error={stagedImagesError}
+                />
+              </div>
+              <RichTextEditor
+                id="nueva-evolucion"
+                html={newEvolucionHtml}
+                placeholder="Qué se observó, qué se trabajó, indicaciones y próximos pasos..."
+                onChange={(html, plainText) => {
+                  setNewEvolucionHtml(html)
+                  setNewEvolucionText(plainText)
+                }}
+              />
+              <div className="evolution-edit-actions">
+                <button type="button" className="secondary-button" onClick={cancelNewEvolucionForm} disabled={savingEvolucion}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={!newEvolucionText.trim() || savingEvolucion}
+                  onClick={() => { void submitEvolucion() }}
+                >
+                  {savingEvolucion ? 'Guardando...' : 'Guardar evolución'}
+                </button>
+              </div>
+            </div>
+          )
         ) : canEditClinical ? (
           <p className="patient-detail-note">
             Tu usuario no está vinculado a un profesional. Un administrador debe completar el vínculo para registrar información clínica.
@@ -744,22 +800,43 @@ export default function PatientDetailPage({
           {activeTurno ? 'Volver' : 'Volver a Pacientes'}
         </button>
 
-        {canEditAdmin && !activeTurno ? (
-          <button
-            type="button"
-            className="icon-button--danger"
-            aria-label="Eliminar paciente"
-            title="Eliminar paciente"
-            disabled={deleting}
-            onClick={requestDeletePatient}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 7h16" />
-              <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-              <path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
-            </svg>
-          </button>
-        ) : null}
+        <div className="patient-detail-topbar-actions">
+          {!activeTurno && onNewTurno ? (
+            <button type="button" className="new-turn-button new-turn-button--row" onClick={() => onNewTurno(patient.id)}>
+              Nuevo turno
+            </button>
+          ) : null}
+          {canEditAdmin ? (
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Editar paciente"
+              title="Editar paciente"
+              onClick={() => setEditPatientOpen(true)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+          ) : null}
+          {canEditAdmin && !activeTurno ? (
+            <button
+              type="button"
+              className="icon-button--danger"
+              aria-label="Eliminar paciente"
+              title="Eliminar paciente"
+              disabled={deleting}
+              onClick={requestDeletePatient}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h16" />
+                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                <path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
+              </svg>
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <PatientProfileHeader
@@ -768,18 +845,13 @@ export default function PatientDetailPage({
         canEditPhoto={canEditAdmin}
         onPhotoChanged={(fotoUrl) => setPatient((current) => (current ? { ...current, fotoUrl } : current))}
         actions={
-          <>
-            {canEditAdmin ? (
-              <button type="button" className="secondary-button" onClick={() => setEditPatientOpen(true)}>
-                Editar paciente
-              </button>
-            ) : null}
-            {!activeTurno && onNewTurno ? (
-              <button type="button" className="new-turn-button" onClick={() => onNewTurno(patient.id)}>
-                Nuevo turno
-              </button>
-            ) : null}
-          </>
+          canEditClinical ? (
+            <PatientAlertsBadge
+              ficha={fichaHook.ficha}
+              onGoToFicha={() => setActiveTab('ficha')}
+              onNavigateToTarget={navigateToClinicalTarget}
+            />
+          ) : null
         }
       />
 
@@ -821,35 +893,8 @@ export default function PatientDetailPage({
         </div>
       ) : null}
 
-      <PatientSummaryCards
-        turnos={turnos}
-        ficha={fichaHook.ficha}
-        fichaStatus={fichaStatus}
-        onGoToFicha={() => setActiveTab('ficha')}
-        onNavigateToTarget={navigateToClinicalTarget}
-      />
-
-      <div className={`patient-detail-layout${canEditClinical ? '' : ' patient-detail-layout--full'}`}>
-        {canEditClinical ? (
-          <div className="patient-detail-stack">
-            <section className="patient-detail-card">
-              <h2>Resumen clínico</h2>
-              <ClinicalSummaryPanel
-                loading={fichaHook.loading}
-                ficha={fichaHook.ficha}
-                fichaForm={fichaHook.form}
-                lastEvolucionDate={lastEvolucion?.createdAt ?? null}
-                nextTurnoDate={nextTurno?.inicio ?? null}
-                onGoToFicha={() => setActiveTab('ficha')}
-                showNoEvolucionAlert={activeTurno?.status === 'Atendiendo' && !hasEvolucionDelTurnoActivo}
-              />
-            </section>
-          </div>
-        ) : null}
-
-        <div className="patient-detail-card clinical-workspace">
-          <ClinicalTabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} panels={panels} />
-        </div>
+      <div className="patient-detail-card clinical-workspace">
+        <ClinicalTabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} panels={panels} />
       </div>
 
       {editPatientOpen ? (

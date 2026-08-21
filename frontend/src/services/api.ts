@@ -37,6 +37,7 @@ import type {
   UsuarioUpdateInput,
 } from '../types/domain'
 import { DEFAULT_TIMEZONE, zonedTimeToUtcIso } from '../utils/timezone'
+import { put as blobPut } from '@vercel/blob/client'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
 
@@ -91,6 +92,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (response.status === 204) return undefined as T
 
   return response.json() as Promise<T>
+}
+
+// Upload directo navegador → Vercel Blob, nunca a través de nuestra propia
+// función Serverless (que en Vercel tiene un límite de body de ~4.5MB,
+// bastante menor que los límites propios de la app — ver
+// docs/architecture.md). Tres pasos: 1) pedirle un token de subida acotado
+// a este archivo puntual al backend, 2) subir directo con ese token,
+// 3) confirmar para que el backend guarde la referencia (nunca se confía
+// en que el pathname que vuelve del cliente sea legítimo sin más — el
+// backend revalida permisos y el prefijo esperado en /confirm).
+// `access: 'private'` siempre hardcodeado acá, nunca expuesto como opción:
+// es la única superficie donde se especifica el nivel de acceso del blob.
+async function uploadFileViaClientToken<T>(
+  uploadTokenUrl: string,
+  confirmUrl: string,
+  file: File,
+): Promise<T> {
+  const { token, pathname } = await request<{ token: string; pathname: string }>(uploadTokenUrl, {
+    method: 'POST',
+    body: JSON.stringify({ nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size }),
+  })
+  const uploaded = await blobPut(pathname, file, { access: 'private', token, contentType: file.type })
+  return request<T>(confirmUrl, {
+    method: 'POST',
+    body: JSON.stringify({ pathname: uploaded.pathname, nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size }),
+  })
 }
 
 // Único punto donde se hace fetch a un archivo servido por una ruta
@@ -217,9 +244,7 @@ export function patchUsuario(usuarioId: number, data: UsuarioUpdateInput): Promi
 // ruta de autoedición de Usuario más allá de esto, ver
 // backend/src/usuarioFotoRoutes.ts.
 export function uploadUsuarioFoto(file: File): Promise<{ fotoUrl: string }> {
-  const formData = new FormData()
-  formData.append('foto', file)
-  return request('/api/usuarios/me/foto', { method: 'POST', body: formData })
+  return uploadFileViaClientToken('/api/usuarios/me/foto/upload-token', '/api/usuarios/me/foto/confirm', file)
 }
 
 export function deleteUsuarioFoto(): Promise<void> {
@@ -231,9 +256,7 @@ export function getPacientes(): Promise<Paciente[]> {
 }
 
 export function uploadPacienteFoto(pacienteId: number, file: File): Promise<{ fotoUrl: string }> {
-  const formData = new FormData()
-  formData.append('foto', file)
-  return request(`/api/pacientes/${pacienteId}/foto`, { method: 'POST', body: formData })
+  return uploadFileViaClientToken(`/api/pacientes/${pacienteId}/foto/upload-token`, `/api/pacientes/${pacienteId}/foto/confirm`, file)
 }
 
 export function deletePacienteFoto(pacienteId: number): Promise<void> {
@@ -428,12 +451,27 @@ export function deleteEvolucion(evolucionId: number): Promise<void> {
   return request(`/api/evoluciones/${evolucionId}`, { method: 'DELETE' })
 }
 
-export function uploadEvolucionImagenes(evolucionId: number, files: File[]): Promise<EvolucionImagen[]> {
-  const formData = new FormData()
-  files.forEach((file) => formData.append('imagenes', file))
-  return request(`/api/evoluciones/${evolucionId}/imagenes`, {
+// Mismo patrón de 3 pasos que uploadFileViaClientToken, pero para varias
+// imágenes en una sola operación de evolución — un solo /upload-tokens pide
+// un token por archivo, cada uno se sube en paralelo directo a Blob, y un
+// solo /confirm guarda todas las referencias juntas.
+export async function uploadEvolucionImagenes(evolucionId: number, files: File[]): Promise<EvolucionImagen[]> {
+  const { items: tokenItems } = await request<{ items: Array<{ token: string; pathname: string }> }>(
+    `/api/evoluciones/${evolucionId}/imagenes/upload-tokens`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ files: files.map((file) => ({ nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size })) }),
+    },
+  )
+
+  const confirmedItems = await Promise.all(files.map(async (file, index) => {
+    const uploaded = await blobPut(tokenItems[index].pathname, file, { access: 'private', token: tokenItems[index].token, contentType: file.type })
+    return { pathname: uploaded.pathname, nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size }
+  }))
+
+  return request(`/api/evoluciones/${evolucionId}/imagenes/confirm`, {
     method: 'POST',
-    body: formData,
+    body: JSON.stringify({ items: confirmedItems }),
   })
 }
 
@@ -578,9 +616,7 @@ export function deleteFichaEstudio(id: number): Promise<void> {
 }
 
 export function uploadEstudioArchivo(estudioId: number, file: File): Promise<FichaEstudioComplementario> {
-  const formData = new FormData()
-  formData.append('archivo', file)
-  return request(`/api/ficha-estudios/${estudioId}/archivo`, { method: 'POST', body: formData })
+  return uploadFileViaClientToken(`/api/ficha-estudios/${estudioId}/archivo/upload-token`, `/api/ficha-estudios/${estudioId}/archivo/confirm`, file)
 }
 
 export function deleteEstudioArchivo(estudioId: number): Promise<void> {

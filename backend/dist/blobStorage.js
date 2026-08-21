@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadToBlob = uploadToBlob;
+exports.issueClientUploadToken = issueClientUploadToken;
 exports.deleteFromBlob = deleteFromBlob;
 exports.streamBlobToResponse = streamBlobToResponse;
 const stream_1 = require("stream");
 const blob_1 = require("@vercel/blob");
+const client_1 = require("@vercel/blob/client");
 // Capa compartida sobre Vercel Blob para las 4 superficies de archivos
 // (imágenes de Evolución, archivo de Estudio, foto de Usuario, foto de
 // Paciente) — nunca se llama a `put`/`del`/`get` directamente desde una
@@ -26,6 +28,26 @@ async function uploadToBlob(pathname, buffer, mimeType) {
         contentType: mimeType,
     });
     return { pathname: blob.pathname };
+}
+// Sube el archivo el navegador mismo, directo a Vercel Blob — nunca pasa
+// por esta función Serverless. Necesario porque las Serverless Functions de
+// Vercel tienen un límite de tamaño de body de pedido (~4.5MB) bastante más
+// chico que los límites propios de la app (10MB imagen de Evolución, 15MB
+// Estudio); con upload por multer/buffer, cualquier archivo real por encima
+// de ese límite de plataforma nunca llegaba ni a esta función. El token
+// devuelto autoriza escribir *solo* en `pathname` (con sufijo aleatorio
+// aplicado recién al subir) — nunca leer ni escribir en cualquier otro
+// lado del store. Cada caller ya validó permisos/recurso antes de pedir
+// este token; el caller también debe validar de nuevo en el endpoint de
+// confirmación (nunca confiar en que el pathname que vuelve del cliente es
+// legítimo sin revisar el prefijo esperado).
+async function issueClientUploadToken(pathname, opts) {
+    return (0, client_1.generateClientTokenFromReadWriteToken)({
+        pathname,
+        addRandomSuffix: true,
+        allowedContentTypes: opts.allowedContentTypes,
+        maximumSizeInBytes: opts.maximumSizeInBytes,
+    });
 }
 async function deleteFromBlob(pathname) {
     try {

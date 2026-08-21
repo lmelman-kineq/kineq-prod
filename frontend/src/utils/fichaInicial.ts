@@ -1,5 +1,4 @@
 import type { FichaInicial, FichaInicialInput } from '../types/domain'
-import { toDateInputValue } from './dateFormat'
 
 export type FichaCompletionStatus = 'pendiente' | 'parcial' | 'completa'
 
@@ -20,16 +19,18 @@ export const FICHA_COMPLETION_PILL_CLASS: Record<FichaCompletionStatus, string> 
 // Campos narrativos/escalares que se editan en el form plano (los antecedentes,
 // alergias, medicación y estudios estructurados viven en sus propias listas,
 // con su propio guardado — no participan de este cálculo de completitud).
+//
+// motivoConsulta/fechaInicioProblema/diagnosticoDerivacion/objetivoPaciente/
+// tratamientosPrevios/traumatismosAccidentes ("Motivo y contexto") se
+// sacaron de acá a pedido — esos campos ya no tienen ningún input en la UI,
+// así que dejarlos en esta lista habría vuelto "Completa" inalcanzable para
+// cualquier ficha nueva (nunca se pueden llenar). Las columnas de Prisma
+// siguen existiendo sin cambios — ver FichaInicialInput/buildFichaPayload,
+// que ya no los manda porque no están acá.
 const FICHA_FORM_FIELDS = [
-  'motivoConsulta',
-  'fechaInicioProblema',
-  'diagnosticoDerivacion',
-  'objetivoPaciente',
   'antecedentesPersonales',
   'antecedentesFamiliares',
   'cirugias',
-  'traumatismosAccidentes',
-  'tratamientosPrevios',
   'alergiasEstado',
   'medicacionEstado',
   'enfermedadesActuales',
@@ -109,19 +110,15 @@ export function fichaFormFromFicha(ficha: FichaInicial | null): Record<string, s
   const form: Record<string, string> = {}
   for (const field of FICHA_FORM_FIELDS) {
     const value = source[field as keyof FichaInicial]
-    if (field === 'fechaInicioProblema') {
-      form[field] = toDateInputValue(source.fechaInicioProblema)
-    } else {
-      form[field] = value == null ? '' : String(value)
-    }
+    form[field] = value == null ? '' : String(value)
   }
   return form
 }
 
 // Arma el payload de PATCH a partir del form plano: convierte los campos
-// numéricos a Number (o los omite si están vacíos), omite la fecha si está
-// vacía, y deja el resto tal cual — mismo criterio que ya usaban
-// PatientDetailPage/AttentionPage antes de esta función existir.
+// numéricos a Number (o los omite si están vacíos), y deja el resto tal
+// cual — mismo criterio que ya usaban PatientDetailPage/AttentionPage antes
+// de esta función existir.
 export function buildFichaPayload(form: Record<string, string>): FichaInicialInput {
   const payload: Record<string, unknown> = {}
   for (const field of FICHA_FORM_FIELDS) {
@@ -130,7 +127,6 @@ export function buildFichaPayload(form: Record<string, string>): FichaInicialInp
       if (raw?.trim()) payload[field] = Number(raw)
       continue
     }
-    if (field === 'fechaInicioProblema' && !raw) continue
     if (FICHA_ENUM_FIELDS.has(field)) {
       payload[field] = raw ? raw : null
       continue

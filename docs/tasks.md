@@ -419,6 +419,58 @@ npx prisma migrate deploy
 
 ---
 
+## Evoluciones, Turnos, Calendario, Diagnósticos y layout del Paciente
+
+Ronda de catorce partes sobre la ronda anterior. Una migración nueva: `20260821100057_turno_es_sesion_consulta` (aditiva).
+
+**1) Scroll del editor de Evolución**: `RichTextEditor.tsx`'s `emitChange()` reasignaba `el.innerHTML` en cada `onInput` cuando DOMPurify normalizaba algo (frecuente, aunque fuera funcionalmente igual) — reasignar `innerHTML` de un `contentEditable` enfocado le hace perder el cursor al navegador y salta el scroll. Ya no reescribe el DOM mientras se tipea (la corrección real queda para el `blur`, donde perder el cursor no importa); de paso, pegar contenido externo ahora siempre entra como texto plano (`onPaste`), cerrando el único vector real de HTML fuera de allowlist.
+
+**2) Menú de Home — orden fijo**: Editar Turno (nuevo) → acciones de estado → Ver Historia Clínica → Eliminar Turno, siempre en ese orden sin importar el estado. Las acciones de estado no se tocaron, solo cambiaron de posición.
+
+**3) "Última atención"**: ya calculaba correctamente (`estado === 'FINALIZADO'`, orden descendente) — verificado, no era un bug. Extraído a `ultimaAtencionFinalizada()` (`utils/patient.ts`) con tests de regresión.
+
+**4) Catálogo de Antecedentes**: nueva fila "+ Agregar antecedente" al final de `CatalogoCompletoDrawer`, mismo endpoint que ya usaba el buscador rápido, sin tener que cerrar el drawer.
+
+**5) Numeración automática de sesiones — bug real corregido**: el backend siempre calculó bien el número automático para cualquier diagnóstico; el frontend solo lo pedía/pisaba si el diagnóstico tenía `cantidadSesionesPlanificadas` configurada — para cualquier otro, el default `1` se mandaba como valor explícito y ganaba sobre el cálculo automático para siempre. Corregido: el auto-fetch ahora dispara para cualquier diagnóstico.
+
+**5.1) "Sesión de consulta"**: nuevo `Turno.esSesionConsulta` — nunca tiene `numeroSesion` (forzado a `null` server-side), excluida del conteo de las demás sesiones del mismo paciente+diagnóstico. Checkbox nuevo en Crear/Editar Turno.
+
+**6) Mini calendario de Home — bug real corregido (marco horario mezclado, no un parche superficial)**: el "hoy" resaltado (`todayEnZonaConsultorio`) ya se calculaba bien, en la zona del consultorio — pero el grid de días (`dayStr`, construido desde `currentMonthDate`) se armaba con `new Date()` de hora del navegador. Comparar un string en zona-consultorio contra uno en zona-navegador podía resaltar el día equivocado cuando ambas zonas difieren. Nuevo `todayDateInTimeZone()` (`utils/timezone.ts`) ancla el mes/año inicial del calendario a la misma zona que el resaltado — mismo marco horario en ambos lados de la comparación.
+
+**7) Upload de archivos — diagnóstico completo, dos hallazgos**: auditoría de punta a punta sin encontrar bugs de código. Confirmado el hallazgo ya conocido (`BLOB_READ_WRITE_TOKEN` sigue sin configurar en ningún ambiente) reproduciendo el error exacto que arrojaría `@vercel/blob`. **Hallazgo nuevo**: sin `vercel.json`, el deploy corre con el límite de body de ~4.5MB de Vercel Serverless Functions — bastante menor que los límites propios de la app (10MB/imagen, hasta 50MB por request de Evolución; 15MB Estudio; 5MB foto). Aunque el token estuviera bien configurado, muchas subidas reales seguirían fallando por este límite de plataforma. No corregido — es una decisión de arquitectura (upload directo cliente→Blob vs. bajar límites propios) que se dejó para que decida el usuario, ver `docs/architecture.md`.
+
+**8) Cualquier turno editable sin importar el estado**: ya era así — el guard de `PATCH /api/turnos/:id` solo bloquea cambiar `estado` sobre un turno terminal, nunca bloqueó editar el resto de los campos. Verificado y agregado un test de regresión explícito.
+
+**9) Reorganización de la pantalla del Paciente**: se sacó la card lateral de "Resumen clínico" — la card principal ahora ocupa todo el ancho, y el mismo panel pasó a ser la primera tab: Resumen clínico → Ficha inicial → Evoluciones → Turnos → Estudios. Ficha Inicial perdió su propia subpestaña "Resumen" (quedaba duplicada) — ahora siempre abre en "Antecedentes".
+
+**10) Dropdown de Diagnóstico**: ya tenía la implementación custom completa (`DiagnosticoSelect.tsx`, mismo patrón que Paciente/Profesional/Especialidad) de una ronda anterior — verificado que sigue así, sin cambios nuevos necesarios.
+
+**11) Click en Evolución = editar**: click en una fila de `EvolutionTable.tsx` ahora llama al mismo handler que el lápiz si el usuario puede editar esa evolución; si no puede, sigue expandiendo a solo lectura como antes.
+
+**12) Alta de Evolución colapsada**: el formulario de "Nueva evolución" arranca oculto detrás de "+ Cargar evolución" (ancho completo); guardar o cancelar (con confirmación si había contenido sin guardar) lo vuelve a ocultar y limpia todo el estado temporal.
+
+**Producción**: dos migraciones aditivas pendientes de Aiven — `20260817170811_turno_eliminado_at` (ronda anterior) y `20260821100057_turno_es_sesion_consulta` (esta ronda). Correr `npx prisma migrate status` y `npx prisma migrate deploy` cuando corresponda.
+
+**Tests**: backend 215→220 (+5: `esSesionConsulta` nunca tiene `numeroSesion` ni automático ni explícito; una sesión de consulta finalizada no cuenta para las demás; editar a `esSesionConsulta` limpia el número; el auto-cálculo no depende de `cantidadSesionesPlanificadas`; un turno terminal sigue editable en campos no-estado). Frontend 94→99 (+5: `ultimaAtencionFinalizada` con ASIGNADO/CANCELADO posteriores, varios FINALIZADO, sin ninguno; `todayDateInTimeZone` con reloj simulado). `tsc -b`/`build`/`lint` limpios en ambos paquetes — el único error de lint sigue siendo el mismo preexistente de `AuthContext.tsx`.
+
+**No verificado con navegador real en esta ronda tampoco** — mismo gap que la ronda anterior, ver "Known gaps" más abajo.
+
+---
+
+## Resumen clínico en dos columnas, Motivo y contexto eliminado, upload directo cliente→Blob
+
+Tres pedidos puntuales sobre la ronda anterior. Ninguna migración de Prisma.
+
+**1) "Resumen clínico" en dos columnas**: `.clinical-summary` pasó a `grid-template-columns: repeat(2, ...)`; alertas, el bloque de Antecedentes y el link "Ir a ficha inicial →" ocupan las dos columnas (contenido variable), el resto se acomoda de a dos. Colapsa a una columna en mobile.
+
+**2) "Motivo y contexto" eliminado de la UI**: se sacó la sección completa y sus 6 campos (Motivo de consulta, Fecha aproximada de inicio, Diagnóstico o derivación, Objetivo del paciente, Tratamientos previos, Traumatismos o accidentes) de la tab Antecedentes — **las columnas de Prisma no se tocaron**, mismo criterio de siempre. Esos 6 campos también se sacaron de `FICHA_FORM_FIELDS` (`utils/fichaInicial.ts`) para que `computeFichaCompletionStatus()` deje de contarlos — si no, ninguna ficha nueva podría llegar nunca a "Completa" (son campos que ya no tienen dónde llenarse). Los datos viejos de pacientes que ya los tenían cargados se preservan intactos.
+
+**3) Upload directo cliente→Blob**: implementado el hallazgo de la ronda anterior (límite de ~4.5MB de Vercel Serverless Functions). Las 4 superficies de archivos (imágenes de Evolución, Estudio, foto de Usuario, foto de Paciente) pasaron de subir vía `multer`/buffer por el backend a un flujo de 3 pasos: pedir un token de subida acotado → el navegador sube directo a Vercel Blob → confirmar para que el backend guarde la referencia. `multer`/`uploadMiddleware.ts` eliminados por quedar sin uso. **Nuance de seguridad sin verificar contra Vercel real** (consultado con el usuario antes de seguir, decidió avanzar igual): el tipo del SDK para emitir el token de cliente no tiene ningún campo `access` — `private` se hardcodea solo del lado del código del navegador, no hay forma de confirmar desde acá que el servidor lo fuerza también. Ver `docs/architecture.md` para el detalle completo y cómo verificarlo apenas haya un token real.
+
+**Tests**: backend sigue en 220 (los 12 tests de upload que usaban `.attach()`/multipart se reescribieron al flujo de 3 pasos, mismos casos cubiertos — ver `simulateClientUpload`/`simulateEvolucionImagenesUpload` en `app.test.ts`). Frontend 98→98 (sin cambios de test — los componentes que llaman a `api.uploadXxx()` no se tocaron, la función mantiene la misma firma). `tsc -b`/`build`/`lint` limpios en ambos paquetes.
+
+---
+
 ## Known gaps / next priorities
 
 - **Pre-existing bug found during manual verification of this round, not fixed (out of scope — not touched by this work):** the Inicio/home dashboard's mini-calendar renders a React "duplicate key" console warning (`Encountered two children with the same key... "M"`) on every load — almost certainly the weekday-initial header (L, M, M, J, V, S, D) using the letter itself as the React `key` instead of an index, so the two `M`s (Martes/Miércoles) collide. Confirmed via isolated console-error-count checkpoints that this fires during the post-login home render, before any Estadísticas/Turnos navigation — unrelated to the new code in this round. Cosmetic/non-crashing, but worth a one-line fix (`key={index}`) next time that file is touched.
@@ -432,6 +484,8 @@ npx prisma migrate deploy
 - **Real accounts currently unlinked** (checked against the dev DB at ship time — these lose clinical write access until an admin links them via Configuración → Usuarios or → Profesionales): `admin@kineq-demo.local` (consultorio 1) and the IAFS demo consultorio's admin (consultorio 13). Not a bug — this is the intended effect of the new rule — just needs a manual link to restore write access on those two accounts.
 - **`.patient-detail-page` has a ~30-45px horizontal overflow at 390/414/430px**, found while verifying the Evoluciones mobile round above — reproduces identically on "Ficha inicial" (untouched by that round), so it's a container-level issue shared by every clinical tab (likely a grid/flex child under `PatientProfileHeader`/`PatientSummaryCards` missing `min-width: 0`), not specific to Evoluciones. Not fixed — was explicitly out of scope for a round scoped to Evoluciones only. Still not fixed as of the "Ajustes de Evoluciones, Ficha Inicial, Estudios y Turnos del Paciente" round either (out of scope again).
 - **No live-browser verification for the "Ajustes de Evoluciones, Ficha Inicial, Estudios y Turnos del Paciente" round** — unlike the Ficha Inicial/Evoluciones-mobile rounds above (which used Playwright ad-hoc against the shared dev server), this round shipped verified only via `tsc -b` + full backend/frontend test suites, no screenshots at the 6 requested breakpoints (1920×1080, 1366×768, 1024×768, 768×1024, 430×932, 390×844) and no manual click-through of: the Diagnóstico dropdown chevron, the reordered Evolución fields row + read view, Ficha Inicial without "Motivo", the clickable Antecedentes category headers, the Turnos-in-Patient table click-to-edit at narrow widths, the Estudios staged-file picker, or the `⋮`/"Eliminar turno" menu across all 6 turno states. This is the single largest remaining gap from that round's own acceptance criteria.
+- **Same gap, one round later ("Evoluciones, Turnos, Calendario, Diagnósticos y layout del Paciente")**: also shipped verified only via `tsc -b`/`build`/`lint` + full test suites, no live click-through of: the collapsed "Cargar evolución" flow, click-to-edit on an Evolución row, the new Patient screen layout (Resumen clínico as first tab, no sidebar), the "Sesión de consulta" checkbox end-to-end, the mini-calendar timezone fix at an actual timezone mismatch, or the RichTextEditor scroll-jump fix under real typing. The 6 breakpoints above are still unverified live, now for two rounds in a row.
+- **File-upload architecture gap, found this round — now fixed (client-direct-upload implemented)**: without a `vercel.json`, `kineq-api`'s Vercel deployment was subject to the platform's default ~4.5MB Serverless Function request body limit — well under this app's own configured max file sizes. Fixed by moving all 4 upload surfaces to Vercel Blob's client-direct-upload pattern (`@vercel/blob/client`) — the browser now uploads straight to Blob, bypassing the Serverless Function's body limit entirely. `multer`/`uploadMiddleware.ts` removed (no longer needed). See "Archivos: Vercel Blob, upload directo cliente → Blob" in `docs/architecture.md` for the full design, including an unresolved security nuance (the client-token type surface has no `access` field, so `access: 'private'` is only enforced client-side in code, not confirmed against real Vercel — needs verification once a real `BLOB_READ_WRITE_TOKEN` exists) and the still-pending token configuration itself (`BLOB_READ_WRITE_TOKEN`, step-by-step in the same doc).
 
 ---
 

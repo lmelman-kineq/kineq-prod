@@ -865,7 +865,7 @@ function overlapExists(consultorioId, profesionalId, inicio, duracionMinutos, ex
 }
 app.post('/api/turnos', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
-    const { pacienteId, especialidadId, obraSocialId, inicio, duracionMinutos = 60, numeroSesion, notas, grupoId } = req.body;
+    const { pacienteId, especialidadId, obraSocialId, inicio, duracionMinutos = 60, numeroSesion, notas, grupoId, esSesionConsulta, monto } = req.body;
     // Un profesional solo puede crear turnos para sí mismo: se ignora cualquier
     // profesionalId enviado por el cliente y se usa el vínculo de sesión.
     let profesionalId = req.body.profesionalId;
@@ -890,6 +890,8 @@ app.post('/api/turnos', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES), asy
         return res.status(400).json({ error: 'invalid duracionMinutos' });
     if (numeroSesion && Number(numeroSesion) <= 0)
         return res.status(400).json({ error: 'invalid numeroSesion' });
+    if (monto !== undefined && monto !== null && (typeof monto !== 'number' || monto < 0))
+        return res.status(400).json({ error: 'invalid monto' });
     try {
         const paciente = await prisma_1.default.paciente.findFirst({ where: { id: pacienteId, consultorioId, activo: true } });
         if (!paciente)
@@ -916,17 +918,21 @@ app.post('/api/turnos', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES), asy
                 return res.status(check.status).json({ error: check.error });
             resolvedGrupoId = Number(grupoId);
         }
+        // Una sesión de consulta nunca tiene número de sesión: ni el explícito
+        // del cliente ni el automático aplican acá — es una visita administrativa/
+        // de evaluación fuera del conteo del plan de tratamiento.
+        const resolvedEsSesionConsulta = Boolean(esSesionConsulta);
         // `numeroSesion` explícito del cliente siempre gana — el cálculo
         // automático es solo un default cuando no se mandó nada.
-        let resolvedNumeroSesion = numeroSesion ? Number(numeroSesion) : null;
-        if (resolvedGrupoId && !resolvedNumeroSesion) {
+        let resolvedNumeroSesion = resolvedEsSesionConsulta ? null : numeroSesion ? Number(numeroSesion) : null;
+        if (!resolvedEsSesionConsulta && resolvedGrupoId && !resolvedNumeroSesion) {
             resolvedNumeroSesion = await sesionAutomaticaParaGrupo(consultorioId, pacienteId, resolvedGrupoId);
         }
         // chequear solapamientos
         const conflict = await overlapExists(consultorioId, profesionalId, inicioDate, Number(duracionMinutos));
         if (conflict)
             return res.status(409).json({ error: 'overlap with existing turno' });
-        const turno = await prisma_1.default.turno.create({ data: { consultorioId, pacienteId, profesionalId, especialidadId, obraSocialId: obraSocialId || null, grupoId: resolvedGrupoId, inicio: inicioDate, duracionMinutos: Number(duracionMinutos), numeroSesion: resolvedNumeroSesion, notas: notas || null } });
+        const turno = await prisma_1.default.turno.create({ data: { consultorioId, pacienteId, profesionalId, especialidadId, obraSocialId: obraSocialId || null, grupoId: resolvedGrupoId, inicio: inicioDate, duracionMinutos: Number(duracionMinutos), numeroSesion: resolvedNumeroSesion, esSesionConsulta: resolvedEsSesionConsulta, monto: monto ?? null, notas: notas || null } });
         const result = await prisma_1.default.turno.findUnique({ where: { id: turno.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true } });
         res.status(201).json(result);
     }
@@ -956,7 +962,7 @@ app.patch('/api/turnos/:turnoId', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_R
             }
         }
         const payload = {};
-        const fields = ['pacienteId', ...(esProfesional ? [] : ['profesionalId']), 'especialidadId', 'obraSocialId', 'grupoId', 'inicio', 'duracionMinutos', 'numeroSesion', 'notas', 'estado'];
+        const fields = ['pacienteId', ...(esProfesional ? [] : ['profesionalId']), 'especialidadId', 'obraSocialId', 'grupoId', 'inicio', 'duracionMinutos', 'numeroSesion', 'esSesionConsulta', 'monto', 'notas', 'estado'];
         for (const f of fields)
             if (f in req.body)
                 payload[f] = req.body[f];
@@ -967,6 +973,16 @@ app.patch('/api/turnos/:turnoId', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_R
         if (payload.especialidadId !== undefined && await especialidadesInvalidasParaConsultorio([Number(payload.especialidadId)], consultorioId)) {
             return res.status(404).json({ error: 'especialidad not found in consultorio' });
         }
+        if (payload.monto !== undefined && payload.monto !== null && (typeof payload.monto !== 'number' || payload.monto < 0)) {
+            return res.status(400).json({ error: 'invalid monto' });
+        }
+        // Vigente después de este PATCH, combinando lo que ya tenía el turno
+        // con lo que llega en el body — una sesión de consulta nunca tiene
+        // número de sesión, sin importar si el cambio viene de este mismo
+        // request o ya era así.
+        const resolvedEsSesionConsulta = 'esSesionConsulta' in payload ? Boolean(payload.esSesionConsulta) : turno.esSesionConsulta;
+        if (resolvedEsSesionConsulta)
+            payload.numeroSesion = null;
         if ('grupoId' in payload) {
             const targetPacienteId = payload.pacienteId ?? turno.pacienteId;
             if (payload.grupoId) {
@@ -977,7 +993,7 @@ app.patch('/api/turnos/:turnoId', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_R
                 // Mismo criterio que el POST: si el cliente no mandó numeroSesion
                 // en el mismo request, se recalcula como default al cambiar de
                 // diagnóstico — nunca pisa un numeroSesion que sí vino explícito.
-                if (!('numeroSesion' in req.body)) {
+                if (!resolvedEsSesionConsulta && !('numeroSesion' in req.body)) {
                     payload.numeroSesion = await sesionAutomaticaParaGrupo(consultorioId, targetPacienteId, payload.grupoId, turnoId);
                 }
             }
@@ -1082,6 +1098,9 @@ async function sesionAutomaticaParaGrupo(consultorioId, pacienteId, grupoId, exc
             grupoId,
             estado: 'FINALIZADO',
             eliminadoAt: null,
+            // Una sesión de consulta no consume número de sesión del plan de
+            // tratamiento — tampoco debe contar para el número de las demás.
+            esSesionConsulta: false,
             NOT: excludeTurnoId ? { id: excludeTurnoId } : undefined,
         },
     });

@@ -2006,6 +2006,8 @@ export const TurnoScalarFieldEnum = {
   inicio: 'inicio',
   duracionMinutos: 'duracionMinutos',
   numeroSesion: 'numeroSesion',
+  esSesionConsulta: 'esSesionConsulta',
+  monto: 'monto',
   notas: 'notas',
   estado: 'estado',
   inicioAtencion: 'inicioAtencion',
@@ -2470,6 +2472,13 @@ export type EnumRolUsuarioFieldRefInput<$PrismaModel> = FieldRefInputType<$Prism
 
 
 /**
+ * Reference to a field of type 'Float'
+ */
+export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
  * Reference to a field of type 'EstadoTurno'
  */
 export type EnumEstadoTurnoFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EstadoTurno'>
@@ -2515,13 +2524,6 @@ export type EnumSeccionFichaFieldRefInput<$PrismaModel> = FieldRefInputType<$Pri
  * Reference to a field of type 'EstadoRevisionSeccion'
  */
 export type EnumEstadoRevisionSeccionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EstadoRevisionSeccion'>
-    
-
-
-/**
- * Reference to a field of type 'Float'
- */
-export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
     
 
 /**

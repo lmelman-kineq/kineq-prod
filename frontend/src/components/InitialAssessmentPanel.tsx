@@ -4,11 +4,9 @@ import { formatDateTime } from '../utils/dateFormat'
 import { professionalName } from '../utils/professional'
 import { FICHA_COMPLETION_LABELS, FICHA_COMPLETION_PILL_CLASS, computeFichaCompletionStatus, fichaSeccionesResumen } from '../utils/fichaInicial'
 import AssessmentSectionNav, { type AssessmentSection } from './AssessmentSectionNav'
-import InitialAssessmentSummary from './InitialAssessmentSummary'
 import ClinicalAntecedentesSection from './ClinicalAntecedentesSection'
 import FichaAllergyList from './FichaAllergyList'
 import FichaMedicationList from './FichaMedicationList'
-import DateInput from './DateInput'
 import AlertToggleButton from './AlertToggleButton'
 import type { ClinicalNavTarget } from '../utils/clinicalNavTarget'
 import { scrollToAndHighlight } from '../utils/scrollAndHighlight'
@@ -30,15 +28,6 @@ function TextField({ id, label, value, onChange, placeholder, alert }: { id?: st
     <label id={id} className="ficha-field">
       <FieldLabel label={label} alert={alert} />
       <input type="text" value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
-    </label>
-  )
-}
-
-function DateField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <label className="ficha-field">
-      <span>{label}</span>
-      <DateInput value={value} onChange={onChange} />
     </label>
   )
 }
@@ -99,23 +88,20 @@ function FichaSection({ icon, title, description, children }: { icon: ReactNode;
 }
 
 const ICONS = {
-  motivo: <svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 1 1-3.6-6.7" /><path d="M21 4v5h-5" /></svg>,
   antecedentes: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>,
   seguridad: <svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /></svg>,
   habitos: <svg viewBox="0 0 24 24"><path d="M3 12h4l2 7 4-14 2 7h6" /></svg>,
   dolorFuncion: <svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 3h6v3H9z" /><path d="M9 12l2 2 4-4" /></svg>,
 }
 
-// "Motivo" ya no es una subpestaña propia — sus campos (motivoConsulta,
-// fechaInicioProblema, diagnosticoDerivacion, objetivoPaciente,
-// tratamientosPrevios, traumatismosAccidentes) se movieron dentro de
-// "Antecedentes" (ver panels.antecedentes más abajo), que pasa a ser la
-// primera sección real. Los datos/columnas de Prisma no se tocaron — sigue
-// siendo texto libre, ahora editable desde otro lugar de la UI. La cantidad
-// de secciones revisables vive en REVISABLE_SECCIONES (utils/fichaInicial.ts)
-// — si se agrega/saca una sección acá, actualizar esa lista también.
+// "Motivo" ya no es una subpestaña propia ni tiene sus campos en ningún
+// lado de la UI (motivoConsulta, fechaInicioProblema, diagnosticoDerivacion,
+// objetivoPaciente, tratamientosPrevios, traumatismosAccidentes — ver
+// "Motivo y contexto" eliminado de panels.antecedentes más abajo). Los
+// datos/columnas de Prisma no se tocaron. La cantidad de secciones
+// revisables vive en REVISABLE_SECCIONES (utils/fichaInicial.ts) — si se
+// agrega/saca una sección acá, actualizar esa lista también.
 const NAV_SECTIONS: AssessmentSection[] = [
-  { key: 'resumen', label: 'Resumen' },
   { key: 'antecedentes', label: 'Antecedentes' },
   { key: 'seguridad', label: 'Seguridad clínica' },
   { key: 'habitos', label: 'Contexto y Hábitos' },
@@ -129,42 +115,22 @@ type InitialAssessmentPanelProps = {
   onNavTargetHandled?: () => void
 }
 
-// Una ficha cuenta como "sin carga clínica real" cuando ni el form plano
-// (Motivo, Antecedentes en texto libre, Seguridad, Hábitos, Dolor y función)
-// ni ninguna lista estructurada (antecedentes del catálogo, alergias,
-// medicación, estudios, alertas manuales) tiene contenido — no alcanza con
-// mirar el estado `pendiente` de `computeFichaCompletionStatus` solo, porque
-// ese cálculo solo conoce el form plano: una ficha puede seguir en
-// `pendiente` (0% del form) y ya tener antecedentes/alergias cargados.
-function fichaEstaRealmenteVacia(ficha: UseFichaInicial['ficha'], form: Record<string, string>): boolean {
-  if (computeFichaCompletionStatus(form) !== 'pendiente') return false
-  if (!ficha) return true
-  return (
-    (ficha.antecedentes?.length ?? 0) === 0
-    && (ficha.alergias?.length ?? 0) === 0
-    && (ficha.medicaciones?.length ?? 0) === 0
-    && (ficha.estudios?.length ?? 0) === 0
-    && (ficha.alertasCampo?.length ?? 0) === 0
-  )
-}
-
 export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget, onNavTargetHandled }: InitialAssessmentPanelProps) {
-  const [activeKey, setActiveKey] = useState('resumen')
+  const [activeKey, setActiveKey] = useState('antecedentes')
   const { ficha, loading, form, saving, saveError, canWrite, updateField, toggleAlertaCampo } = fichaHook
 
-  // Tab inicial: "Antecedentes" (la primera sección real, ya que "Motivo"
-  // dejó de existir como subpestaña propia) si la ficha está realmente
-  // vacía, "Resumen" si ya tiene algún progreso — se decide una sola vez
-  // por paciente (apenas termina de cargar), nunca en cada render, para no
-  // arrancarle la sección de las manos al profesional mientras está
+  // Ficha Inicial ya no tiene una subpestaña "Resumen" (ese rol lo cumple
+  // ahora la tab principal "Resumen clínico" de PatientDetailPage.tsx) —
+  // siempre abre en "Antecedentes", la primera sección real. Se decide una
+  // sola vez por paciente (apenas termina de cargar), nunca en cada render,
+  // para no arrancarle la sección de las manos al profesional mientras está
   // completando otra más adelante en la lista (Seguridad, etc.).
   const initialTabPatientRef = useRef<number | null>(null)
   useEffect(() => {
     if (loading) return
     if (initialTabPatientRef.current === patientId) return
     initialTabPatientRef.current = patientId
-    setActiveKey(fichaEstaRealmenteVacia(ficha, form) ? 'antecedentes' : 'resumen')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setActiveKey('antecedentes')
   }, [loading, patientId])
 
   // Deep-link desde una alerta clínica: cambia a la sección de origen y
@@ -194,22 +160,16 @@ export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget
   })
 
   const panels: Record<string, ReactNode> = {
-    resumen: <InitialAssessmentSummary ficha={ficha} form={form} onNavigate={setActiveKey} />,
-
-    // "Motivo" ya no es una subpestaña propia — su contenido (Motivo y
-    // contexto) pasa a vivir arriba de Antecedentes, dentro de la misma
-    // sección: mismos campos/columnas de Prisma, sin cambios de datos, solo
-    // de navegación.
+    // La sección "Motivo y contexto" (motivoConsulta, fechaInicioProblema,
+    // diagnosticoDerivacion, objetivoPaciente, tratamientosPrevios,
+    // traumatismosAccidentes) se sacó de la UI por completo a pedido — las
+    // columnas de Prisma NO se tocaron (retirar UI, no migración
+    // destructiva); esos 6 campos también se sacaron de FICHA_FORM_FIELDS
+    // (utils/fichaInicial.ts) para que computeFichaCompletionStatus() no
+    // los siga contando (si no, ninguna ficha nueva podría llegar a
+    // "Completa": esos campos ya no tienen forma de completarse).
     antecedentes: (
       <>
-        <FichaSection icon={ICONS.motivo} title="Motivo y contexto">
-          <TextField id="ficha-field-motivoConsulta" label="Motivo de consulta" value={form.motivoConsulta} onChange={(v) => updateField('motivoConsulta', v)} alert={alertFor('motivoConsulta')} />
-          <DateField label="Fecha aproximada de inicio" value={form.fechaInicioProblema} onChange={(v) => updateField('fechaInicioProblema', v)} />
-          <TextField id="ficha-field-diagnosticoDerivacion" label="Diagnóstico o derivación" value={form.diagnosticoDerivacion} onChange={(v) => updateField('diagnosticoDerivacion', v)} alert={alertFor('diagnosticoDerivacion')} />
-          <TextField label="Objetivo del paciente" value={form.objetivoPaciente} onChange={(v) => updateField('objetivoPaciente', v)} />
-          <TextField id="ficha-field-tratamientosPrevios" label="Tratamientos previos" value={form.tratamientosPrevios} onChange={(v) => updateField('tratamientosPrevios', v)} alert={alertFor('tratamientosPrevios')} />
-          <TextField id="ficha-field-traumatismosAccidentes" label="Traumatismos o accidentes" value={form.traumatismosAccidentes} onChange={(v) => updateField('traumatismosAccidentes', v)} alert={alertFor('traumatismosAccidentes')} />
-        </FichaSection>
         <div className="ficha-section-header">
           <span className="ficha-section-icon" aria-hidden="true">{ICONS.antecedentes}</span>
           <div>
