@@ -1,6 +1,6 @@
 import type { Turno } from '../types/domain'
 import { formatDateOnly, formatTimeOnly } from '../utils/dateFormat'
-import { professionalName } from '../utils/professional'
+import { professionalName, professionalNameCompact } from '../utils/professional'
 import { mapEstadoToStatus, statusClass } from '../utils/turnoStatus'
 
 type PatientAppointmentsTableProps = {
@@ -56,7 +56,7 @@ export default function PatientAppointmentsTable({ turnos, onEditTurno }: Patien
                 <small>{formatTimeOnly(turno.inicio)}</small>
               </td>
               <td data-label="Profesional" className="patient-turnos-cell-truncate" title={professionalName(turno.profesional)}>
-                {professionalName(turno.profesional)}
+                {professionalNameCompact(turno.profesional)}
               </td>
               <td data-label="Especialidad" className="patient-turnos-cell-truncate" title={turno.especialidad?.nombre ?? '—'}>
                 <span className="turnos-specialty-cell">

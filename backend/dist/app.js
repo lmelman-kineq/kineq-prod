@@ -393,8 +393,8 @@ const PROFESIONAL_INCLUDE = {
 app.post('/api/profesionales', (0, auth_1.requireRole)(client_1.RolUsuario.ADMINISTRADOR), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
     const { nombre, apellido, titulo, matricula, email, telefono, especialidadIds, usuarioId } = req.body;
-    if (!nombre || !apellido)
-        return res.status(400).json({ error: 'nombre and apellido required' });
+    if (!nombre)
+        return res.status(400).json({ error: 'nombre required' });
     const especialidadIdList = Array.isArray(especialidadIds) ? especialidadIds.map(Number) : [];
     try {
         if (await especialidadesInvalidasParaConsultorio(especialidadIdList, consultorioId)) {
@@ -414,7 +414,7 @@ app.post('/api/profesionales', (0, auth_1.requireRole)(client_1.RolUsuario.ADMIN
                 data: {
                     consultorioId,
                     nombre,
-                    apellido,
+                    apellido: apellido || '',
                     titulo: titulo || null,
                     matricula: matricula || null,
                     email: email || null,

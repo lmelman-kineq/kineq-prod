@@ -1,7 +1,8 @@
 import { Fragment, useState, type SVGProps } from 'react'
 import type { Evolucion, GrupoEvolucion } from '../types/domain'
 import { formatDateTime } from '../utils/dateFormat'
-import { professionalName } from '../utils/professional'
+import { professionalName, professionalNameCompact } from '../utils/professional'
+import { sanitizeRichTextHtml } from '../utils/richTextSanitize'
 import RichTextEditor from './RichTextEditor'
 import EvolucionContent from './EvolucionContent'
 import EvolucionImages from './EvolucionImages'
@@ -88,6 +89,16 @@ export default function EvolutionTable({
   imagesError,
 }: EvolutionTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  // Popover de "Resumen" al hover — mismo mecanismo que el tooltip del
+  // sidebar (position:fixed + getBoundingClientRect, ver App.tsx), acá con
+  // contenido rico en vez de una sola línea: escapa de cualquier overflow
+  // del contenedor de tabla y no reordena el layout.
+  const [resumenPopover, setResumenPopover] = useState<{ evolucion: Evolucion; top: number; left: number } | null>(null)
+  const showResumenPopover = (evolucion: Evolucion) => (event: { currentTarget: HTMLElement }) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setResumenPopover({ evolucion, top: rect.bottom + 8, left: rect.left })
+  }
+  const hideResumenPopover = () => setResumenPopover(null)
 
   if (evoluciones.length === 0) {
     return (
@@ -99,8 +110,12 @@ export default function EvolutionTable({
   }
 
   const toggleExpand = (id: number) => {
-    setExpandedId((current) => (current === id ? null : id))
-    if (editingId !== null && editingId !== id) onCancelEdit()
+    const collapsing = expandedId === id
+    setExpandedId(collapsing ? null : id)
+    // Cancela edición en curso tanto al cambiar de fila como al colapsar la
+    // propia fila que se estaba editando — nunca deja `editingId` colgado
+    // apuntando a una fila que ya no está expandida.
+    if (editingId !== null && (editingId !== id || collapsing)) onCancelEdit()
   }
 
   const startEdit = (evolucion: Evolucion) => {
@@ -108,14 +123,11 @@ export default function EvolutionTable({
     onStartEdit(evolucion)
   }
 
-  // Click en la fila entra directo a edición (mismo handler que el lápiz)
-  // cuando el usuario puede editar esa evolución; si no puede, sigue
-  // funcionando como antes (expandir a solo lectura) — nunca deja el click
-  // sin efecto.
-  const handleRowClick = (evolucion: Evolucion) => {
-    if (canEdit(evolucion)) startEdit(evolucion)
-    else toggleExpand(evolucion.id)
-  }
+  // Click en la fila SIEMPRE expande a solo lectura, sin importar permisos
+  // de edición — editar es una acción explícita, solo vía el lápiz. (Antes
+  // entraba directo a edición si el usuario podía editar; se invirtió a
+  // pedido: un click accidental en la fila ya no abre el formulario.)
+  const handleRowClick = (evolucion: Evolucion) => toggleExpand(evolucion.id)
 
   return (
     <div className="turnos-table-scroll">
@@ -152,9 +164,18 @@ export default function EvolutionTable({
                     {formatDateTime(evolucion.createdAt)}
                     {wasEdited ? <span className="evolution-edited-tag"> · editada</span> : null}
                   </td>
-                  <td data-label="Profesional">{professionalName(evolucion.profesional)}</td>
+                  <td data-label="Profesional" title={professionalName(evolucion.profesional)}>{professionalNameCompact(evolucion.profesional)}</td>
                   <td data-label="Diagnóstico"><GrupoChip grupo={evolucion.grupo} /></td>
-                  <td className="evolution-resumen-cell" data-label="Resumen"><span>{evolucion.contenido}</span></td>
+                  <td
+                    className="evolution-resumen-cell"
+                    data-label="Resumen"
+                    onMouseEnter={showResumenPopover(evolucion)}
+                    onMouseLeave={hideResumenPopover}
+                    onFocus={showResumenPopover(evolucion)}
+                    onBlur={hideResumenPopover}
+                  >
+                    <span>{evolucion.contenido}</span>
+                  </td>
                   <td className="turnos-actions-cell config-row-actions">
                     {canEdit(evolucion) ? (
                       <button
@@ -248,6 +269,19 @@ export default function EvolutionTable({
           })}
         </tbody>
       </table>
+
+      {resumenPopover ? (
+        <div className="evolution-resumen-popover" style={{ top: resumenPopover.top, left: resumenPopover.left }}>
+          {resumenPopover.evolucion.contenidoHtml ? (
+            <div
+              className="evolution-rich-content"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(resumenPopover.evolucion.contenidoHtml) }}
+            />
+          ) : (
+            <p>{resumenPopover.evolucion.contenido}</p>
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }

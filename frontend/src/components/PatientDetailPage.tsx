@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import * as api from '../services/api'
-import type { Evolucion, EstadoTurno, GrupoEvolucion, Paciente, Profesional, Turno } from '../types/domain'
+import type { Evolucion, EstadoTurno, GrupoEvolucion, Paciente, Turno } from '../types/domain'
 import type { ConfirmDialogOptions, Turno as SessionTurno } from '../App'
 import { useAuth } from '../auth/AuthContext'
-import { statusClass } from '../utils/turnoStatus'
-import { formatPlainDate } from '../utils/dateFormat'
 import PatientProfileHeader from './PatientProfileHeader'
-import PatientAlertsBadge from './PatientAlertsBadge'
 import ClinicalSummaryPanel from './ClinicalSummaryPanel'
 import ClinicalTabs, { type ClinicalTab } from './ClinicalTabs'
 import EvolutionTable, { GrupoChip } from './EvolutionTable'
@@ -21,7 +18,6 @@ import FichaEstudiosTab from './FichaEstudiosTab'
 import PatientFormModal from './PatientFormModal'
 import RichTextEditor from './RichTextEditor'
 import { useFichaInicial } from '../hooks/useFichaInicial'
-import { professionalName } from '../utils/professional'
 import { groupEvolucionesByGrupo } from '../utils/groupEvolucionesByGrupo'
 import { SPECIALTY_COLOR_TOKENS } from '../utils/specialtyColors'
 import type { ClinicalNavRequest, ClinicalNavTarget } from '../utils/clinicalNavTarget'
@@ -73,18 +69,16 @@ export default function PatientDetailPage({
   const [evoluciones, setEvoluciones] = useState<Evolucion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState(() => (canEditClinical ? 'resumen' : 'turnos'))
+  const [activeTab, setActiveTab] = useState(() => (canEditClinical ? 'ficha' : 'turnos'))
   const [editPatientOpen, setEditPatientOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
-  const [now, setNow] = useState(() => Date.now())
 
   const [showNewEvolucionForm, setShowNewEvolucionForm] = useState(false)
   const [newEvolucionText, setNewEvolucionText] = useState('')
   const [newEvolucionHtml, setNewEvolucionHtml] = useState('')
   const [savingEvolucion, setSavingEvolucion] = useState(false)
   const [evolucionError, setEvolucionError] = useState<string | null>(null)
-  const [propioProfesional, setPropioProfesional] = useState<Profesional | null>(null)
 
   // Imágenes de la evolución en creación: se suben recién después de crear
   // la evolución (el endpoint de subida necesita un evolucionId real) —
@@ -189,22 +183,6 @@ export default function PatientDetailPage({
     })
   }
 
-  // Timer de atención — solo corre con turno activo en ATENDIENDO (contexto
-  // de sesión); sin `activeTurno`, este efecto nunca arranca.
-  useEffect(() => {
-    if (!activeTurno || activeTurno.status !== 'Atendiendo' || !activeTurno.startAttention) return undefined
-    const timer = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(timer)
-    // Solo status/startAttention importan acá — activeTurno cambia de
-    // identidad en cada refetch del turno aunque nada relevante haya cambiado.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTurno?.status, activeTurno?.startAttention])
-
-  const elapsedSeconds =
-    activeTurno?.status === 'Atendiendo' && activeTurno.startAttention
-      ? Math.max(0, Math.floor((now - new Date(activeTurno.startAttention).getTime()) / 1000))
-      : 0
-
   const doFinalize = async () => {
     if (!activeTurno || !onUpdateEstado) return
     setFinalizing(true)
@@ -262,11 +240,10 @@ export default function PatientDetailPage({
       setError(null)
 
       try {
-        const [patientResult, turnosResult, evolucionesResult, profesionalesResult, gruposResult] = await Promise.all([
+        const [patientResult, turnosResult, evolucionesResult, gruposResult] = await Promise.all([
           api.getPaciente(patientId),
           api.getTurnos({ pacienteId: patientId }),
           canEditClinical ? api.getEvoluciones(patientId) : Promise.resolve([]),
-          user?.profesionalId ? api.getProfesionales() : Promise.resolve([]),
           canEditClinical ? api.getGruposEvolucion(patientId) : Promise.resolve([]),
         ])
 
@@ -274,7 +251,6 @@ export default function PatientDetailPage({
         setPatient(patientResult)
         setTurnos(turnosResult)
         setEvoluciones(evolucionesResult)
-        setPropioProfesional(profesionalesResult.find((p) => p.id === user?.profesionalId) ?? null)
         setGrupos(gruposResult)
       } catch (loadError) {
         if (!cancelled) {
@@ -516,16 +492,10 @@ export default function PatientDetailPage({
   const sortedEvoluciones = [...evoluciones].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
-  const lastEvolucion = sortedEvoluciones[0] ?? null
   const hasEvolucionDelTurnoActivo = activeTurno ? evoluciones.some((evolucion) => evolucion.turnoId === activeTurno.id) : false
   const socialWorkName = patient.obraSocial?.nombre ?? patientSocialWorkById[patient.id] ?? null
 
-  const nextTurno = turnos
-    .filter((turno) => turno.estado === 'ASIGNADO' || turno.estado === 'EN_ESPERA')
-    .sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime())[0] ?? null
-
   const tabs: ClinicalTab[] = [
-    ...(canEditClinical ? [{ key: 'resumen', label: 'Resumen clínico' }] : []),
     ...(canEditClinical ? [{ key: 'ficha', label: 'Ficha inicial' }] : []),
     ...(canEditClinical ? [{ key: 'evoluciones', label: 'Evoluciones', badge: evoluciones.length ? String(evoluciones.length) : undefined }] : []),
     { key: 'turnos', label: 'Turnos' },
@@ -567,17 +537,6 @@ export default function PatientDetailPage({
   const { secciones, sinGrupo: evolucionesSinGrupo } = groupEvolucionesByGrupo(evolucionesFiltradas)
 
   const panels: Record<string, ReactNode> = {
-    resumen: (
-      <ClinicalSummaryPanel
-        loading={fichaHook.loading}
-        ficha={fichaHook.ficha}
-        fichaForm={fichaHook.form}
-        lastEvolucionDate={lastEvolucion?.createdAt ?? null}
-        nextTurnoDate={nextTurno?.inicio ?? null}
-        onGoToFicha={() => setActiveTab('ficha')}
-        showNoEvolucionAlert={activeTurno?.status === 'Atendiendo' && !hasEvolucionDelTurnoActivo}
-      />
-    ),
     evoluciones: (
       <>
         {canWriteClinical ? (
@@ -592,9 +551,6 @@ export default function PatientDetailPage({
           ) : (
             <div className="evolution-form">
               <label htmlFor="nueva-evolucion">Nueva evolución</label>
-              <p className="patient-detail-note patient-detail-note--inline">
-                La evolución se va a registrar como {propioProfesional ? professionalName(propioProfesional) : 'tu profesional vinculado'}.
-              </p>
               <div className="evolution-form-fields-row">
                 <DiagnosticoSelect
                   grupos={grupos}
@@ -801,6 +757,15 @@ export default function PatientDetailPage({
         </button>
 
         <div className="patient-detail-topbar-actions">
+          {/* Reemplaza la vieja card contextual de turno (estado/fecha·hora/
+              duración reservada, ya eliminada): única acción real de ese
+              bloque, que no vive en ningún otro lado — vincula la evolución
+              cargada al turno y lo pasa a FINALIZADO. Sin card, solo el botón. */}
+          {activeTurno?.status === 'Atendiendo' ? (
+            <button type="button" className="primary-button" disabled={finalizing} onClick={finalizarAtencion}>
+              {finalizing ? 'Finalizando...' : 'Finalizar atención'}
+            </button>
+          ) : null}
           {!activeTurno && onNewTurno ? (
             <button type="button" className="new-turn-button new-turn-button--row" onClick={() => onNewTurno(patient.id)}>
               Nuevo turno
@@ -839,62 +804,41 @@ export default function PatientDetailPage({
         </div>
       </div>
 
-      <PatientProfileHeader
-        patient={patient}
-        socialWorkName={socialWorkName}
-        canEditPhoto={canEditAdmin}
-        onPhotoChanged={(fotoUrl) => setPatient((current) => (current ? { ...current, fotoUrl } : current))}
-        actions={
-          canEditClinical ? (
-            <PatientAlertsBadge
-              ficha={fichaHook.ficha}
-              onGoToFicha={() => setActiveTab('ficha')}
-              onNavigateToTarget={navigateToClinicalTarget}
-            />
-          ) : null
-        }
-      />
-
-      {/* Contexto de sesión — aditivo, nunca reemplaza el header/datos del
-          paciente de arriba. Reutiliza las clases ya existentes de la vieja
-          pantalla de Atención (.attention-header/.attention-timer), ahora
-          como una franja propia en vez de todo el header. */}
-      {activeTurno ? (
-        <div className="patient-detail-header attention-header">
-          <div>
-            <span className={`turnos-status-pill turnos-status-pill--${statusClass(activeTurno.status)}`}>
-              {activeTurno.status}
-            </span>
-            <p className="patient-detail-subtitle">
-              {formatPlainDate(activeTurno.date)} · {activeTurno.time} — {activeTurno.professionalDisplay ?? 'Profesional no disponible'}
-              {activeTurno.specialtyName ? ` · ${activeTurno.specialtyName}` : ''}
-              {activeTurno.sessionNumber != null ? ` · Sesión ${activeTurno.sessionNumber}` : ''}
-            </p>
-          </div>
-          <div className="attention-header-actions">
-            {activeTurno.status === 'Atendiendo' && activeTurno.startAttention ? (
-              <div className="attention-timer">
-                <p className="details-label">Tiempo atendiendo</p>
-                <strong>{new Date(elapsedSeconds * 1000).toISOString().slice(11, 19)}</strong>
-                <span className="details-duration-hint">Reservado: {activeTurno.duration} min</span>
-              </div>
-            ) : (
-              <div className="attention-timer attention-timer--static">
-                <p className="details-label">Duración reservada</p>
-                <strong>{activeTurno.duration} min</strong>
-              </div>
-            )}
-            {activeTurno.status === 'Atendiendo' ? (
-              <button type="button" className="primary-button" disabled={finalizing} onClick={finalizarAtencion}>
-                {finalizing ? 'Finalizando...' : 'Finalizar atención'}
-              </button>
-            ) : null}
-          </div>
+      {/* Layout 70/30: panel principal (tabs clínicas, con scroll propio) a
+          la izquierda, columna angosta (datos del paciente + resumen de
+          alertas) a la derecha — reemplaza el header ancho de antes.
+          Una sola pantalla de Paciente sin importar el origen de navegación
+          (Pacientes/Turnos/Home): `activeTurno` ya no agrega ninguna card
+          visual, solo el botón "Finalizar atención" de arriba. */}
+      <div className="patient-detail-layout">
+        <div className="patient-detail-main patient-detail-card clinical-workspace">
+          <ClinicalTabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} panels={panels} />
         </div>
-      ) : null}
 
-      <div className="patient-detail-card clinical-workspace">
-        <ClinicalTabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} panels={panels} />
+        <aside className="patient-detail-aside">
+          {/* Sin badge/contador de alertas acá arriba — redundante con la
+              card de Alertas clínicas de abajo, que ya muestra el detalle
+              completo directamente. */}
+          <PatientProfileHeader
+            patient={patient}
+            socialWorkName={socialWorkName}
+            canEditPhoto={canEditAdmin}
+            onPhotoChanged={(fotoUrl) => setPatient((current) => (current ? { ...current, fotoUrl } : current))}
+          />
+
+          {canEditClinical ? (
+            <div className="patient-detail-card patient-detail-aside-card">
+              <ClinicalSummaryPanel
+                loading={fichaHook.loading}
+                ficha={fichaHook.ficha}
+                fichaForm={fichaHook.form}
+                onGoToFicha={() => setActiveTab('ficha')}
+                onNavigateToTarget={navigateToClinicalTarget}
+                showNoEvolucionAlert={activeTurno?.status === 'Atendiendo' && !hasEvolucionDelTurnoActivo}
+              />
+            </div>
+          ) : null}
+        </aside>
       </div>
 
       {editPatientOpen ? (

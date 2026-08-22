@@ -144,7 +144,7 @@ export default function PatientFormModal({ patient, canEditObservaciones, onClos
           <label>
             Obra social
             <select value={form.obraSocialId} onChange={(event) => update({ obraSocialId: event.target.value })}>
-              <option value="">Sin obra social</option>
+              <option value="">Particular</option>
               {obrasSociales.map((obraSocial) => (
                 <option key={obraSocial.id} value={obraSocial.id}>{obraSocial.nombre}</option>
               ))}

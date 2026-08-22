@@ -645,6 +645,29 @@ describe('auth, roles y aislamiento por consultorio', () => {
       expect(res.status).toBe(200)
       expect(res.body.contenido).toBe('editado por admin')
     })
+
+    it('el profesional autor nunca cambia al editar, ni siquiera si el request intenta mandar profesionalId', async () => {
+      const created = await request(app)
+        .post('/api/evoluciones')
+        .set('Cookie', cookies.profesionalA)
+        .send({ pacienteId: pacienteAId, contenido: 'autoría original' })
+      expect(created.status).toBe(201)
+      const autorOriginalId = created.body.profesionalId
+
+      // Editado por admin, intentando además reasignar el autor — el DTO del
+      // PATCH nunca lee `profesionalId` del body, así que esto no debería
+      // tener ningún efecto sobre la autoría.
+      const res = await request(app)
+        .patch(`/api/evoluciones/${created.body.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ contenido: 'editado por admin', profesionalId: otroProfesionalAId })
+      expect(res.status).toBe(200)
+      expect(res.body.profesionalId).toBe(autorOriginalId)
+      expect(res.body.profesionalId).not.toBe(otroProfesionalAId)
+
+      const refetched = await prisma.evolucion.findUniqueOrThrow({ where: { id: created.body.id } })
+      expect(refetched.profesionalId).toBe(autorOriginalId)
+    })
   })
 
   describe('evoluciones: imágenes', () => {
@@ -2106,6 +2129,33 @@ describe('auth, roles y aislamiento por consultorio', () => {
     it('ningún rol edita pacientes ni turnos de otro consultorio', async () => {
       const pacienteRes = await request(app).patch(`/api/pacientes/${pacienteBId}`).set('Cookie', cookies.adminA).send({ telefono: '1' })
       expect(pacienteRes.status).toBe(404)
+    })
+
+    it('ADMINISTRADOR edita y elimina un turno de otro profesional sin ninguna restricción de ownership', async () => {
+      const turnoDeOtro = await prisma.turno.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-08-08T15:00:00.000Z'), duracionMinutos: 60 },
+      })
+
+      const editRes = await request(app)
+        .patch(`/api/turnos/${turnoDeOtro.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ notas: 'editado por admin, turno de otro profesional' })
+      expect(editRes.status).toBe(200)
+
+      const deleteRes = await request(app).delete(`/api/turnos/${turnoDeOtro.id}`).set('Cookie', cookies.adminA)
+      expect(deleteRes.status).toBe(204)
+    })
+
+    it('ADMINISTRADOR desactiva (baja lógica) cualquier paciente del consultorio', async () => {
+      const otroPaciente = await prisma.paciente.create({
+        data: { consultorioId: consultorioAId, nombre: `Paciente ajeno ${RUN_ID}`, apellido: '' },
+      })
+      const res = await request(app)
+        .patch(`/api/pacientes/${otroPaciente.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ activo: false })
+      expect(res.status).toBe(200)
+      expect(res.body.activo).toBe(false)
     })
 
     it('el contenido clínico sigue restringido aunque se amplíen los permisos administrativos', async () => {

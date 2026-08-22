@@ -310,7 +310,11 @@ body,
      `to`, al terminar la animación (sin animation-fill-mode) el transform
      volvería a "none" y el tooltip saltaría de posición. */
   transform: translateY(-50%);
-  z-index: 60;
+  /* Por encima de CUALQUIER overlay flotante (context-menu 9999, dropdown-
+     list, modales) — antes con z-index:60 quedaba tapado por un menú
+     contextual de Turno abierto en simultáneo mientras se hacía hover en el
+     sidebar. Es un tooltip efímero, siempre debería ganar. */
+  z-index: 10010;
   padding: 8px 14px;
   border-radius: 10px;
   background: var(--color-text);
@@ -1088,7 +1092,9 @@ body,
 
 /* Input nativo real: invisible pero "rendered" (no display:none), para que
    showPicker() siga funcionando — es solo el disparador del calendario, el
-   texto visible/tipeable es .date-input-text. */
+   texto visible/tipeable es .date-input-text. En desktop es inerte
+   (pointer-events:none, 1x1px): el ícono dispara showPicker()/.focus() por
+   JS (ver openPicker() en DateInput.tsx). */
 .date-input-native {
   position: absolute;
   width: 1px;
@@ -1097,6 +1103,34 @@ body,
   border: none;
   opacity: 0;
   pointer-events: none;
+}
+
+/* En touch, showPicker()/.focus() disparado por JS es poco confiable (no
+   todos los navegadores/versiones de iOS lo soportan) — en vez de depender
+   de eso, el input nativo pasa a cubrir TODO el campo (texto + ícono) y
+   recibe el tap directo, que es el único mecanismo 100% confiable para
+   abrir el selector nativo en mobile. Sin zonas muertas: cualquier punto
+   del campo abre el picker con un solo toque, sin doble tap. */
+@media (pointer: coarse) {
+  .date-input-native {
+    /* Ni `inset:0` ni height:100% alcanzan acá: el layout interno (shadow
+       DOM) de un <input type=date> nativo no siempre respeta el
+       auto-stretch de un posicionado absoluto — queda con su alto
+       intrínseco (~26px) aunque el contenedor sea más alto, dejando franjas
+       sin cubrir arriba/abajo. En vez de pelear con el stretch, se le da el
+       mismo padding/font-size que .date-input-text para que su alto
+       intrínseco coincida con el del campo visible. */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    padding: 12px 14px;
+    font-size: 15px;
+    box-sizing: border-box;
+    opacity: 0;
+    pointer-events: auto;
+    cursor: pointer;
+  }
 }
 
 .date-input-error {
@@ -2445,6 +2479,13 @@ select:disabled {
   white-space: nowrap;
 }
 
+/* Columna "Sesión" del listado principal de Turnos: lo más angosta posible
+   (un número corto o "—") para dejarle más ancho al resto de columnas. */
+.turnos-table-col-sesion {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .turnos-table td:first-child strong,
 .turnos-table td:first-child small {
   display: block;
@@ -2464,7 +2505,8 @@ select:disabled {
 
 .patient-turnos-table th:nth-child(1),
 .patient-turnos-table td:nth-child(1) {
-  width: 90px;
+  width: 110px;
+  padding-right: 24px;
 }
 
 .patient-turnos-table th:nth-child(4),
@@ -2776,17 +2818,21 @@ select:disabled {
   gap: 12px;
 }
 
+/* Más chico/sutil que un botón de acción normal — es navegación, no la
+   acción principal de la pantalla, así que no debería competir en peso
+   visual con el contenido clínico. */
 .patient-detail-back-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: fit-content;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   background: transparent;
   color: var(--color-text-muted);
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -2796,25 +2842,13 @@ select:disabled {
 }
 
 .patient-detail-back-button svg {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.patient-detail-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 24px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-panel);
-  background: var(--color-surface);
-  box-shadow: var(--inset-card-border);
 }
 
 .patient-detail-title-row {
@@ -2836,14 +2870,15 @@ select:disabled {
   font-size: 14px;
 }
 
-/* Header-card de perfil del paciente (PatientDetailPage) */
+/* Card de datos del paciente, columna derecha de PatientDetailPage — antes
+   una franja horizontal ancha (avatar/nombre/acciones en fila); apilada en
+   vertical para funcionar en una columna angosta (~30%). */
 .patient-profile-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 20px;
-  padding: 24px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  padding: 20px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-panel);
   background: var(--color-surface);
@@ -2865,13 +2900,6 @@ select:disabled {
 .patient-profile-meta {
   color: var(--color-text);
   font-weight: 500;
-}
-
-.patient-profile-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 
 .patient-detail-topbar-actions {
@@ -2920,6 +2948,23 @@ select:disabled {
   border-color: var(--color-danger);
 }
 
+/* Más chico/liviano que el .icon-button genérico (44px, usado en
+   Configuración/listas de ficha) — acá es la acción "editar paciente" de
+   arriba de todo, no debería dominar visualmente el header. Escala propia
+   en vez de tocar la clase compartida, para no afectar esos otros usos. */
+.patient-detail-topbar-actions .icon-button,
+.patient-detail-topbar-actions .icon-button--danger {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+}
+
+.patient-detail-topbar-actions .icon-button svg,
+.patient-detail-topbar-actions .icon-button--danger svg {
+  width: 15px;
+  height: 15px;
+}
+
 .icon-button svg,
 .icon-button--danger svg {
   width: 19px;
@@ -2929,57 +2974,6 @@ select:disabled {
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-/* Indicador compacto de Alertas clínicas — vive en el header del paciente,
-   donde antes iban los botones Editar/Nuevo turno (ver
-   .patient-detail-topbar-actions, que ahora los tiene). Mismo cálculo y
-   mismo popup de detalle que la vieja card "Alertas clínicas" — ver
-   PatientAlertsBadge.tsx. */
-.patient-alerts-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  background: var(--color-control);
-  color: var(--color-text);
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.patient-alerts-badge svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.patient-alerts-badge--activa {
-  border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
-  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
-  color: var(--color-danger);
-}
-
-.patient-alerts-badge--sin-alertas {
-  border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-border));
-  color: var(--color-text-muted);
-}
-
-.patient-alerts-badge--pendiente {
-  color: var(--color-text-muted);
-}
-
-.patient-alerts-badge:hover {
-  border-color: var(--color-primary-border);
 }
 
 .patient-summary-grid {
@@ -3047,6 +3041,50 @@ select:disabled {
   border-radius: var(--radius-panel);
   background: var(--color-surface);
   box-shadow: var(--inset-card-border);
+}
+
+/* Layout 70/30 de la pantalla de Paciente: panel principal (tabs clínicas)
+   a la izquierda, columna de datos del paciente + resumen de alertas a la
+   derecha. `align-items: start` es lo que evita que la columna angosta se
+   estire al alto del panel principal (que puede ser mucho más largo). */
+.patient-detail-layout {
+  display: grid;
+  grid-template-columns: 7fr 3fr;
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
+}
+
+.patient-detail-main {
+  min-width: 0;
+}
+
+.patient-detail-aside {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  /* Igual criterio que .sidebar: no crece más que el viewport, con scroll
+     propio si el contenido (sobre todo la lista de alertas) es largo, en
+     vez de estirar la página entera. */
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.patient-detail-aside-card {
+  padding: 20px;
+}
+
+/* El panel principal scrollea internamente en vez de estirar la página —
+   mismo objetivo que .patient-detail-aside de arriba, aplicado al lado
+   ancho. Solo en desktop: en mobile todo se apila y scrollea con la página,
+   ver el breakpoint más abajo. */
+@media (min-width: 1171px) {
+  .patient-detail-main {
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
 }
 
 .patient-detail-card h2 {
@@ -3167,6 +3205,36 @@ select:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Popover de contenido completo al hover sobre Resumen — mismo mecanismo
+   position:fixed que .sidebar-tooltip (ver App.tsx), acá para contenido
+   rico en vez de una etiqueta corta: wrapea, tiene alto máximo con scroll
+   interno para evoluciones muy largas, y respeta el tema. */
+.evolution-resumen-popover {
+  position: fixed;
+  z-index: 10005;
+  max-width: 420px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: normal;
+  box-shadow: var(--shadow-popover);
+  pointer-events: none;
+}
+
+.evolution-resumen-popover p {
+  margin: 0 0 8px;
+}
+
+.evolution-resumen-popover p:last-child {
+  margin-bottom: 0;
 }
 
 .grupo-evolucion-chip {
@@ -3299,35 +3367,6 @@ select:disabled {
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.attention-header {
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.attention-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.attention-timer {
-  display: grid;
-  gap: 4px;
-  justify-items: end;
-  text-align: right;
-}
-
-.attention-timer strong {
-  color: var(--color-text);
-  font-size: 22px;
-  font-variant-numeric: tabular-nums;
-}
-
-.attention-timer--static strong {
-  font-size: 18px;
 }
 
 .evolution-form {
@@ -3651,10 +3690,6 @@ select:disabled {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-}
-
-.clinical-alerts-body {
-  margin-bottom: 4px;
 }
 
 .ficha-form {
@@ -4998,16 +5033,6 @@ select:disabled {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .patient-detail-header,
-  .attention-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .attention-header-actions {
-    justify-content: space-between;
-  }
-
   .patient-summary-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -5253,36 +5278,25 @@ select:disabled {
     gap: 16px;
   }
 
-  .patient-detail-header {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 18px;
+  /* Layout 70/30 apilado en mobile: una sola columna, sin sticky/scroll
+     interno (todo scrollea con la página, más previsible en touch). */
+  .patient-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .patient-detail-header .new-turn-button {
-    width: 100%;
-    justify-content: center;
+  .patient-detail-aside {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .patient-detail-main {
+    max-height: none;
+    overflow-y: visible;
   }
 
   .patient-profile-header {
-    flex-direction: column;
-    align-items: stretch;
     padding: 18px;
-  }
-
-  .patient-profile-actions {
-    justify-content: stretch;
-  }
-
-  .patient-profile-actions .new-turn-button,
-  .patient-profile-actions .secondary-button {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
-
-  .attention-timer {
-    justify-items: start;
-    text-align: left;
   }
 
   .patient-summary-grid {

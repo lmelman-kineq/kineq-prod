@@ -2127,12 +2127,12 @@ function Dashboard() {
         {contextMenu ? (() => {
           const menuTurno = turnosState.find((item) => item.id === contextMenu.turnoId)
           const allActions = menuTurno ? getTurnoQuickActions(menuTurno) : []
-          // Orden fijo pedido para este menú, sin importar el estado: Editar
-          // Turno / [acciones de estado] / Ver Historia Clínica / Eliminar
-          // Turno. "Eliminar" se saca de la lista de acciones de estado acá
-          // para reubicarlo siempre al final — el filtro por rol que ya
-          // aplica getTurnoQuickActions (quién ve "eliminar") se respeta
-          // igual, solo cambia dónde se renderiza.
+          // Orden fijo pedido para este menú, sin importar el estado: Ver
+          // Historia Clínica / Editar Turno / [acciones de estado] /
+          // Eliminar Turno. "Eliminar" se saca de la lista de acciones de
+          // estado acá para reubicarlo siempre al final — el filtro por rol
+          // que ya aplica getTurnoQuickActions (quién ve "eliminar") se
+          // respeta igual, solo cambia dónde se renderiza.
           const stateActions = allActions.filter((action) => action.key !== 'eliminar')
           const eliminarAction = allActions.find((action) => action.key === 'eliminar')
 
@@ -2142,6 +2142,18 @@ function Dashboard() {
               ref={contextMenuRef}
               style={{ top: contextMenu.y, left: contextMenu.x }}
             >
+              {menuTurno ? (
+                <button
+                  type="button"
+                  className="context-menu-item"
+                  onClick={() => {
+                    setContextMenu(null)
+                    openPatientDetail(menuTurno.patientId)
+                  }}
+                >
+                  Ver Historia Clínica
+                </button>
+              ) : null}
               {menuTurno ? (
                 <button
                   type="button"
@@ -2164,18 +2176,6 @@ function Dashboard() {
                   {action.label}
                 </button>
               ))}
-              {menuTurno ? (
-                <button
-                  type="button"
-                  className="context-menu-item"
-                  onClick={() => {
-                    setContextMenu(null)
-                    openPatientDetail(menuTurno.patientId)
-                  }}
-                >
-                  Ver Historia Clínica
-                </button>
-              ) : null}
               {eliminarAction ? (
                 <button
                   type="button"

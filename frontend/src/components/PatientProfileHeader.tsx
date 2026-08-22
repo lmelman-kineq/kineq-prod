@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Paciente } from '../types/domain'
 import { calculateAge } from '../utils/dateFormat'
 import { patientFullName } from '../utils/patient'
@@ -12,7 +12,6 @@ const ALLOWED_FOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 type PatientProfileHeaderProps = {
   patient: Paciente
   socialWorkName?: string | null
-  actions?: ReactNode
   canEditPhoto?: boolean
   onPhotoChanged?: (fotoUrl: string | null) => void
 }
@@ -21,7 +20,7 @@ function joinFacts(parts: Array<string | null | undefined>) {
   return parts.filter((part): part is string => Boolean(part)).join(' · ')
 }
 
-export default function PatientProfileHeader({ patient, socialWorkName, actions, canEditPhoto, onPhotoChanged }: PatientProfileHeaderProps) {
+export default function PatientProfileHeader({ patient, socialWorkName, canEditPhoto, onPhotoChanged }: PatientProfileHeaderProps) {
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -154,16 +153,17 @@ export default function PatientProfileHeader({ patient, socialWorkName, actions,
         <div className="patient-profile-info">
           <div className="patient-detail-title-row">
             <h1>{patientFullName(patient)}</h1>
-            <span className={`turnos-status-pill ${patient.activo ? 'turnos-status-pill--finalizado' : 'turnos-status-pill--cancelado'}`}>
-              {patient.activo ? 'Activo' : 'Inactivo'}
-            </span>
+            {/* El caso normal (Activo) no necesita badge — ruido visual
+                para el estado esperado. Solo se muestra cuando hay algo
+                relevante que señalar (Inactivo). */}
+            {!patient.activo ? (
+              <span className="turnos-status-pill turnos-status-pill--cancelado">Inactivo</span>
+            ) : null}
           </div>
           <p className="patient-profile-contact">{contactLine || 'Sin datos de contacto registrados'}</p>
           <p className="patient-profile-meta">{metaLine || 'Sin documento ni obra social registrados'}</p>
         </div>
       </div>
-
-      {actions ? <div className="patient-profile-actions">{actions}</div> : null}
     </header>
   )
 }

@@ -4,7 +4,7 @@ import * as api from '../services/api'
 import type { Turno as ApiTurno } from '../types/domain'
 import { WAITING_ALERT_MINUTES, getElapsedMinutes } from '../utils/turnoTimers'
 import { mapEstadoToStatus, statusClass, compareByAttentionPriority } from '../utils/turnoStatus'
-import { professionalName } from '../utils/professional'
+import { professionalName, professionalNameCompact } from '../utils/professional'
 import { patientFullName } from '../utils/patient'
 import { utcIsoToZonedParts } from '../utils/timezone'
 import DateInput from './DateInput'
@@ -22,6 +22,7 @@ export type TurnosPageItem = {
   patientDisplay: string
   patientId: number
   professionalDisplay?: string
+  professionalDisplayCompact?: string
   professionalId?: number
   specialtyId?: number
   specialtyName?: string
@@ -105,6 +106,7 @@ function mapApiTurno(
     patientDisplay: patientFullName(turno.paciente),
     patientId: turno.pacienteId,
     professionalDisplay: professionalName(turno.profesional),
+    professionalDisplayCompact: professionalNameCompact(turno.profesional),
     professionalId: turno.profesionalId,
     specialtyId: turno.especialidadId,
     specialtyName: turno.especialidad.nombre,
@@ -626,7 +628,7 @@ export default function TurnosPage({
                   <th>Nombre</th>
                   <th>Profesional</th>
                   <th>Obra Social</th>
-                  <th>Nro. de Sesión</th>
+                  <th className="turnos-table-col-sesion">Sesión</th>
                   <th>Especialidad</th>
                   <th>Estado</th>
                   <th aria-label="Acciones" />
@@ -651,7 +653,7 @@ export default function TurnosPage({
                   <th>Nombre</th>
                   <th>Profesional</th>
                   <th>Obra Social</th>
-                  <th>Nro. de Sesión</th>
+                  <th className="turnos-table-col-sesion">Sesión</th>
                   <th>Especialidad</th>
                   <th>Estado</th>
                   <th aria-label="Acciones" />
@@ -691,9 +693,9 @@ export default function TurnosPage({
                         <small>{formatTableDate(turno.date)}</small>
                       </td>
                       <td data-label="Nombre"><strong>{turno.patientDisplay}</strong></td>
-                      <td data-label="Profesional">{turno.professionalDisplay ?? '—'}</td>
-                      <td data-label="Obra Social">{turno.socialWorkDisplay ?? 'Sin obra social'}</td>
-                      <td data-label="Nro. de Sesión">{turno.sessionNumber ?? '—'}</td>
+                      <td data-label="Profesional" title={turno.professionalDisplay ?? undefined}>{turno.professionalDisplayCompact ?? '—'}</td>
+                      <td data-label="Obra Social">{turno.socialWorkDisplay ?? 'Particular'}</td>
+                      <td data-label="Sesión" className="turnos-table-col-sesion">{turno.sessionNumber ?? '—'}</td>
                       <td data-label="Especialidad">
                         <span className="turnos-specialty-cell">
                           <span className="turnos-specialty-dot" style={{ backgroundColor: turno.color }} />

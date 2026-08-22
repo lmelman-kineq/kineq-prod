@@ -28,3 +28,28 @@ export function professionalName(profesional: ProfesionalNameInput | null | unde
   if (profesional.activo === false) return `${base} (Inactivo)`
   return base
 }
+
+// Prefijo corto para tablas compactas: toma la primera palabra del título
+// tal cual está cargado ("Lic. en Kinesiología y Fisiatría" → "Lic."), sin
+// asumir "Lic." para todos — un Dr./Kgo./etc. conserva su propio prefijo.
+// Sin título cargado, no hay prefijo (no se inventa uno).
+function tituloCorto(titulo: string | null | undefined): string {
+  if (!titulo) return ''
+  const primeraPalabra = titulo.trim().split(/\s+/)[0]
+  return primeraPalabra ?? ''
+}
+
+/**
+ * Versión compacta de professionalName() para columnas angostas de tabla
+ * (Turnos, Turnos del paciente, Evoluciones): "Lic. Nombre Apellido" en vez
+ * del título completo. Mismos sufijos de estado (Inactivo/Eliminado) que la
+ * versión larga — nunca se pierde esa señal solo por acortar.
+ */
+export function professionalNameCompact(profesional: ProfesionalNameInput | null | undefined) {
+  if (!profesional) return 'Profesional no disponible'
+  const prefix = tituloCorto(profesional.titulo)
+  const base = `${prefix ? `${prefix} ` : ''}${profesional.nombre} ${profesional.apellido}`
+  if (profesional.deletedAt) return `${base} (Eliminado)`
+  if (profesional.activo === false) return `${base} (Inactivo)`
+  return base
+}
