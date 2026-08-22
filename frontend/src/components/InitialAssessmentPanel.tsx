@@ -174,7 +174,6 @@ export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget
           <span className="ficha-section-icon" aria-hidden="true">{ICONS.antecedentes}</span>
           <div>
             <h3>Antecedentes</h3>
-            <p className="ficha-section-description">Personales, familiares y quirúrgicos, buscables en el catálogo.</p>
           </div>
         </div>
         <ClinicalAntecedentesSection

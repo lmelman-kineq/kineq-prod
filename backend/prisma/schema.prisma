@@ -102,6 +102,7 @@ model Consultorio {
   obrasSocialesOcultas      ConsultorioObraSocialOculta[]
   fichaAlertasCampo         FichaAlertaCampo[]
   gruposEvolucion           GrupoEvolucion[]
+  plantillasEvolucion       PlantillaEvolucion[]
 
   @@index([activo])
 }
@@ -444,6 +445,33 @@ model GrupoEvolucion {
 
   @@unique([pacienteId, nombre])
   @@index([consultorioId, pacienteId])
+}
+
+// Plantilla reutilizable de contenido para Evoluciones (V1) — atajo para no
+// re-tipear una estructura recurrente (ej. una evaluación cervical
+// estándar) cada vez que se carga una evolución nueva. Siempre de
+// consultorio, nunca global (a diferencia de Especialidad/
+// CatalogoClinicoItem, acá no hay noción "de sistema") ni asociada a un
+// Profesional en particular: cualquier ADMINISTRADOR/PROFESIONAL del
+// consultorio la puede usar/crear/editar/archivar por igual. `activo:false`
+// es baja lógica (nunca se borra físicamente si ya se usó como referencia
+// visual en algún momento — igual que GrupoEvolucion no se borra
+// evoluciones, acá directamente no hay relación a preservar: aplicar una
+// plantilla solo copia texto una vez, no deja rastro en la Evolución
+// resultante).
+model PlantillaEvolucion {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  nombre        String
+  contenido     String   @db.Text
+  contenidoHtml String?  @db.Text
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  consultorio Consultorio @relation(fields: [consultorioId], references: [id], onDelete: Cascade)
+
+  @@index([consultorioId, activo])
 }
 
 // Ficha clínica inicial del paciente. 1:1 con Paciente, editable y guardable

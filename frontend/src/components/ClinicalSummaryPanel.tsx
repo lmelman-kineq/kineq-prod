@@ -1,5 +1,5 @@
 import type { FichaInicial } from '../types/domain'
-import { computeFichaCompletionStatus } from '../utils/fichaInicial'
+import { fichaHasAnyClinicalData } from '../utils/fichaInicial'
 import { computeAlertasClinicas } from '../utils/clinicalAlerts'
 import type { ClinicalNavRequest } from '../utils/clinicalNavTarget'
 import ClinicalAlertsList from './ClinicalAlertsList'
@@ -28,7 +28,7 @@ export default function ClinicalSummaryPanel({
 }: ClinicalSummaryPanelProps) {
   if (loading) return <p>Cargando resumen clínico...</p>
 
-  const fichaPendiente = computeFichaCompletionStatus(fichaForm) === 'pendiente'
+  const fichaPendiente = !fichaHasAnyClinicalData(ficha, fichaForm)
   const alertas = computeAlertasClinicas(ficha)
   const hasAnyAlert = fichaPendiente || alertas.total > 0 || showNoEvolucionAlert
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { sanitizeRichTextHtml } from '../utils/richTextSanitize'
 
 type Props = {
@@ -7,13 +7,17 @@ type Props = {
   onChange: (html: string, plainText: string) => void
   placeholder?: string
   disabled?: boolean
+  // Contenido extra en la misma toolbar, junto a B/I/U (ej. el botón
+  // "Plantillas" de Nueva evolución) — opcional, para no afectar los demás
+  // usos de este editor (edición de evolución, plantilla).
+  toolbarExtra?: ReactNode
 }
 
 // Editor mínimo de formato básico (negrita/cursiva/subrayado) sobre un
 // `contentEditable` + `document.execCommand` — deprecado pero todavía
 // soportado en todos los navegadores evergreen para este uso puntual, y
 // evita meter una dependencia de RTE completa para 3 botones.
-export default function RichTextEditor({ id, html, onChange, placeholder, disabled }: Props) {
+export default function RichTextEditor({ id, html, onChange, placeholder, disabled, toolbarExtra }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const focusedRef = useRef(false)
 
@@ -60,6 +64,7 @@ export default function RichTextEditor({ id, html, onChange, placeholder, disabl
         <button type="button" aria-label="Subrayado" title="Subrayado (Ctrl+U)" disabled={disabled} onMouseDown={(e) => e.preventDefault()} onClick={() => exec('underline')}>
           <u>U</u>
         </button>
+        {toolbarExtra}
       </div>
       <div
         id={id}

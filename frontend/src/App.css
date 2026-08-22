@@ -1445,37 +1445,51 @@ body,
   justify-content: flex-end;
 }
 
-/* Mismo look que `.modal-body input`, pero puesto acá para que valga en
-   cualquier contexto — el combobox de Diagnóstico (DiagnosticoSelect) se usa
-   tanto dentro de modales (Nuevo Turno) como inline en la página del
-   paciente ("Nueva evolución"), y ese segundo caso quedaba sin el estilo de
-   caja porque `.modal-body input` nunca lo alcanzaba ahí. */
-.dropdown-input-row input {
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  background: var(--color-input-bg);
-  color: var(--color-text);
-  font-size: 15px;
-  font-family: inherit;
-  transition: border-color 0.2s ease;
-}
-
-.dropdown-input-row input:focus {
-  border-color: var(--color-primary);
-}
-
+/* El "box" visible del trigger vive acá, en el contenedor flex — no en el
+   <input> de adentro. Antes era al revés (border/padding en el input) y el
+   chevron `::after`, al ser hijo de ESTE contenedor, quedaba renderizado
+   FUERA del borde del input: una flechita suelta al lado de la caja en vez
+   de integrada adentro. Con el borde acá, input + dot + chevron + botón de
+   limpiar comparten una única caja. Mismo look que `.modal-body input`,
+   pero puesto acá para que valga en cualquier contexto — el combobox de
+   Diagnóstico (DiagnosticoSelect) se usa tanto dentro de modales (Nuevo
+   Turno) como inline en la página del paciente ("Nueva evolución"). */
 .dropdown-input-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-input-bg);
+  transition: border-color 0.2s ease;
 }
 
-/* Chevron: sin esto, un combobox custom (Paciente/Profesional/Especialidad/
-   Diagnóstico) no se distingue a simple vista de un input de texto suelto.
-   `::after` en vez de un ícono SVG por componente — un solo lugar para los
-   cuatro dropdowns, `pointer-events: none` para no interceptar clicks. */
+.dropdown-input-row:focus-within {
+  border-color: var(--color-primary);
+}
+
+.dropdown-input-row input {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 15px;
+  font-family: inherit;
+}
+
+.dropdown-input-row input:focus {
+  outline: none;
+}
+
+/* Chevron integrado dentro de la misma caja — sin esto, un combobox custom
+   (Paciente/Profesional/Especialidad/Diagnóstico) no se distingue a simple
+   vista de un input de texto suelto. `::after` en vez de un ícono SVG por
+   componente — un solo lugar para los cuatro dropdowns, `pointer-events:
+   none` para no interceptar clicks. */
 .dropdown-input-row::after {
   content: '▾';
   margin-left: auto;
@@ -3369,13 +3383,19 @@ select:disabled {
   display: block;
 }
 
+/* Card sutil (no modal, no sombra marcada) para distinguir claramente el
+   formulario del listado de Evoluciones de abajo — antes era solo una
+   separación con borde superior, se perdía visualmente entre el botón
+   "+ Cargar evolución" de arriba y la tabla de abajo. */
 .evolution-form {
   display: grid;
-  gap: 10px;
+  gap: 14px;
   margin-top: 18px;
   margin-bottom: 24px;
-  padding-top: 18px;
-  border-top: 1px solid var(--color-line-soft);
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-muted);
 }
 
 .evolution-load-button {
@@ -3571,6 +3591,19 @@ select:disabled {
 .rich-text-toolbar button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+/* "Plantillas" — texto, no un ícono de una letra, así que no puede compartir
+   el cuadrado fijo de 28x28 de B/I/U. Selector de dos clases a propósito
+   (en vez de !important) para ganarle en especificidad a ".rich-text-
+   toolbar button". Empujado al final de la toolbar (margin-left:auto) para
+   separarlo visualmente del grupo de formato. */
+.rich-text-toolbar .rich-text-toolbar-plantillas {
+  width: auto;
+  margin-left: auto;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .rich-text-content {
@@ -4536,6 +4569,29 @@ select:disabled {
 .antecedentes-item--clickable:focus-visible {
   border-color: var(--color-primary);
   background: var(--color-primary-subtle);
+  outline: none;
+}
+
+/* Variante para cuando la fila necesita acciones propias aparte (editar/
+   eliminar) — acá solo el nombre/contenido es clickeable ("aplicar"), no
+   toda la fila, así que no puede reusar .antecedentes-item--clickable (que
+   asume que ES el elemento clickeable completo, sin hermanos). */
+.antecedentes-item--clickable-inner {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.antecedentes-item--clickable-inner:hover,
+.antecedentes-item--clickable-inner:focus-visible {
+  color: var(--color-primary);
   outline: none;
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import * as api from '../services/api'
-import type { Evolucion, EstadoTurno, GrupoEvolucion, Paciente, Turno } from '../types/domain'
+import type { Evolucion, EstadoTurno, GrupoEvolucion, Paciente, PlantillaEvolucion, Turno } from '../types/domain'
 import type { ConfirmDialogOptions, Turno as SessionTurno } from '../App'
 import { useAuth } from '../auth/AuthContext'
 import PatientProfileHeader from './PatientProfileHeader'
@@ -11,6 +11,8 @@ import EvolucionImages from './EvolucionImages'
 import { validateNewEvolucionImages } from '../utils/evolucionImageValidation'
 import GrupoEvolucionModal from './GrupoEvolucionModal'
 import GestionarGruposModal from './GestionarGruposModal'
+import PlantillasListModal from './PlantillasListModal'
+import PlantillaFormModal from './PlantillaFormModal'
 import DiagnosticoSelect from './DiagnosticoSelect'
 import InitialAssessmentPanel from './InitialAssessmentPanel'
 import PatientAppointmentsTable from './PatientAppointmentsTable'
@@ -69,7 +71,7 @@ export default function PatientDetailPage({
   const [evoluciones, setEvoluciones] = useState<Evolucion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState(() => (canEditClinical ? 'ficha' : 'turnos'))
+  const [activeTab, setActiveTab] = useState(() => (canEditClinical ? 'evoluciones' : 'turnos'))
   const [editPatientOpen, setEditPatientOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
@@ -100,6 +102,9 @@ export default function PatientDetailPage({
   const [grupos, setGrupos] = useState<GrupoEvolucion[]>([])
   const [nuevaEvolucionGrupoId, setNuevaEvolucionGrupoId] = useState<number | ''>('')
   const [grupoModal, setGrupoModal] = useState<'crear' | GrupoEvolucion | null>(null)
+  const [plantillas, setPlantillas] = useState<PlantillaEvolucion[]>([])
+  const [plantillasOpen, setPlantillasOpen] = useState(false)
+  const [plantillaModal, setPlantillaModal] = useState<'crear' | PlantillaEvolucion | null>(null)
   const [vistaEvoluciones, setVistaEvoluciones] = useState<'fecha' | 'grupo'>('fecha')
   const [gestionarGruposOpen, setGestionarGruposOpen] = useState(false)
   const [filtroGrupo, setFiltroGrupo] = useState<'todos' | 'sin-grupo' | number>('todos')
@@ -132,6 +137,12 @@ export default function PatientDetailPage({
     if (!canEditClinical) return
     const response = await api.getGruposEvolucion(patientId)
     setGrupos(response)
+  }
+
+  const loadPlantillas = async () => {
+    if (!canEditClinical) return
+    const response = await api.getPlantillasEvolucion()
+    setPlantillas(response)
   }
 
   // Alta rápida de Diagnóstico desde el propio dropdown (DiagnosticoSelect,
@@ -180,6 +191,53 @@ export default function PatientDetailPage({
         void loadGrupos()
         void loadEvoluciones()
       },
+    })
+  }
+
+  // Igual criterio que deleteGrupo de arriba: única lógica de borrado,
+  // compartida por PlantillasListModal (tachito de la lista) y
+  // PlantillaFormModal (tachito del modal de edición). Baja lógica en el
+  // backend (activo:false) — la plantilla no deja rastro en evoluciones ya
+  // guardadas (aplicar solo copia texto una vez), así que no hace falta
+  // ningún efecto colateral más allá de sacarla de la lista.
+  const deletePlantilla = (plantilla: PlantillaEvolucion, afterDelete?: () => void) => {
+    onRequestConfirm({
+      title: 'Eliminar plantilla',
+      description: 'Esta plantilla deja de estar disponible para cargar evoluciones nuevas.',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+      destructive: true,
+      onConfirm: async () => {
+        await api.deletePlantillaEvolucion(plantilla.id)
+        afterDelete?.()
+        void loadPlantillas()
+      },
+    })
+  }
+
+  // Aplicar una plantilla al editor de "Nueva evolución": si está vacío,
+  // directo; si ya tiene contenido, nunca se pisa en silencio — confirmación
+  // custom Kineq (nunca confirm() nativo), mismo patrón que
+  // cancelNewEvolucionForm() más abajo para descartar contenido sin guardar.
+  const applyPlantilla = (plantilla: PlantillaEvolucion) => {
+    const doApply = () => {
+      setNewEvolucionHtml(plantilla.contenidoHtml ?? '')
+      setNewEvolucionText(plantilla.contenido)
+      setPlantillasOpen(false)
+    }
+
+    if (!newEvolucionText.trim()) {
+      doApply()
+      return
+    }
+
+    onRequestConfirm({
+      title: 'Reemplazar contenido',
+      description: 'Ya hay texto cargado en la evolución. Aplicar esta plantilla lo va a reemplazar por completo.',
+      confirmLabel: 'Reemplazar',
+      cancelLabel: 'Cancelar',
+      destructive: true,
+      onConfirm: doApply,
     })
   }
 
@@ -240,11 +298,12 @@ export default function PatientDetailPage({
       setError(null)
 
       try {
-        const [patientResult, turnosResult, evolucionesResult, gruposResult] = await Promise.all([
+        const [patientResult, turnosResult, evolucionesResult, gruposResult, plantillasResult] = await Promise.all([
           api.getPaciente(patientId),
           api.getTurnos({ pacienteId: patientId }),
           canEditClinical ? api.getEvoluciones(patientId) : Promise.resolve([]),
           canEditClinical ? api.getGruposEvolucion(patientId) : Promise.resolve([]),
+          canEditClinical ? api.getPlantillasEvolucion() : Promise.resolve([]),
         ])
 
         if (cancelled) return
@@ -252,6 +311,7 @@ export default function PatientDetailPage({
         setTurnos(turnosResult)
         setEvoluciones(evolucionesResult)
         setGrupos(gruposResult)
+        setPlantillas(plantillasResult)
       } catch (loadError) {
         if (!cancelled) {
           setPatient(null)
@@ -493,13 +553,19 @@ export default function PatientDetailPage({
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
   const hasEvolucionDelTurnoActivo = activeTurno ? evoluciones.some((evolucion) => evolucion.turnoId === activeTurno.id) : false
+  // Default de Diagnóstico al abrir "Cargar evolución": el de la evolución
+  // más reciente que tenga uno (si la última no tiene, se sigue buscando
+  // hacia atrás) — nunca un request nuevo, ya viene en `evoluciones`
+  // (cargadas una sola vez al abrir el paciente). Solo un default: el
+  // usuario lo puede cambiar libremente antes de guardar.
+  const ultimoDiagnosticoGrupoId = sortedEvoluciones.find((e) => e.grupoId != null)?.grupoId ?? ''
   const socialWorkName = patient.obraSocial?.nombre ?? patientSocialWorkById[patient.id] ?? null
 
   const tabs: ClinicalTab[] = [
-    ...(canEditClinical ? [{ key: 'ficha', label: 'Ficha inicial' }] : []),
     ...(canEditClinical ? [{ key: 'evoluciones', label: 'Evoluciones', badge: evoluciones.length ? String(evoluciones.length) : undefined }] : []),
-    { key: 'turnos', label: 'Turnos' },
+    ...(canEditClinical ? [{ key: 'ficha', label: 'Ficha inicial' }] : []),
     ...(canEditClinical ? [{ key: 'estudios', label: 'Estudios' }] : []),
+    { key: 'turnos', label: 'Turnos' },
   ]
 
   const evolutionTableCommonProps = {
@@ -544,13 +610,30 @@ export default function PatientDetailPage({
             <button
               type="button"
               className="secondary-button evolution-load-button"
-              onClick={() => setShowNewEvolucionForm(true)}
+              onClick={() => {
+                setNuevaEvolucionGrupoId(ultimoDiagnosticoGrupoId)
+                setShowNewEvolucionForm(true)
+              }}
             >
               + Cargar evolución
             </button>
           ) : (
             <div className="evolution-form">
               <label htmlFor="nueva-evolucion">Nueva evolución</label>
+              <RichTextEditor
+                id="nueva-evolucion"
+                html={newEvolucionHtml}
+                placeholder="Qué se observó, qué se trabajó, indicaciones y próximos pasos..."
+                onChange={(html, plainText) => {
+                  setNewEvolucionHtml(html)
+                  setNewEvolucionText(plainText)
+                }}
+                toolbarExtra={
+                  <button type="button" className="rich-text-toolbar-plantillas" onClick={() => setPlantillasOpen(true)}>
+                    Plantillas
+                  </button>
+                }
+              />
               <div className="evolution-form-fields-row">
                 <DiagnosticoSelect
                   grupos={grupos}
@@ -565,15 +648,6 @@ export default function PatientDetailPage({
                   error={stagedImagesError}
                 />
               </div>
-              <RichTextEditor
-                id="nueva-evolucion"
-                html={newEvolucionHtml}
-                placeholder="Qué se observó, qué se trabajó, indicaciones y próximos pasos..."
-                onChange={(html, plainText) => {
-                  setNewEvolucionHtml(html)
-                  setNewEvolucionText(plainText)
-                }}
-              />
               <div className="evolution-edit-actions">
                 <button type="button" className="secondary-button" onClick={cancelNewEvolucionForm} disabled={savingEvolucion}>
                   Cancelar
@@ -736,6 +810,31 @@ export default function PatientDetailPage({
               void loadEvoluciones()
             }}
             onDelete={(grupo) => deleteGrupo(grupo, () => setGrupoModal(null))}
+            onRequestConfirm={onRequestConfirm}
+          />
+        ) : null}
+
+        {plantillasOpen ? (
+          <PlantillasListModal
+            plantillas={plantillas}
+            onClose={() => setPlantillasOpen(false)}
+            onAplicar={applyPlantilla}
+            onEditar={(plantilla) => { setPlantillasOpen(false); setPlantillaModal(plantilla) }}
+            onNueva={() => { setPlantillasOpen(false); setPlantillaModal('crear') }}
+            onEliminar={(plantilla) => deletePlantilla(plantilla)}
+          />
+        ) : null}
+
+        {plantillaModal ? (
+          <PlantillaFormModal
+            plantilla={plantillaModal === 'crear' ? undefined : plantillaModal}
+            onClose={() => setPlantillaModal(null)}
+            onSaved={() => {
+              setPlantillaModal(null)
+              setPlantillasOpen(true)
+              void loadPlantillas()
+            }}
+            onDelete={(plantilla) => deletePlantilla(plantilla, () => { setPlantillaModal(null); setPlantillasOpen(true) })}
             onRequestConfirm={onRequestConfirm}
           />
         ) : null}

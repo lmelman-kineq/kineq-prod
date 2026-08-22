@@ -930,6 +930,115 @@ describe('auth, roles y aislamiento por consultorio', () => {
     })
   })
 
+  describe('plantillas de evolución', () => {
+    it('crea una plantilla y aparece en el listado del consultorio', async () => {
+      const res = await request(app)
+        .post('/api/plantillas-evolucion')
+        .set('Cookie', cookies.profesionalA)
+        .send({ nombre: `Evaluación cervical ${RUN_ID}`, contenido: 'Evaluación:\n- Dolor:\n- Rango articular:' })
+      expect(res.status).toBe(201)
+      expect(res.body.consultorioId).toBe(consultorioAId)
+
+      const listRes = await request(app).get('/api/plantillas-evolucion').set('Cookie', cookies.adminA)
+      expect(listRes.status).toBe(200)
+      expect(listRes.body.find((p: { id: number }) => p.id === res.body.id)).toBeTruthy()
+
+      await prisma.plantillaEvolucion.delete({ where: { id: res.body.id } })
+    })
+
+    it('preserva el formato rico (contenidoHtml) sanitizado', async () => {
+      const res = await request(app)
+        .post('/api/plantillas-evolucion')
+        .set('Cookie', cookies.profesionalA)
+        .send({ nombre: `Con formato ${RUN_ID}`, contenido: 'Evaluación', contenidoHtml: '<p><strong>Evaluación</strong></p><script>alert(1)</script>' })
+      expect(res.status).toBe(201)
+      expect(res.body.contenidoHtml).toContain('<strong>Evaluación</strong>')
+      expect(res.body.contenidoHtml).not.toContain('<script>')
+
+      await prisma.plantillaEvolucion.delete({ where: { id: res.body.id } })
+    })
+
+    it('rechaza crear sin nombre o sin contenido', async () => {
+      const sinNombre = await request(app)
+        .post('/api/plantillas-evolucion')
+        .set('Cookie', cookies.profesionalA)
+        .send({ nombre: '', contenido: 'algo' })
+      expect(sinNombre.status).toBe(400)
+
+      const sinContenido = await request(app)
+        .post('/api/plantillas-evolucion')
+        .set('Cookie', cookies.profesionalA)
+        .send({ nombre: `Vacía ${RUN_ID}`, contenido: '' })
+      expect(sinContenido.status).toBe(400)
+    })
+
+    it('edita una plantilla existente', async () => {
+      const created = await prisma.plantillaEvolucion.create({
+        data: { consultorioId: consultorioAId, nombre: `Original ${RUN_ID}`, contenido: 'texto original' },
+      })
+
+      const res = await request(app)
+        .patch(`/api/plantillas-evolucion/${created.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: `Editada ${RUN_ID}`, contenido: 'texto editado' })
+      expect(res.status).toBe(200)
+      expect(res.body.nombre).toBe(`Editada ${RUN_ID}`)
+      expect(res.body.contenido).toBe('texto editado')
+
+      await prisma.plantillaEvolucion.delete({ where: { id: created.id } })
+    })
+
+    it('eliminar es baja lógica: desaparece del listado pero la fila sobrevive', async () => {
+      const created = await prisma.plantillaEvolucion.create({
+        data: { consultorioId: consultorioAId, nombre: `Para borrar ${RUN_ID}`, contenido: 'texto' },
+      })
+
+      const res = await request(app).delete(`/api/plantillas-evolucion/${created.id}`).set('Cookie', cookies.adminA)
+      expect(res.status).toBe(204)
+
+      const listRes = await request(app).get('/api/plantillas-evolucion').set('Cookie', cookies.adminA)
+      expect(listRes.body.find((p: { id: number }) => p.id === created.id)).toBeUndefined()
+
+      const enBase = await prisma.plantillaEvolucion.findUnique({ where: { id: created.id } })
+      expect(enBase).not.toBeNull()
+      expect(enBase?.activo).toBe(false)
+    })
+
+    it('aislamiento por consultorio: no se ve, edita ni elimina una plantilla de otro consultorio', async () => {
+      const deB = await prisma.plantillaEvolucion.create({
+        data: { consultorioId: consultorioBId, nombre: `De otro consultorio ${RUN_ID}`, contenido: 'texto' },
+      })
+
+      const listRes = await request(app).get('/api/plantillas-evolucion').set('Cookie', cookies.adminA)
+      expect(listRes.body.find((p: { id: number }) => p.id === deB.id)).toBeUndefined()
+
+      const editRes = await request(app)
+        .patch(`/api/plantillas-evolucion/${deB.id}`)
+        .set('Cookie', cookies.adminA)
+        .send({ nombre: 'Hackeada' })
+      expect(editRes.status).toBe(404)
+
+      const deleteRes = await request(app).delete(`/api/plantillas-evolucion/${deB.id}`).set('Cookie', cookies.adminA)
+      expect(deleteRes.status).toBe(404)
+
+      await prisma.plantillaEvolucion.delete({ where: { id: deB.id } })
+    })
+
+    it('Recepción y Supervisor no pueden ver ni administrar plantillas clínicas', async () => {
+      const listRecepcion = await request(app).get('/api/plantillas-evolucion').set('Cookie', cookies.recepcionA)
+      expect(listRecepcion.status).toBe(403)
+
+      const listSupervisor = await request(app).get('/api/plantillas-evolucion').set('Cookie', cookies.supervisorA)
+      expect(listSupervisor.status).toBe(403)
+
+      const createRecepcion = await request(app)
+        .post('/api/plantillas-evolucion')
+        .set('Cookie', cookies.recepcionA)
+        .send({ nombre: 'No debería poder', contenido: 'x' })
+      expect(createRecepcion.status).toBe(403)
+    })
+  })
+
   describe('Diagnóstico con sesiones planificadas y "Sesión X de Y" en Turnos', () => {
     it('crea un grupo con cantidadSesionesPlanificadas', async () => {
       const res = await request(app)

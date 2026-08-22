@@ -150,6 +150,18 @@ export interface GrupoEvolucion {
   updatedAt: string
 }
 
+// Plantilla reutilizable de contenido para Evoluciones (V1) — de consultorio,
+// nunca de un paciente/profesional en particular.
+export interface PlantillaEvolucion {
+  id: number
+  consultorioId: number
+  nombre: string
+  contenido: string
+  contenidoHtml?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface EvolucionImagen {
   id: number
   evolucionId: number
@@ -476,6 +488,8 @@ export type EspecialidadInput = Partial<Pick<Especialidad, 'nombre' | 'color' | 
 export type ObraSocialInput = Partial<Pick<ObraSocial, 'nombre' | 'activo'>>
 
 export type GrupoEvolucionInput = { nombre: string; color: string; cantidadSesionesPlanificadas?: number | null }
+
+export type PlantillaEvolucionInput = { nombre: string; contenido: string; contenidoHtml?: string | null }
 
 // --- Estadísticas ---
 

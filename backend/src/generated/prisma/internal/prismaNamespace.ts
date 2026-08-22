@@ -410,6 +410,7 @@ export const ModelName = {
   Evolucion: 'Evolucion',
   EvolucionImagen: 'EvolucionImagen',
   GrupoEvolucion: 'GrupoEvolucion',
+  PlantillaEvolucion: 'PlantillaEvolucion',
   FichaInicial: 'FichaInicial',
   FichaAlertaCampo: 'FichaAlertaCampo',
   CatalogoClinicoItem: 'CatalogoClinicoItem',
@@ -433,7 +434,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "consultorio" | "usuario" | "paciente" | "profesional" | "especialidad" | "consultorioEspecialidadOculta" | "profesionalEspecialidad" | "obraSocial" | "consultorioObraSocialOculta" | "turno" | "evolucion" | "evolucionImagen" | "grupoEvolucion" | "fichaInicial" | "fichaAlertaCampo" | "catalogoClinicoItem" | "fichaAntecedente" | "fichaAlergia" | "fichaMedicacion" | "fichaEstudioComplementario" | "fichaSeccionEstado"
+    modelProps: "consultorio" | "usuario" | "paciente" | "profesional" | "especialidad" | "consultorioEspecialidadOculta" | "profesionalEspecialidad" | "obraSocial" | "consultorioObraSocialOculta" | "turno" | "evolucion" | "evolucionImagen" | "grupoEvolucion" | "plantillaEvolucion" | "fichaInicial" | "fichaAlertaCampo" | "catalogoClinicoItem" | "fichaAntecedente" | "fichaAlergia" | "fichaMedicacion" | "fichaEstudioComplementario" | "fichaSeccionEstado"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1295,6 +1296,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PlantillaEvolucion: {
+      payload: Prisma.$PlantillaEvolucionPayload<ExtArgs>
+      fields: Prisma.PlantillaEvolucionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlantillaEvolucionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlantillaEvolucionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlantillaEvolucionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlantillaEvolucionPayload>
+        }
+        findFirst: {
+          args: Prisma.PlantillaEvolucionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlantillaEvolucionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlantillaEvolucionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlantillaEvolucionPayload>
+        }
+        findMany: {
+          args: Prisma.PlantillaEvolucionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlantillaEvolucionPayload>[]
+        }
+        create: {
+          args: Prisma.PlantillaEvolucionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlantillaEvolucionPayload>
+        }
+        createMany: {
+          args: Prisma.PlantillaEvolucionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.PlantillaEvolucionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlantillaEvolucionPayload>
+        }
+        update: {
+          args: Prisma.PlantillaEvolucionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlantillaEvolucionPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlantillaEvolucionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlantillaEvolucionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.PlantillaEvolucionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlantillaEvolucionPayload>
+        }
+        aggregate: {
+          args: Prisma.PlantillaEvolucionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlantillaEvolucion>
+        }
+        groupBy: {
+          args: Prisma.PlantillaEvolucionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlantillaEvolucionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlantillaEvolucionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlantillaEvolucionCountAggregateOutputType> | number
+        }
+      }
+    }
     FichaInicial: {
       payload: Prisma.$FichaInicialPayload<ExtArgs>
       fields: Prisma.FichaInicialFieldRefs
@@ -2067,6 +2134,20 @@ export const GrupoEvolucionScalarFieldEnum = {
 export type GrupoEvolucionScalarFieldEnum = (typeof GrupoEvolucionScalarFieldEnum)[keyof typeof GrupoEvolucionScalarFieldEnum]
 
 
+export const PlantillaEvolucionScalarFieldEnum = {
+  id: 'id',
+  consultorioId: 'consultorioId',
+  nombre: 'nombre',
+  contenido: 'contenido',
+  contenidoHtml: 'contenidoHtml',
+  activo: 'activo',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PlantillaEvolucionScalarFieldEnum = (typeof PlantillaEvolucionScalarFieldEnum)[keyof typeof PlantillaEvolucionScalarFieldEnum]
+
+
 export const FichaInicialScalarFieldEnum = {
   id: 'id',
   consultorioId: 'consultorioId',
@@ -2346,6 +2427,15 @@ export const GrupoEvolucionOrderByRelevanceFieldEnum = {
 } as const
 
 export type GrupoEvolucionOrderByRelevanceFieldEnum = (typeof GrupoEvolucionOrderByRelevanceFieldEnum)[keyof typeof GrupoEvolucionOrderByRelevanceFieldEnum]
+
+
+export const PlantillaEvolucionOrderByRelevanceFieldEnum = {
+  nombre: 'nombre',
+  contenido: 'contenido',
+  contenidoHtml: 'contenidoHtml'
+} as const
+
+export type PlantillaEvolucionOrderByRelevanceFieldEnum = (typeof PlantillaEvolucionOrderByRelevanceFieldEnum)[keyof typeof PlantillaEvolucionOrderByRelevanceFieldEnum]
 
 
 export const FichaInicialOrderByRelevanceFieldEnum = {
@@ -2690,6 +2780,7 @@ export type GlobalOmitConfig = {
   evolucion?: Prisma.EvolucionOmit
   evolucionImagen?: Prisma.EvolucionImagenOmit
   grupoEvolucion?: Prisma.GrupoEvolucionOmit
+  plantillaEvolucion?: Prisma.PlantillaEvolucionOmit
   fichaInicial?: Prisma.FichaInicialOmit
   fichaAlertaCampo?: Prisma.FichaAlertaCampoOmit
   catalogoClinicoItem?: Prisma.CatalogoClinicoItemOmit

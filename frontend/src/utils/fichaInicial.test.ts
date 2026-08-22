@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { computeFichaCompletionStatus, fichaFormFromFicha, buildFichaPayload, fichaSeccionesResumen } from './fichaInicial'
+import { computeFichaCompletionStatus, fichaFormFromFicha, buildFichaPayload, fichaSeccionesResumen, fichaHasAnyClinicalData } from './fichaInicial'
+import type { FichaInicial } from '../types/domain'
+
+function fichaCon(fields: Partial<FichaInicial>): FichaInicial {
+  return { id: 1, consultorioId: 1, pacienteId: 1, estado: 'BORRADOR', createdAt: '', updatedAt: '', ...fields } as FichaInicial
+}
 
 describe('computeFichaCompletionStatus', () => {
   it('está pendiente cuando ningún campo tiene valor', () => {
@@ -74,5 +79,43 @@ describe('fichaSeccionesResumen', () => {
       { id: 1, consultorioId: 1, fichaInicialId: 1, seccion: 'ESTUDIOS' as const, estado: 'REVISADA' as const, updatedAt: '' },
     ]
     expect(fichaSeccionesResumen(secciones)).toEqual({ revisadas: 0, total: 4 })
+  })
+})
+
+describe('fichaHasAnyClinicalData (alerta "Ficha inicial pendiente")', () => {
+  const emptyForm = fichaFormFromFicha(null)
+
+  it('ficha inexistente y form vacío → sin datos', () => {
+    expect(fichaHasAnyClinicalData(null, emptyForm)).toBe(false)
+  })
+
+  it('ficha con solo metadata/defaults (sin listas, form vacío) → sin datos', () => {
+    const ficha = fichaCon({ antecedentes: [], alergias: [], medicaciones: [], estudios: [] })
+    expect(fichaHasAnyClinicalData(ficha, emptyForm)).toBe(false)
+  })
+
+  it('un antecedente cargado → hay datos', () => {
+    const ficha = fichaCon({ antecedentes: [{ id: 1 }] as FichaInicial['antecedentes'] })
+    expect(fichaHasAnyClinicalData(ficha, emptyForm)).toBe(true)
+  })
+
+  it('una alergia cargada → hay datos', () => {
+    const ficha = fichaCon({ alergias: [{ id: 1 }] as FichaInicial['alergias'] })
+    expect(fichaHasAnyClinicalData(ficha, emptyForm)).toBe(true)
+  })
+
+  it('una medicación cargada → hay datos', () => {
+    const ficha = fichaCon({ medicaciones: [{ id: 1 }] as FichaInicial['medicaciones'] })
+    expect(fichaHasAnyClinicalData(ficha, emptyForm)).toBe(true)
+  })
+
+  it('un estudio complementario cargado → hay datos', () => {
+    const ficha = fichaCon({ estudios: [{ id: 1 }] as FichaInicial['estudios'] })
+    expect(fichaHasAnyClinicalData(ficha, emptyForm)).toBe(true)
+  })
+
+  it('un campo escalar clínico (hábito/dolor/seguridad) completado → hay datos', () => {
+    const form = { ...emptyForm, actividadFisica: 'Fútbol' }
+    expect(fichaHasAnyClinicalData(null, form)).toBe(true)
   })
 })

@@ -27,6 +27,8 @@ import type {
   ObraSocialInput,
   Paciente,
   PacienteInput,
+  PlantillaEvolucion,
+  PlantillaEvolucionInput,
   Profesional,
   ProfesionalInput,
   Turno,
@@ -504,6 +506,28 @@ export function deleteGrupoEvolucion(id: number): Promise<void> {
 export async function getProximaSesion(grupoId: number): Promise<number> {
   const result = await request<{ numeroSesion: number }>(`/api/grupos-evolucion/${grupoId}/proxima-sesion`)
   return result.numeroSesion
+}
+
+export function getPlantillasEvolucion(): Promise<PlantillaEvolucion[]> {
+  return request('/api/plantillas-evolucion')
+}
+
+export function createPlantillaEvolucion(data: PlantillaEvolucionInput): Promise<PlantillaEvolucion> {
+  return request('/api/plantillas-evolucion', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function patchPlantillaEvolucion(id: number, data: Partial<PlantillaEvolucionInput>): Promise<PlantillaEvolucion> {
+  return request(`/api/plantillas-evolucion/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export function deletePlantillaEvolucion(id: number): Promise<void> {
+  return request(`/api/plantillas-evolucion/${id}`, { method: 'DELETE' })
 }
 
 export function getFichaInicial(pacienteId: number): Promise<FichaInicial | null> {

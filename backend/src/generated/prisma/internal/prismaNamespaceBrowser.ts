@@ -64,6 +64,7 @@ export const ModelName = {
   Evolucion: 'Evolucion',
   EvolucionImagen: 'EvolucionImagen',
   GrupoEvolucion: 'GrupoEvolucion',
+  PlantillaEvolucion: 'PlantillaEvolucion',
   FichaInicial: 'FichaInicial',
   FichaAlertaCampo: 'FichaAlertaCampo',
   CatalogoClinicoItem: 'CatalogoClinicoItem',
@@ -293,6 +294,20 @@ export const GrupoEvolucionScalarFieldEnum = {
 } as const
 
 export type GrupoEvolucionScalarFieldEnum = (typeof GrupoEvolucionScalarFieldEnum)[keyof typeof GrupoEvolucionScalarFieldEnum]
+
+
+export const PlantillaEvolucionScalarFieldEnum = {
+  id: 'id',
+  consultorioId: 'consultorioId',
+  nombre: 'nombre',
+  contenido: 'contenido',
+  contenidoHtml: 'contenidoHtml',
+  activo: 'activo',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PlantillaEvolucionScalarFieldEnum = (typeof PlantillaEvolucionScalarFieldEnum)[keyof typeof PlantillaEvolucionScalarFieldEnum]
 
 
 export const FichaInicialScalarFieldEnum = {
@@ -574,6 +589,15 @@ export const GrupoEvolucionOrderByRelevanceFieldEnum = {
 } as const
 
 export type GrupoEvolucionOrderByRelevanceFieldEnum = (typeof GrupoEvolucionOrderByRelevanceFieldEnum)[keyof typeof GrupoEvolucionOrderByRelevanceFieldEnum]
+
+
+export const PlantillaEvolucionOrderByRelevanceFieldEnum = {
+  nombre: 'nombre',
+  contenido: 'contenido',
+  contenidoHtml: 'contenidoHtml'
+} as const
+
+export type PlantillaEvolucionOrderByRelevanceFieldEnum = (typeof PlantillaEvolucionOrderByRelevanceFieldEnum)[keyof typeof PlantillaEvolucionOrderByRelevanceFieldEnum]
 
 
 export const FichaInicialOrderByRelevanceFieldEnum = {

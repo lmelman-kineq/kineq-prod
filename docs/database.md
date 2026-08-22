@@ -22,7 +22,9 @@ Migration `20260817170811_turno_eliminado_at` (additive): `Turno` gained `elimin
 
 Migration `20260821100057_turno_es_sesion_consulta` (additive): `Turno` gained `esSesionConsulta Boolean @default(false)`. A turno marked this way is an administrative/evaluation visit that never gets a `numeroSesion` (forced to `null` server-side regardless of what the client sends) and is excluded from the count that `sesionAutomaticaParaGrupo()` uses to suggest the next session number for other turnos of the same paciente+diagnóstico. See "Diagnóstico + numeración automática de sesiones" in `docs/modules/appointments.md`.
 
-**Not applied to production (Aiven) yet as of this session**: `20260817170811_turno_eliminado_at`, `20260821100057_turno_es_sesion_consulta`. Run `npx prisma migrate status` then `npx prisma migrate deploy` against production to apply — never run automatically by an agent.
+New table, migration `20260822195351_plantilla_evolucion` (purely additive): `PlantillaEvolucion` (`id`, `consultorioId`, `nombre`, `contenido` `@db.Text`, `contenidoHtml` `@db.Text` nullable, `activo` `@default(true)`, `createdAt`, `updatedAt`), FK to `Consultorio` with `onDelete: Cascade`. Always consultorio-scoped, never global, never tied to a `Profesional` — see "Plantillas de evolución (implementado — V1)" in `docs/modules/clinical-history.md`. Generated via `prisma migrate diff` (not hand-written) specifically to avoid a table-name case-sensitivity mismatch against Aiven/Linux MySQL (a real past incident, e.g. `turno` vs `Turno`) — confirmed the generated SQL uses `PlantillaEvolucion` (exact Prisma model casing, no `@@map` anywhere in this schema).
+
+**Not applied to production (Aiven) yet as of this session**: `20260817170811_turno_eliminado_at`, `20260821100057_turno_es_sesion_consulta`, `20260821152517_turno_monto`, `20260822195351_plantilla_evolucion`. Run `npx prisma migrate status` then `npx prisma migrate deploy` against production to apply — never run automatically by an agent.
 
 Main entities (original draft, generic names, not the real schema):
 

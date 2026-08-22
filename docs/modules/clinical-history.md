@@ -14,7 +14,7 @@ La historia clínica no debe ser una pantalla pesada ni difícil de usar. El obj
 
 **Esta sección quedó desactualizada por debajo de este párrafo — `docs/tasks.md` es la fuente de verdad sobre qué está implementado hoy, no este archivo.** En resumen: `Evolucion` existe (con borrado lógico vía `activo`), y `FichaInicial` no solo existe sino que fue rediseñada con un catálogo clínico extensible (antecedentes personales/familiares/quirúrgicos, alergias y medicación estructuradas, hábitos y contexto gineco-obstétrico renombrados como "Contexto y Hábitos" en la UI, estudios complementarios movidos a su propia pestaña general "Estudios") y luego ajustada en una segunda ronda: catálogo personalizado por consultorio, estado de sección/ficha 100% automático (ya no hay selector manual), y una card "Alertas clínicas" derivada de datos explícitamente marcados (nunca diagnóstico automático). Una tercera ronda ("Autoría clínica, vínculo Usuario–Profesional y permisos") hizo la autoría de todo el contenido clínico automática y obligatoria: sale siempre del `Profesional` vinculado al usuario autenticado, nunca de un valor enviado por el cliente, y sin vínculo el backend devuelve `403` a cualquier escritura clínica (evoluciones, ficha inicial, antecedentes, alergias, medicación, estudios) aunque el rol sea `ADMINISTRADOR`. Ver "Ficha Inicial — rediseño estructurado", "Ficha Inicial — ajustes incrementales" y "Autoría clínica, vínculo Usuario–Profesional y permisos" en `docs/tasks.md` para el modelo real. El resto de esta sección (antes decía que ni la ficha inicial ni una historia clínica estructurada existían) queda como referencia de planificación temprana, no como estado real.
 
-Una cuarta ronda agregó dos cosas: **alertas manuales sobre campos de texto libre de la Ficha Inicial** (más allá de Antecedentes/Medicación, que ya tenían su propio flag `esAlertaClinica`) vía la tabla nueva `FichaAlertaCampo` — ver sección "Alertas clínicas: extensión a otros campos" más abajo — y **grupos de evolución** (`GrupoEvolucion`) — ver "Grupos de evolución (implementado — no es `Tratamiento`)" en la sección Tratamientos. Una quinta ronda corrigió dos bugs reales de esa cuarta ronda (pérdida de contenido al marcar una alerta + guardado roto en la primera edición de una ficha nueva — ver "Bugs corregidos: pérdida de contenido y guardado roto" más abajo), completó la navegación "click en alerta → campo de origen", terminó la gestión de grupos (antes solo se podían crear, no listar/editar sin pasar por una evolución existente) y agregó formato básico (negrita/cursiva/subrayado) a Evoluciones — ver "Formato básico en Evoluciones" más abajo. Una sexta ronda (UI/UX transversal, ver `docs/tasks.md`) simplificó aún más la gestión de grupos (un único "Ver grupos", eliminar en vez de archivar), cambió la Ficha Inicial para que la tab de Antecedentes muestre **solo** los ítems marcados `SI` (los `NO` se conservan y siguen editables desde "Ver todos", pero dejan de aparecer en el listado visible), agregó menú contextual por click derecho a los turnos del listado de Turnos (reutilizando exactamente la misma lógica de acciones que el calendario de Inicio), corrigió la navegación del botón "Volver" desde Atención, y agregó una confirmación obligatoria a "Finalizar atención" en los cuatro lugares desde donde se puede disparar.
+Una cuarta ronda agregó dos cosas: **alertas manuales sobre campos de texto libre de la Ficha Inicial** (más allá de Antecedentes/Medicación, que ya tenían su propio flag `esAlertaClinica`) vía la tabla nueva `FichaAlertaCampo` — ver sección "Alertas clínicas: extensión a otros campos" más abajo — y **grupos de evolución** (`GrupoEvolucion`) — ver "Grupos de evolución (implementado — no es `Tratamiento`)" en la sección Tratamientos. Una quinta ronda corrigió dos bugs reales de esa cuarta ronda (pérdida de contenido al marcar una alerta + guardado roto en la primera edición de una ficha nueva — ver "Bugs corregidos: pérdida de contenido y guardado roto" más abajo), completó la navegación "click en alerta → campo de origen", terminó la gestión de grupos (antes solo se podían crear, no listar/editar sin pasar por una evolución existente) y agregó formato básico (negrita/cursiva/subrayado) a Evoluciones — ver "Formato básico en Evoluciones" más abajo. Una sexta ronda (UI/UX transversal, ver `docs/tasks.md`) simplificó aún más la gestión de grupos (un único "Ver grupos", eliminar en vez de archivar), cambió la Ficha Inicial para que la tab de Antecedentes muestre **solo** los ítems marcados `SI` (los `NO` se conservan y siguen editables desde "Ver todos", pero dejan de aparecer en el listado visible), agregó menú contextual por click derecho a los turnos del listado de Turnos (reutilizando exactamente la misma lógica de acciones que el calendario de Inicio), corrigió la navegación del botón "Volver" desde Atención, y agregó una confirmación obligatoria a "Finalizar atención" en los cuatro lugares desde donde se puede disparar. Una séptima ronda ("Plantillas de Evolución, tabs y ajustes de Ficha Inicial", ver `docs/tasks.md`) agregó Plantillas de Evolución (ver sección propia más abajo), reordenó las tabs de Paciente a Evoluciones/Ficha inicial/Estudios/Turnos (Evoluciones ahora la tab inicial por default), reescribió la condición de la alerta "Ficha inicial pendiente" para que solo aparezca si la ficha está genuinamente vacía (antes solo miraba los campos escalares planos, no las listas estructuradas de antecedentes/alergias/medicación/estudios — bug real, la alerta seguía mostrándose con datos clínicos ya cargados), reordenó "Nueva evolución" (editor arriba, Diagnóstico/Archivos debajo, dentro de una card sutil), precargó el Diagnóstico de la evolución anterior como default al abrir el formulario, y corrigió el combobox custom compartido (Paciente/Profesional/Especialidad/Diagnóstico) para que el chevron quede integrado dentro de la misma caja del trigger (antes el borde vivía en el `<input>` interno y el chevron, hermano flex de ese input, quedaba renderizado por fuera — una flecha suelta al lado del campo).
 
 La evolución permite registrar notas clínicas asociadas a un paciente y a un profesional.
 
@@ -400,36 +400,17 @@ No implementar firma digital, firma manuscrita ni bloqueo de evolución firmada 
 
 ---
 
-## Plantillas de evolución
+## Plantillas de evolución (implementado — V1)
 
-Las plantillas de evolución serían útiles para guiar a los kinesiólogos en la carga clínica.
+**Modelo (`PlantillaEvolucion`, migración `20260822195351_plantilla_evolucion`)**: `id`, `consultorioId`, `nombre`, `contenido` (`@db.Text`), `contenidoHtml` (`@db.Text`, nullable), `activo` (baja lógica, `@default(true)`), `createdAt`/`updatedAt`. Siempre de consultorio — nunca global (a diferencia de `Especialidad`/`CatalogoClinicoItem`, acá no existe noción "de sistema") ni asociada a un `Profesional` en particular: cualquier ADMINISTRADOR/PROFESIONAL del consultorio la puede usar/crear/editar/archivar por igual (mismo alcance que `CLINICAL_ROLES`, usado también en Evoluciones/Ficha inicial — Recepción/Supervisor no la ven ni administran).
 
-El objetivo es ayudar sin volver rígido el sistema.
+**Endpoints** (`backend/src/app.ts`, junto a los de `grupos-evolucion`): `GET/POST /api/plantillas-evolucion`, `PATCH/DELETE /api/plantillas-evolucion/:id`. Mismo criterio de sanitización que Evolución: `contenidoHtml` se sanitiza siempre en el servidor (nunca se confía en el que mandó el cliente) y `contenido` (texto plano) se deriva del HTML sanitizado cuando hay formato. `DELETE` es baja lógica (`activo:false`), nunca borrado físico — aplicar una plantilla solo copia texto una vez a un editor, no deja ninguna relación que preservar en la Evolución resultante.
 
-Las plantillas deberían ser simples y configurables.
+**UI**: botón "Plantillas" integrado en la toolbar del editor rico de "Nueva evolución" (`RichTextEditor.tsx` ganó un prop opcional `toolbarExtra`, sin afectar sus otros usos — edición de evolución existente, contenido de la propia plantilla). Abre `PlantillasListModal.tsx` (listar/aplicar/ir a editar/eliminar, "+ Nueva plantilla" al pie — mismo patrón que `GestionarGruposModal.tsx` para Diagnóstico) → `PlantillaFormModal.tsx` (Nombre + el mismo `RichTextEditor` básico para el contenido — mismo patrón que `GrupoEvolucionModal.tsx`).
 
-A futuro, podrían cargarse desde la pestaña Configuración.
+**Aplicar plantilla**: si el editor de "Nueva evolución" está vacío, se aplica directo; si ya tiene texto, nunca se pisa en silencio — confirmación custom Kineq ("Reemplazar contenido", nunca `confirm()` nativo) antes de reemplazar.
 
-Ejemplos de estructura de plantilla:
-
-- Motivo de consulta.
-- Evaluación de la sesión.
-- Tratamiento realizado.
-- Respuesta del paciente.
-- Indicaciones.
-- Próxima sesión.
-
-Otra plantilla posible:
-
-- Subjetivo.
-- Objetivo.
-- Intervención.
-- Evolución.
-- Plan.
-
-No implementar plantillas complejas todavía.
-
-Para una primera versión, puede bastar con permitir texto enriquecido y luego sumar plantillas simples.
+**No implementado a propósito (fuera de alcance de V1)**: plantillas globales, variables dinámicas, IA para completar contenido, versionado, firma, auditoría avanzada, sharing entre consultorios.
 
 ---
 

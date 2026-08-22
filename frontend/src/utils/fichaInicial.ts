@@ -105,6 +105,27 @@ export function computeFichaCompletionStatus(form: Record<string, string>): Fich
   return allSatisfied ? 'completa' : 'parcial'
 }
 
+// Para la alerta "Ficha inicial pendiente" (Resumen clínico): a diferencia
+// de computeFichaCompletionStatus() de arriba (que solo mira los campos
+// narrativos/escalares planos, y sigue impulsando el badge "Pendiente/
+// Parcialmente completa/Completa" de la tab Ficha inicial, sin cambios acá),
+// esto también cuenta las listas estructuradas — antecedentes, alergias,
+// medicaciones, estudios complementarios — que antes NO hacían desaparecer
+// la alerta aunque ya hubiera datos clínicos reales cargados (bug real
+// encontrado en verificación en vivo: agregar un antecedente no sacaba la
+// alerta). Una fila que existe en estas listas ya es una interacción real
+// del profesional (buscó/confirmó/negó algo en el catálogo), nunca un
+// default — no hace falta filtrar por estado.
+export function fichaHasAnyClinicalData(ficha: FichaInicial | null, form: Record<string, string>): boolean {
+  if (ficha) {
+    if ((ficha.antecedentes?.length ?? 0) > 0) return true
+    if ((ficha.alergias?.length ?? 0) > 0) return true
+    if ((ficha.medicaciones?.length ?? 0) > 0) return true
+    if ((ficha.estudios?.length ?? 0) > 0) return true
+  }
+  return Object.keys(form).some((field) => form[field]?.trim())
+}
+
 export function fichaFormFromFicha(ficha: FichaInicial | null): Record<string, string> {
   const source = ficha ?? ({} as Partial<FichaInicial>)
   const form: Record<string, string> = {}

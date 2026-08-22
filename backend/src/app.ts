@@ -1434,6 +1434,85 @@ app.get('/api/grupos-evolucion/:id/proxima-sesion', requireRole(...CLINICAL_ROLE
   res.json({ numeroSesion })
 })
 
+// PLANTILLAS DE EVOLUCIÓN
+// Siempre de consultorio (nunca globales, nunca atadas a un Profesional en
+// particular) — mismo alcance clínico que Evoluciones/Ficha inicial
+// (administrador y profesional). Baja lógica (`activo:false`), nunca
+// borrado físico — mismo criterio que el resto del catálogo clínico.
+app.get('/api/plantillas-evolucion', requireRole(...CLINICAL_ROLES), async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const plantillas = await prisma.plantillaEvolucion.findMany({
+    where: { consultorioId, activo: true },
+    orderBy: { nombre: 'asc' },
+  })
+  res.json(plantillas)
+})
+
+app.post('/api/plantillas-evolucion', requireRole(...CLINICAL_ROLES), async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const nombre = String(req.body.nombre || '').trim()
+  if (!nombre) return res.status(400).json({ error: 'nombre es requerido' })
+
+  // Mismo criterio que Evolución: el HTML nunca se confía tal cual del
+  // cliente, se vuelve a sanitizar acá; `contenido` (texto plano) se deriva
+  // del HTML sanitizado cuando hay formato, para que nunca queden
+  // desincronizados.
+  let contenidoHtml: string | null = null
+  let contenido: string = req.body.contenido || ''
+  if (req.body.contenidoHtml) {
+    contenidoHtml = sanitizeRichText(String(req.body.contenidoHtml))
+    contenido = stripToPlainText(contenidoHtml) || contenido
+  }
+  if (!contenido.trim()) return res.status(400).json({ error: 'contenido es requerido' })
+
+  const plantilla = await prisma.plantillaEvolucion.create({
+    data: { consultorioId, nombre, contenido, contenidoHtml },
+  })
+  res.status(201).json(plantilla)
+})
+
+app.patch('/api/plantillas-evolucion/:id', requireRole(...CLINICAL_ROLES), async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const id = Number(req.params.id)
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'invalid id' })
+
+  const plantilla = await prisma.plantillaEvolucion.findFirst({ where: { id, consultorioId } })
+  if (!plantilla) return res.status(404).json({ error: 'plantilla not found in consultorio' })
+
+  const payload: any = {}
+  if (req.body.nombre !== undefined) {
+    const nombre = String(req.body.nombre).trim()
+    if (!nombre) return res.status(400).json({ error: 'nombre no puede estar vacío' })
+    payload.nombre = nombre
+  }
+  if (req.body.contenido !== undefined || req.body.contenidoHtml !== undefined) {
+    let contenidoHtml: string | null = null
+    let contenido: string = req.body.contenido || ''
+    if (req.body.contenidoHtml) {
+      contenidoHtml = sanitizeRichText(String(req.body.contenidoHtml))
+      contenido = stripToPlainText(contenidoHtml) || contenido
+    }
+    if (!contenido.trim()) return res.status(400).json({ error: 'contenido es requerido' })
+    payload.contenido = contenido
+    payload.contenidoHtml = contenidoHtml
+  }
+
+  const updated = await prisma.plantillaEvolucion.update({ where: { id }, data: payload })
+  res.json(updated)
+})
+
+app.delete('/api/plantillas-evolucion/:id', requireRole(...CLINICAL_ROLES), async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const id = Number(req.params.id)
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'invalid id' })
+
+  const plantilla = await prisma.plantillaEvolucion.findFirst({ where: { id, consultorioId } })
+  if (!plantilla) return res.status(404).json({ error: 'plantilla not found in consultorio' })
+
+  await prisma.plantillaEvolucion.update({ where: { id }, data: { activo: false } })
+  res.status(204).end()
+})
+
 // FICHA INICIAL
 // Contenido clínico: mismo alcance que evoluciones (administrador y profesional).
 const FICHA_INICIAL_INCLUDE = {

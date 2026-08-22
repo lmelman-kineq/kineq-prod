@@ -105,6 +105,11 @@ export type EvolucionImagen = Prisma.EvolucionImagenModel
  */
 export type GrupoEvolucion = Prisma.GrupoEvolucionModel
 /**
+ * Model PlantillaEvolucion
+ * 
+ */
+export type PlantillaEvolucion = Prisma.PlantillaEvolucionModel
+/**
  * Model FichaInicial
  * 
  */
