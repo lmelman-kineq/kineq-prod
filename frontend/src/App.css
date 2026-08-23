@@ -446,11 +446,19 @@ body,
   stroke-linejoin: round;
 }
 
+/* position:fixed + top/left calculados en JS (getBoundingClientRect), no
+   CSS estático — mismo motivo y mismo mecanismo que .sidebar-tooltip: el
+   wrapper del avatar del usuario logueado vive dentro de `.sidebar`, que
+   tiene `overflow-y: auto` y por la interacción overflow-x/overflow-y del
+   spec recorta también el eje horizontal (aunque nunca se haya declarado
+   overflow-x explícito). Con `position: absolute` el popover quedaba
+   parcialmente cortado y generaba scroll horizontal en el propio sidebar
+   (bug real reportado). Se usa también desde PatientProfileHeader.tsx (foto
+   del paciente, fuera del sidebar) — ahí el fixed no cambia nada visible,
+   solo unifica el mecanismo en un solo lugar. */
 .avatar-edit-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 20;
+  position: fixed;
+  z-index: 9999;
   width: 220px;
   display: grid;
   gap: 8px;

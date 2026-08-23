@@ -22,6 +22,10 @@ function joinFacts(parts: Array<string | null | undefined>) {
 
 export default function PatientProfileHeader({ patient, socialWorkName, canEditPhoto, onPhotoChanged }: PatientProfileHeaderProps) {
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
+  // .avatar-edit-popover es position:fixed (ver App.css) — la posición se
+  // calcula acá en vez de con CSS relativo al wrapper, mismo mecanismo que
+  // el popover equivalente de App.tsx (foto de perfil del usuario).
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -113,7 +117,13 @@ export default function PatientProfileHeader({ patient, socialWorkName, canEditP
                 className="avatar-edit-button avatar-edit-button--circle"
                 aria-label="Foto del paciente"
                 title="Foto del paciente"
-                onClick={() => setPhotoMenuOpen((current) => !current)}
+                onClick={() => {
+                  if (!photoMenuOpen) {
+                    const rect = avatarWrapperRef.current?.getBoundingClientRect()
+                    if (rect) setPopoverPos({ top: rect.bottom + 8, left: rect.left })
+                  }
+                  setPhotoMenuOpen((current) => !current)
+                }}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 20h9" />
@@ -130,8 +140,13 @@ export default function PatientProfileHeader({ patient, socialWorkName, canEditP
                   event.target.value = ''
                 }}
               />
-              {photoMenuOpen ? (
-                <div className="avatar-edit-popover" role="dialog" aria-label="Foto del paciente">
+              {photoMenuOpen && popoverPos ? (
+                <div
+                  className="avatar-edit-popover"
+                  role="dialog"
+                  aria-label="Foto del paciente"
+                  style={{ top: popoverPos.top, left: popoverPos.left }}
+                >
                   <p className="avatar-edit-popover-title">Foto del paciente</p>
                   <div className="avatar-edit-popover-actions">
                     <button type="button" className="secondary-button" disabled={uploading} onClick={() => fileInputRef.current?.click()}>

@@ -1585,3 +1585,36 @@ actualizó el mock de `@vercel/blob` en `app.test.ts`). `tsc -b`/`build`/
 en el deployment real tras el redeploy; no hace falta ninguna variable de
 entorno nueva, `BLOB_READ_WRITE_TOKEN_STORE_ID` ya está desde que se
 conectó el store.
+
+## Sesión: popover "Foto de perfil"/"Foto del paciente" recortado en el sidebar
+
+Bug real reportado por el usuario con captura: al abrir el popover "Foto de
+perfil" desde el avatar del sidebar colapsado, los botones ("Subir foto"/
+"Cerrar") aparecían cortados/vacíos y el propio sidebar mostraba scroll
+horizontal. Mismo mecanismo ya diagnosticado esta sesión para
+`.sidebar-tooltip`: `.avatar-edit-popover` era `position: absolute`
+relativo a `.avatar-wrapper`, que vive dentro de `.sidebar`
+(`overflow-y: auto`, que por la interacción overflow-x/overflow-y del spec
+recorta también el eje horizontal aunque nunca se declaró overflow-x
+explícito) — un popover de 220px de ancho posicionado `left:0` sobre un
+sidebar colapsado de 86px se salía muy por fuera de esos límites y quedaba
+recortado.
+
+Fix real, no un ancho reducido ni overflow-visible: `.avatar-edit-popover`
+pasó a `position: fixed` (`z-index` de 20 a 9999), con `top`/`left`
+calculados en JS vía `getBoundingClientRect()` del wrapper del avatar al
+abrir el popover — mismo mecanismo que `.sidebar-tooltip`, ya establecido
+en esta sesión para exactamente esta clase de problema. Aplicado en los dos
+lugares que comparten esta clase CSS: `App.tsx` (foto de perfil del usuario
+logueado, dentro del sidebar — el caso que reportó el bug) y
+`PatientProfileHeader.tsx` (foto del paciente, fuera del sidebar — no tenía
+el bug pero comparte la clase, así que necesitaba el mismo mecanismo para
+no romperse cuando la CSS estática se sacó).
+
+Tests: sin cambios de comportamiento testeable por unit tests (es
+posicionamiento visual) — `tsc -b`/`build`/`lint` limpios en ambos
+paquetes, sin cambios de conteo de tests. **Verificado en vivo con
+Playwright**: el popover del sidebar ya no genera scroll horizontal en
+`.sidebar` (`scrollWidth === clientWidth`, confirmado por script) y se
+renderiza completo con sus dos botones visibles; el popover de foto de
+paciente también verificado, sin regresión.

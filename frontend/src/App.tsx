@@ -295,6 +295,16 @@ function Dashboard() {
   }
   const hideSidebarTooltip = () => setSidebarTooltip(null)
   const [profilePhotoInfoOpen, setProfilePhotoInfoOpen] = useState(false)
+  // Posición calculada, no CSS estático: el popover vive dentro de
+  // `.avatar-wrapper`, que vive dentro de `.sidebar` — `.sidebar` tiene
+  // `overflow-y: auto`, que por la interacción overflow-x/overflow-y del
+  // spec recorta también el eje horizontal (aunque nunca se haya declarado
+  // overflow-x explícito). Un `position: absolute` relativo al wrapper
+  // quedaba parcialmente cortado y además generaba scroll horizontal en el
+  // propio sidebar (bug real reportado). Mismo mecanismo que
+  // `.sidebar-tooltip` (position:fixed + getBoundingClientRect), ya
+  // establecido en este archivo para exactamente este problema.
+  const [profilePhotoPopoverPos, setProfilePhotoPopoverPos] = useState<{ top: number; left: number } | null>(null)
   const [profilePhotoUploading, setProfilePhotoUploading] = useState(false)
   const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null)
   const profilePhotoInputRef = useRef<HTMLInputElement | null>(null)
@@ -1517,7 +1527,13 @@ function Dashboard() {
               className="avatar-edit-button"
               aria-label="Foto de perfil"
               title="Foto de perfil"
-              onClick={() => setProfilePhotoInfoOpen((current) => !current)}
+              onClick={() => {
+                if (!profilePhotoInfoOpen) {
+                  const rect = avatarWrapperRef.current?.getBoundingClientRect()
+                  if (rect) setProfilePhotoPopoverPos({ top: rect.bottom + 8, left: rect.left })
+                }
+                setProfilePhotoInfoOpen((current) => !current)
+              }}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 20h9" />
@@ -1534,8 +1550,13 @@ function Dashboard() {
                 event.target.value = ''
               }}
             />
-            {profilePhotoInfoOpen ? (
-              <div className="avatar-edit-popover" role="dialog" aria-label="Foto de perfil">
+            {profilePhotoInfoOpen && profilePhotoPopoverPos ? (
+              <div
+                className="avatar-edit-popover"
+                role="dialog"
+                aria-label="Foto de perfil"
+                style={{ top: profilePhotoPopoverPos.top, left: profilePhotoPopoverPos.left }}
+              >
                 <p className="avatar-edit-popover-title">Foto de perfil</p>
                 <div className="avatar-edit-popover-actions">
                   <button type="button" className="secondary-button" disabled={profilePhotoUploading} onClick={() => profilePhotoInputRef.current?.click()}>
