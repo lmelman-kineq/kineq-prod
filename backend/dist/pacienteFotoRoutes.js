@@ -37,12 +37,12 @@ router.post('/upload-token', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES)
         const paciente = await prisma_1.default.paciente.findFirst({ where: { id: pacienteId, consultorioId } });
         if (!paciente)
             return res.status(404).json({ error: 'paciente not found in consultorio' });
-        const pathname = pathnameFor(consultorioId, pacienteId, String(nombreOriginal));
-        const token = await (0, blobStorage_1.issueClientUploadToken)(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES });
-        res.json({ token, pathname });
+        const pathname = pathnameFor(consultorioId, pacienteId, (0, blobStorage_1.withUniqueSuffix)(String(nombreOriginal)));
+        const { presignedUrl } = await (0, blobStorage_1.issuePresignedUploadUrl)(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES });
+        res.json({ presignedUrl, pathname });
     }
     catch (err) {
-        console.error('failed to issue paciente foto upload token', err);
+        console.error('[blob] issue upload url failed', { resource: 'paciente-foto', consultorioId, pacienteId, errorCode: err instanceof Error ? err.name : 'unknown', message: err instanceof Error ? err.message : String(err) });
         res.status(500).json({ error: 'No se pudo iniciar la subida. Volvé a intentar.' });
     }
 });

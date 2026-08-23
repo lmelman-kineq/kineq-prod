@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import prisma from './prisma'
 import { CLINICAL_ROLES, requireProfesionalVinculado, requireRole } from './auth'
-import { issueClientUploadToken, deleteFromBlob, streamBlobToResponse } from './blobStorage'
+import { issuePresignedUploadUrl, withUniqueSuffix, deleteFromBlob, streamBlobToResponse } from './blobStorage'
 import { estudioParaCliente } from './estudioSerializer'
 
 // Estudios no tenía antes ningún tipo de archivo soportado (la tab era
@@ -45,11 +45,11 @@ router.post('/upload-token', requireRole(...CLINICAL_ROLES), async (req, res) =>
     const estudio = await prisma.fichaEstudioComplementario.findFirst({ where: { id: estudioId, consultorioId } })
     if (!estudio) return res.status(404).json({ error: 'estudio not found in consultorio' })
 
-    const pathname = pathnameFor(consultorioId, estudioId, String(nombreOriginal))
-    const token = await issueClientUploadToken(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES })
-    res.json({ token, pathname })
+    const pathname = pathnameFor(consultorioId, estudioId, withUniqueSuffix(String(nombreOriginal)))
+    const { presignedUrl } = await issuePresignedUploadUrl(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES })
+    res.json({ presignedUrl, pathname })
   } catch (err) {
-    console.error('failed to issue estudio archivo upload token', err)
+    console.error('[blob] issue upload url failed', { resource: 'estudio-archivo', consultorioId, estudioId, errorCode: err instanceof Error ? err.name : 'unknown', message: err instanceof Error ? err.message : String(err) })
     res.status(500).json({ error: 'No se pudo iniciar la subida. Volvé a intentar.' })
   }
 })

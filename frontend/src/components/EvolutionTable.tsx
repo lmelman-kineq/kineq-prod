@@ -159,6 +159,10 @@ export default function EvolutionTable({
                       handleRowClick(evolucion)
                     }
                   }}
+                  onMouseEnter={showResumenPopover(evolucion)}
+                  onMouseLeave={hideResumenPopover}
+                  onFocus={showResumenPopover(evolucion)}
+                  onBlur={hideResumenPopover}
                 >
                   <td>
                     {formatDateTime(evolucion.createdAt)}
@@ -166,14 +170,7 @@ export default function EvolutionTable({
                   </td>
                   <td data-label="Profesional" title={professionalName(evolucion.profesional)}>{professionalNameCompact(evolucion.profesional)}</td>
                   <td data-label="Diagnóstico"><GrupoChip grupo={evolucion.grupo} /></td>
-                  <td
-                    className="evolution-resumen-cell"
-                    data-label="Resumen"
-                    onMouseEnter={showResumenPopover(evolucion)}
-                    onMouseLeave={hideResumenPopover}
-                    onFocus={showResumenPopover(evolucion)}
-                    onBlur={hideResumenPopover}
-                  >
+                  <td className="evolution-resumen-cell" data-label="Resumen">
                     <span>{evolucion.contenido}</span>
                   </td>
                   <td className="turnos-actions-cell config-row-actions">

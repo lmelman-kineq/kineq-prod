@@ -1481,3 +1481,107 @@ Backend sigue en 220 tests (12 tests de upload reescritos al flujo nuevo,
 mismos casos cubiertos). Frontend sigue en 98 (los componentes que llaman
 a `api.uploadXxx()` no cambiaron — misma firma de función). `tsc -b`/
 `build`/`lint` limpios en ambos paquetes.
+
+## Sesión: rediseño 70/30 del Paciente, permisos, Plantillas de Evolución
+
+Tres rondas seguidas en la misma sesión (mismo hilo de trabajo, ver detalle
+completo de cada una en `docs/tasks.md`). Una migración nueva.
+
+**Ronda 1 — "UX compacta, Evoluciones, permisos y rediseño de Paciente
+(70/30)"**: tooltip del sidebar tapado por un menú contextual (era
+z-index, no overflow — subido a 10010). Profesional compacto (`Lic.
+Nombre`) en las 3 tablas relevantes, nuevo helper `professionalNameCompact()`.
+"Sin obra social" → "Particular" (copy puro). Fecha en mobile: el
+`<input type=date>` invisible pasa a cubrir todo el campo en touch en vez
+de depender de `showPicker()` por JS. Evolución: click en fila vuelve a
+ser solo-lectura (se había invertido a editar-directo en una ronda
+anterior), lápiz es el único acceso a edición; nuevo popover de hover
+sobre Resumen con el contenido completo. Autor de Evolución inmutable y
+permisos ADMIN sobre Paciente/Turno: ya estaban bien implementados, se
+agregaron tests de regresión explícitos. **Bug real encontrado de paso**:
+`POST /api/profesionales` pedía `apellido` no vacío, pero el form de
+"Nombre completo" (de una ronda previa) siempre manda `apellido: ''` —
+crear un Profesional por UI estaba roto de raíz. Arreglado. Menú
+contextual de Home: `Ver Historia Clínica` pasa a ir primero. Pantalla de
+Paciente: layout `.patient-detail-layout` (grid 7fr/3fr) — tabs clínicas a
+la izquierda, columna angosta a la derecha con `PatientProfileHeader` +
+`ClinicalSummaryPanel` apilados. `activeTurno` ya no agrega ninguna card
+visual (se sacó la vieja franja de estado/duración), solo un botón
+"Finalizar atención" en la topbar. Resumen clínico dejó de ser una tab —
+ahora es solo alertas clínicas (se sacaron Estado de ficha/Última
+evolución/Próximo turno y el bloque de Antecedentes agrupados), con
+"Ficha inicial pendiente" como una alerta más.
+
+**Ronda 2 — "Ajustes finos sobre la nueva pestaña de Paciente"**: se sacó
+todo el "Origen: ficha inicial..." de las cards de alerta; antecedentes
+pasan a titularse "Antecedente personal/familiar/quirúrgico · X". Botón de
+editar de la topbar y texto "Volver a Pacientes" más chicos. Badge
+"Activo" oculto en el caso normal (solo se muestra si no está activo).
+Badge/contador de alertas de la card superior eliminado sin reemplazo —
+quedó redundante con la card de abajo; `PatientAlertsBadge.tsx` y
+`ClinicalAlertsDetail.tsx` se borraron por quedar sin ningún uso. Más
+espacio entre Fecha/Profesional en la tabla de Turnos del paciente.
+"Nro. de Sesión" → "Sesión", columna angosta (`width:1%` + nowrap).
+
+**Ronda 3 — "Plantillas de Evolución, tabs y ajustes de Ficha Inicial"**:
+**bug real corregido** — la alerta "Ficha inicial pendiente" solo miraba
+los campos escalares planos, nunca las listas estructuradas (antecedentes/
+alergias/medicaciones/estudios) — con datos clínicos ya cargados, la
+alerta seguía mostrándose igual. Nuevo helper `fichaHasAnyClinicalData()`.
+Orden de tabs: Evoluciones → Ficha inicial → Estudios → Turnos (Evoluciones
+ahora la tab default). Leyenda de Antecedentes eliminada. "Nueva
+evolución" reordenada (editor arriba, Diagnóstico/Archivos debajo) dentro
+de una card sutil (antes solo un borde superior). Diagnóstico default =
+el de la evolución más reciente del paciente que tenga uno (sin request
+nuevo, ya viene cargado). Chevron "suelto" del combobox custom
+(Paciente/Profesional/Especialidad/Diagnóstico) arreglado de raíz: el
+borde vivía en el `<input>` interno, no en el contenedor — se movió al
+contenedor para que quede una sola caja. **Plantillas de Evolución (V1)**
+nueva: modelo `PlantillaEvolucion` (consultorio-scoped, nunca global ni de
+un Profesional en particular), CRUD completo, botón "Plantillas" en la
+toolbar del editor, listar/aplicar/crear/editar/eliminar vía modales
+propios — aplicar sobre contenido ya escrito pide confirmación custom
+Kineq, nunca pisa en silencio.
+
+Migración nueva: `20260822195351_plantilla_evolucion` (generada con
+`prisma migrate diff`, nunca a mano — ver nota de case-sensitivity de
+tablas en Aiven en `docs/database.md`). No aplicada a producción.
+
+Tests: backend 215→236 (+21 entre las tres rondas). Frontend 94→105
+(+11). `tsc -b`/`build`/`lint` limpios en ambos paquetes en todo momento.
+**Verificado en vivo con Playwright** (no solo tsc/tests) en las tres
+rondas — consultorios/pacientes/profesionales/turnos nuevos, registrados
+vía el flujo público de alta, contra el dev server real.
+
+## Sesión: Vercel Blob reescrito a OIDC (uploads seguían fallando en prod)
+
+El store `kineq-files` (Private) ya estaba conectado a `kineq-api`, pero
+las 4 superficies de archivos seguían fallando. Causa real: la
+implementación vieja (`generateClientTokenFromReadWriteToken`) nunca
+pasaba `storeId` a ninguna llamada del SDK — dependía por completo del
+fallback a `BLOB_READ_WRITE_TOKEN`, que **nunca estuvo configurado en
+ningún ambiente** (ya lo decía `docs/architecture.md` de una ronda
+anterior). Conectar el store agrega `BLOB_READ_WRITE_TOKEN_STORE_ID`
+automáticamente, pero esa variable por sí sola no autentica nada sin
+pasarla explícitamente al SDK.
+
+Reescrito `blobStorage.ts` para usar OIDC: `getBlobStoreId()` centraliza
+`BLOB_READ_WRITE_TOKEN_STORE_ID`, pasado a cada llamada (`del`/`get`/
+`issueSignedToken`) — con eso, `VERCEL_OIDC_TOKEN` (que Vercel inyecta
+solo en cada invocación dentro de la plataforma) alcanza para autenticar
+todo, sin ningún token estático. El client-token de subida directa se
+reemplazó por `issueSignedToken()` + `presignUrl()` — el navegador ahora
+sube con un `fetch` PUT crudo a una URL firmada, sin ningún paquete de
+Vercel Blob en el frontend (`@vercel/blob` se sacó del frontend, ~100KB
+menos de bundle). De paso, esto resuelve una nota de seguridad pendiente
+de rondas anteriores: `access: 'private'` ahora es un parámetro explícito
+de `presignUrl()`, ya no una expectativa sin confirmar. `uploadToBlob()`
+(server-side directo, sin ningún uso real) se eliminó.
+
+Tests: backend se mantiene en 236 (mismos endpoints ya cubiertos, solo se
+actualizó el mock de `@vercel/blob` en `app.test.ts`). `tsc -b`/`build`/
+`lint` limpios en ambos paquetes. **No verificado contra Vercel real**
+(fuera del alcance de este entorno) — pendiente probar las 4 superficies
+en el deployment real tras el redeploy; no hace falta ninguna variable de
+entorno nueva, `BLOB_READ_WRITE_TOKEN_STORE_ID` ya está desde que se
+conectó el store.

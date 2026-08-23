@@ -2,7 +2,7 @@ import { Router } from 'express'
 import prisma from './prisma'
 import { CLINICAL_ROLES, requireProfesionalVinculado, requireRole } from './auth'
 import { RolUsuario } from './generated/prisma/client'
-import { issueClientUploadToken, deleteFromBlob, streamBlobToResponse } from './blobStorage'
+import { issuePresignedUploadUrl, withUniqueSuffix, deleteFromBlob, streamBlobToResponse } from './blobStorage'
 import { imagenParaCliente } from './evolucionImagenSerializer'
 
 // Mismos límites que le mostramos al usuario en el frontend (ver
@@ -54,14 +54,14 @@ router.post('/upload-tokens', requireRole(...CLINICAL_ROLES), async (req, res) =
     }
 
     const items = await Promise.all(files.map(async (f) => {
-      const pathname = pathnameFor(consultorioId, evolucionId, f.nombreOriginal!)
-      const token = await issueClientUploadToken(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES })
-      return { token, pathname }
+      const pathname = pathnameFor(consultorioId, evolucionId, withUniqueSuffix(f.nombreOriginal!))
+      const { presignedUrl } = await issuePresignedUploadUrl(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES })
+      return { presignedUrl, pathname }
     }))
 
     res.json({ items })
   } catch (err) {
-    console.error('failed to issue evolucion imagenes upload tokens', err)
+    console.error('[blob] issue upload url failed', { resource: 'evolucion-imagenes', consultorioId, evolucionId, errorCode: err instanceof Error ? err.name : 'unknown', message: err instanceof Error ? err.message : String(err) })
     res.status(500).json({ error: 'No se pudo iniciar la subida. Volvé a intentar.' })
   }
 })

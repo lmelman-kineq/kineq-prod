@@ -35,12 +35,12 @@ router.post('/upload-token', async (req, res) => {
         const usuario = await prisma_1.default.usuario.findUnique({ where: { id: usuarioId } });
         if (!usuario)
             return res.status(404).json({ error: 'usuario not found' });
-        const pathname = pathnameFor(usuario.consultorioId, usuarioId, String(nombreOriginal));
-        const token = await (0, blobStorage_1.issueClientUploadToken)(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES });
-        res.json({ token, pathname });
+        const pathname = pathnameFor(usuario.consultorioId, usuarioId, (0, blobStorage_1.withUniqueSuffix)(String(nombreOriginal)));
+        const { presignedUrl } = await (0, blobStorage_1.issuePresignedUploadUrl)(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES });
+        res.json({ presignedUrl, pathname });
     }
     catch (err) {
-        console.error('failed to issue usuario foto upload token', err);
+        console.error('[blob] issue upload url failed', { resource: 'usuario-foto', usuarioId, errorCode: err instanceof Error ? err.name : 'unknown', message: err instanceof Error ? err.message : String(err) });
         res.status(500).json({ error: 'No se pudo iniciar la subida. Volvé a intentar.' });
     }
 });

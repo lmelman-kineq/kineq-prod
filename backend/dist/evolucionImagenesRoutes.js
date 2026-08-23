@@ -55,14 +55,14 @@ router.post('/upload-tokens', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES),
             return res.status(400).json({ error: `Esta evolución ya tiene ${yaTiene} imagen(es); como máximo puede tener ${MAX_IMAGES_PER_EVOLUCION}.` });
         }
         const items = await Promise.all(files.map(async (f) => {
-            const pathname = pathnameFor(consultorioId, evolucionId, f.nombreOriginal);
-            const token = await (0, blobStorage_1.issueClientUploadToken)(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES });
-            return { token, pathname };
+            const pathname = pathnameFor(consultorioId, evolucionId, (0, blobStorage_1.withUniqueSuffix)(f.nombreOriginal));
+            const { presignedUrl } = await (0, blobStorage_1.issuePresignedUploadUrl)(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES });
+            return { presignedUrl, pathname };
         }));
         res.json({ items });
     }
     catch (err) {
-        console.error('failed to issue evolucion imagenes upload tokens', err);
+        console.error('[blob] issue upload url failed', { resource: 'evolucion-imagenes', consultorioId, evolucionId, errorCode: err instanceof Error ? err.name : 'unknown', message: err instanceof Error ? err.message : String(err) });
         res.status(500).json({ error: 'No se pudo iniciar la subida. Volvé a intentar.' });
     }
 });

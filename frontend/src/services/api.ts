@@ -39,7 +39,6 @@ import type {
   UsuarioUpdateInput,
 } from '../types/domain'
 import { DEFAULT_TIMEZONE, zonedTimeToUtcIso } from '../utils/timezone'
-import { put as blobPut } from '@vercel/blob/client'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
 
@@ -99,27 +98,37 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 // Upload directo navegador → Vercel Blob, nunca a través de nuestra propia
 // función Serverless (que en Vercel tiene un límite de body de ~4.5MB,
 // bastante menor que los límites propios de la app — ver
-// docs/architecture.md). Tres pasos: 1) pedirle un token de subida acotado
-// a este archivo puntual al backend, 2) subir directo con ese token,
-// 3) confirmar para que el backend guarde la referencia (nunca se confía
-// en que el pathname que vuelve del cliente sea legítimo sin más — el
-// backend revalida permisos y el prefijo esperado en /confirm).
-// `access: 'private'` siempre hardcodeado acá, nunca expuesto como opción:
-// es la única superficie donde se especifica el nivel de acceso del blob.
+// docs/architecture.md). Tres pasos: 1) pedirle al backend una URL de
+// subida (`PUT`) firmada y acotada a este archivo puntual, 2) subir directo
+// con un `fetch` PUT crudo a esa URL, 3) confirmar para que el backend
+// guarde la referencia (nunca se confía en que el pathname que vuelve del
+// cliente sea legítimo sin más — el backend revalida permisos y el prefijo
+// esperado en /confirm). `access: 'private'` lo decide el backend al firmar
+// la URL (`presignUrl`), nunca acá — el navegador no tiene forma de elegir
+// ni ver el nivel de acceso.
 async function uploadFileViaClientToken<T>(
   uploadTokenUrl: string,
   confirmUrl: string,
   file: File,
 ): Promise<T> {
-  const { token, pathname } = await request<{ token: string; pathname: string }>(uploadTokenUrl, {
+  const { presignedUrl, pathname } = await request<{ presignedUrl: string; pathname: string }>(uploadTokenUrl, {
     method: 'POST',
     body: JSON.stringify({ nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size }),
   })
-  const uploaded = await blobPut(pathname, file, { access: 'private', token, contentType: file.type })
+  await putToPresignedUrl(presignedUrl, file)
   return request<T>(confirmUrl, {
     method: 'POST',
-    body: JSON.stringify({ pathname: uploaded.pathname, nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size }),
+    body: JSON.stringify({ pathname, nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size }),
   })
+}
+
+async function putToPresignedUrl(presignedUrl: string, file: File): Promise<void> {
+  const response = await fetch(presignedUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': file.type },
+  })
+  if (!response.ok) throw new Error('No se pudo subir el archivo. Volvé a intentar.')
 }
 
 // Único punto donde se hace fetch a un archivo servido por una ruta
@@ -458,7 +467,7 @@ export function deleteEvolucion(evolucionId: number): Promise<void> {
 // un token por archivo, cada uno se sube en paralelo directo a Blob, y un
 // solo /confirm guarda todas las referencias juntas.
 export async function uploadEvolucionImagenes(evolucionId: number, files: File[]): Promise<EvolucionImagen[]> {
-  const { items: tokenItems } = await request<{ items: Array<{ token: string; pathname: string }> }>(
+  const { items: tokenItems } = await request<{ items: Array<{ presignedUrl: string; pathname: string }> }>(
     `/api/evoluciones/${evolucionId}/imagenes/upload-tokens`,
     {
       method: 'POST',
@@ -467,8 +476,8 @@ export async function uploadEvolucionImagenes(evolucionId: number, files: File[]
   )
 
   const confirmedItems = await Promise.all(files.map(async (file, index) => {
-    const uploaded = await blobPut(tokenItems[index].pathname, file, { access: 'private', token: tokenItems[index].token, contentType: file.type })
-    return { pathname: uploaded.pathname, nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size }
+    await putToPresignedUrl(tokenItems[index].presignedUrl, file)
+    return { pathname: tokenItems[index].pathname, nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size }
   }))
 
   return request(`/api/evoluciones/${evolucionId}/imagenes/confirm`, {

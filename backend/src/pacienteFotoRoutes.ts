@@ -2,7 +2,7 @@ import { Router } from 'express'
 import type { Request } from 'express'
 import prisma from './prisma'
 import { ADMIN_DATA_ROLES, requireRole } from './auth'
-import { issueClientUploadToken, deleteFromBlob, streamBlobToResponse } from './blobStorage'
+import { issuePresignedUploadUrl, withUniqueSuffix, deleteFromBlob, streamBlobToResponse } from './blobStorage'
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -36,11 +36,11 @@ router.post('/upload-token', requireRole(...ADMIN_DATA_ROLES), async (req, res) 
     const paciente = await prisma.paciente.findFirst({ where: { id: pacienteId, consultorioId } })
     if (!paciente) return res.status(404).json({ error: 'paciente not found in consultorio' })
 
-    const pathname = pathnameFor(consultorioId, pacienteId, String(nombreOriginal))
-    const token = await issueClientUploadToken(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES })
-    res.json({ token, pathname })
+    const pathname = pathnameFor(consultorioId, pacienteId, withUniqueSuffix(String(nombreOriginal)))
+    const { presignedUrl } = await issuePresignedUploadUrl(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES })
+    res.json({ presignedUrl, pathname })
   } catch (err) {
-    console.error('failed to issue paciente foto upload token', err)
+    console.error('[blob] issue upload url failed', { resource: 'paciente-foto', consultorioId, pacienteId, errorCode: err instanceof Error ? err.name : 'unknown', message: err instanceof Error ? err.message : String(err) })
     res.status(500).json({ error: 'No se pudo iniciar la subida. Volvé a intentar.' })
   }
 })

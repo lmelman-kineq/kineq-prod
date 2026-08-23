@@ -47,12 +47,12 @@ router.post('/upload-token', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), 
         const estudio = await prisma_1.default.fichaEstudioComplementario.findFirst({ where: { id: estudioId, consultorioId } });
         if (!estudio)
             return res.status(404).json({ error: 'estudio not found in consultorio' });
-        const pathname = pathnameFor(consultorioId, estudioId, String(nombreOriginal));
-        const token = await (0, blobStorage_1.issueClientUploadToken)(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES });
-        res.json({ token, pathname });
+        const pathname = pathnameFor(consultorioId, estudioId, (0, blobStorage_1.withUniqueSuffix)(String(nombreOriginal)));
+        const { presignedUrl } = await (0, blobStorage_1.issuePresignedUploadUrl)(pathname, { allowedContentTypes: ALLOWED_MIME_TYPES, maximumSizeInBytes: MAX_FILE_SIZE_BYTES });
+        res.json({ presignedUrl, pathname });
     }
     catch (err) {
-        console.error('failed to issue estudio archivo upload token', err);
+        console.error('[blob] issue upload url failed', { resource: 'estudio-archivo', consultorioId, estudioId, errorCode: err instanceof Error ? err.name : 'unknown', message: err instanceof Error ? err.message : String(err) });
         res.status(500).json({ error: 'No se pudo iniciar la subida. Volvé a intentar.' });
     }
 });

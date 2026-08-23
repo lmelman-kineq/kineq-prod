@@ -56,6 +56,7 @@ Can request or reserve appointments, receive reminders, cancel or reschedule dep
 - Add session evolution
 - Attach files
 - Track diagnosis, treatment plan, goals, and progress
+- Reusable evolution templates — **implemented (V1)**: consultorio-scoped, no dynamic variables/AI/versioning/sharing — see "Plantillas de evolución" in `docs/modules/clinical-history.md`.
 
 ### Treatment Follow-up
 - Track active patients

@@ -6,26 +6,23 @@ import { hashPassword } from './auth'
 import { RolUsuario, EstadoTurno } from './generated/prisma/client'
 import { seedCatalogosGlobales } from './seedCatalogosGlobales'
 
-// Los tests no tienen un BLOB_READ_WRITE_TOKEN real ni acceso de red a
-// Vercel Blob — se mockea el módulo para poder probar validación/permisos/
-// persistencia del endpoint de imágenes sin depender de esa infraestructura.
-// vitest hoistea este vi.mock por encima de los imports de arriba.
-let blobStoreCounter = 0
+// Los tests no corren en Vercel — no hay VERCEL_OIDC_TOKEN real ni acceso de
+// red a Vercel Blob — se mockea el módulo para poder probar validación/
+// permisos/persistencia de los endpoints de archivos sin depender de esa
+// infraestructura. vitest hoistea este vi.mock por encima de los imports de
+// arriba. `getBlobStoreId()` (blobStorage.ts) exige `BLOB_READ_WRITE_TOKEN_STORE_ID`
+// seteada — un valor fake alcanza, nunca se usa contra la red real acá.
+process.env.BLOB_READ_WRITE_TOKEN_STORE_ID = 'test-store-id'
+
 const fakeBlobStore = new Map<string, Buffer>()
 vi.mock('@vercel/blob', () => ({
-  put: vi.fn(async (pathname: string, body: Buffer) => {
-    blobStoreCounter += 1
-    const finalPathname = `${pathname}-${blobStoreCounter}`
-    fakeBlobStore.set(finalPathname, Buffer.isBuffer(body) ? body : Buffer.from(body))
-    return { url: `https://blob.test/${finalPathname}`, pathname: finalPathname }
-  }),
   del: vi.fn(async (pathname: string) => {
     fakeBlobStore.delete(pathname)
   }),
   // Fake de `get()` con `access: 'private'`: devuelve el mismo buffer que se
-  // guardó en `put()`, envuelto en un ReadableStream real — así los tests
-  // de las rutas `/contenido` verifican el contenido de punta a punta, sin
-  // red ni token real.
+  // guardó al "subir" (ver simulateClientUpload más abajo), envuelto en un
+  // ReadableStream real — así los tests de las rutas `/contenido` verifican
+  // el contenido de punta a punta, sin red ni credencial real.
   get: vi.fn(async (pathname: string) => {
     const data = fakeBlobStore.get(pathname)
     if (!data) return null
@@ -52,15 +49,19 @@ vi.mock('@vercel/blob', () => ({
       },
     }
   }),
-}))
-
-// El upload real (navegador → Vercel Blob, ver blobStorage.ts →
-// issueClientUploadToken) nunca pasa por esta función Serverless — acá solo
-// hace falta que el servidor pueda emitir un token fake. La "subida" en sí
-// se simula escribiendo directo en fakeBlobStore (ver simulateClientUpload
-// más abajo), como si el navegador ya la hubiera hecho.
-vi.mock('@vercel/blob/client', () => ({
-  generateClientTokenFromReadWriteToken: vi.fn(async ({ pathname }: { pathname: string }) => `fake-client-token-for-${pathname}`),
+  // El upload real (navegador → Vercel Blob, ver blobStorage.ts →
+  // issuePresignedUploadUrl) nunca pasa por esta función Serverless — acá
+  // solo hace falta que el servidor pueda emitir una URL presignada fake.
+  // La "subida" en sí se simula escribiendo directo en fakeBlobStore (ver
+  // simulateClientUpload más abajo), como si el navegador ya la hubiera hecho.
+  issueSignedToken: vi.fn(async ({ pathname }: { pathname: string }) => ({
+    delegationToken: `fake-delegation-for-${pathname}`,
+    clientSigningToken: 'fake-signing-token',
+    validUntil: Date.now() + 600_000,
+  })),
+  presignUrl: vi.fn(async (_signedToken: unknown, { pathname }: { pathname: string }) => ({
+    presignedUrl: `https://blob.test/presigned/${pathname}`,
+  })),
 }))
 
 const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -111,7 +112,7 @@ async function simulateEvolucionImagenesUpload(cookie: string, evolucionId: numb
     .send({ files: files.map((f) => ({ nombreOriginal: f.filename, mimeType: f.contentType, sizeBytes: f.buffer.length })) })
   if (tokenRes.status !== 200) return tokenRes
 
-  const items = (tokenRes.body.items as Array<{ token: string; pathname: string }>).map((item, i) => {
+  const items = (tokenRes.body.items as Array<{ presignedUrl: string; pathname: string }>).map((item, i) => {
     fakeBlobStore.set(item.pathname, files[i].buffer)
     return { pathname: item.pathname, nombreOriginal: files[i].filename, mimeType: files[i].contentType, sizeBytes: files[i].buffer.length }
   })
