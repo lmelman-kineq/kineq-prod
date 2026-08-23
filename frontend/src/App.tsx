@@ -1510,9 +1510,18 @@ function Dashboard() {
             ref={avatarWrapperRef}
             tabIndex={0}
             aria-label={fullName}
-            onMouseEnter={showSidebarTooltip(fullName)}
+            // El tooltip de hover (nombre completo) y el popover de "Foto de
+            // perfil" comparten esta misma zona — sin este guard, justo
+            // después de clickear el ícono de editar (el mouse todavía está
+            // encima), el tooltip se abre por el hover y queda superpuesto
+            // arriba del popover (mismo z-index más alto que el popover, a
+            // propósito para menús contextuales — acá compite con contenido
+            // que sí necesita estar arriba). El popover ya muestra "Foto de
+            // perfil" como título, así que el tooltip con el nombre no suma
+            // nada en ese momento.
+            onMouseEnter={profilePhotoInfoOpen ? undefined : showSidebarTooltip(fullName)}
             onMouseLeave={hideSidebarTooltip}
-            onFocus={showSidebarTooltip(fullName)}
+            onFocus={profilePhotoInfoOpen ? undefined : showSidebarTooltip(fullName)}
             onBlur={hideSidebarTooltip}
           >
             {user?.fotoUrl ? (
@@ -1529,8 +1538,31 @@ function Dashboard() {
               title="Foto de perfil"
               onClick={() => {
                 if (!profilePhotoInfoOpen) {
+                  // El hover ya pudo haber abierto el tooltip antes de este
+                  // click (el mouse llega al botón pasando por encima del
+                  // wrapper) — se lo oculta acá explícitamente, el guard de
+                  // onMouseEnter de arriba solo previene que se reabra.
+                  hideSidebarTooltip()
                   const rect = avatarWrapperRef.current?.getBoundingClientRect()
-                  if (rect) setProfilePhotoPopoverPos({ top: rect.bottom + 8, left: rect.left })
+                  if (rect) {
+                    // Desktop (sidebar comprimida a 86px, ≥1171px): a la
+                    // derecha del avatar, no debajo — "debajo" queda
+                    // encimado con los ítems de navegación que siguen más
+                    // abajo en esa misma columna angosta (no clipping, pero
+                    // se ve superpuesto/desprolijo). Mismo criterio de
+                    // flyout que .sidebar-tooltip (rect.right + 12).
+                    // Mobile (panel deslizable, ≤1170px, con labels
+                    // restaurados): "a la derecha" desbordaría el drawer
+                    // (hasta 320px de ancho) y potencialmente el viewport en
+                    // un celular angosto — ahí se mantiene "debajo", que es
+                    // donde ya cabe sin superponerse a nada.
+                    const isDesktopRail = window.matchMedia('(min-width: 1171px)').matches
+                    setProfilePhotoPopoverPos(
+                      isDesktopRail
+                        ? { top: rect.top, left: rect.right + 12 }
+                        : { top: rect.bottom + 8, left: rect.left },
+                    )
+                  }
                 }
                 setProfilePhotoInfoOpen((current) => !current)
               }}
