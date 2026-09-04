@@ -21,6 +21,14 @@ export const EstadoTurno = {
 export type EstadoTurno = (typeof EstadoTurno)[keyof typeof EstadoTurno]
 
 
+export const PatronRecurrenciaSerie = {
+  SEMANAL: 'SEMANAL',
+  MENSUAL_ORDINAL: 'MENSUAL_ORDINAL'
+} as const
+
+export type PatronRecurrenciaSerie = (typeof PatronRecurrenciaSerie)[keyof typeof PatronRecurrenciaSerie]
+
+
 export const RolUsuario = {
   ADMINISTRADOR: 'ADMINISTRADOR',
   PROFESIONAL: 'PROFESIONAL',

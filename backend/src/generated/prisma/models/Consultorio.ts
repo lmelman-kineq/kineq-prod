@@ -292,6 +292,7 @@ export type ConsultorioWhereInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoListRelationFilter
   gruposEvolucion?: Prisma.GrupoEvolucionListRelationFilter
   plantillasEvolucion?: Prisma.PlantillaEvolucionListRelationFilter
+  seriesTurno?: Prisma.SerieTurnoListRelationFilter
 }
 
 export type ConsultorioOrderByWithRelationInput = {
@@ -327,6 +328,7 @@ export type ConsultorioOrderByWithRelationInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoOrderByRelationAggregateInput
   gruposEvolucion?: Prisma.GrupoEvolucionOrderByRelationAggregateInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionOrderByRelationAggregateInput
+  seriesTurno?: Prisma.SerieTurnoOrderByRelationAggregateInput
   _relevance?: Prisma.ConsultorioOrderByRelevanceInput
 }
 
@@ -366,6 +368,7 @@ export type ConsultorioWhereUniqueInput = Prisma.AtLeast<{
   fichaAlertasCampo?: Prisma.FichaAlertaCampoListRelationFilter
   gruposEvolucion?: Prisma.GrupoEvolucionListRelationFilter
   plantillasEvolucion?: Prisma.PlantillaEvolucionListRelationFilter
+  seriesTurno?: Prisma.SerieTurnoListRelationFilter
 }, "id" | "slug">
 
 export type ConsultorioOrderByWithAggregationInput = {
@@ -438,6 +441,7 @@ export type ConsultorioCreateInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateInput = {
@@ -473,6 +477,7 @@ export type ConsultorioUncheckedCreateInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUpdateInput = {
@@ -507,6 +512,7 @@ export type ConsultorioUpdateInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateInput = {
@@ -542,6 +548,7 @@ export type ConsultorioUncheckedUpdateInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateManyInput = {
@@ -811,6 +818,20 @@ export type ConsultorioUpdateOneRequiredWithoutTurnosNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ConsultorioUpdateToOneWithWhereWithoutTurnosInput, Prisma.ConsultorioUpdateWithoutTurnosInput>, Prisma.ConsultorioUncheckedUpdateWithoutTurnosInput>
 }
 
+export type ConsultorioCreateNestedOneWithoutSeriesTurnoInput = {
+  create?: Prisma.XOR<Prisma.ConsultorioCreateWithoutSeriesTurnoInput, Prisma.ConsultorioUncheckedCreateWithoutSeriesTurnoInput>
+  connectOrCreate?: Prisma.ConsultorioCreateOrConnectWithoutSeriesTurnoInput
+  connect?: Prisma.ConsultorioWhereUniqueInput
+}
+
+export type ConsultorioUpdateOneRequiredWithoutSeriesTurnoNestedInput = {
+  create?: Prisma.XOR<Prisma.ConsultorioCreateWithoutSeriesTurnoInput, Prisma.ConsultorioUncheckedCreateWithoutSeriesTurnoInput>
+  connectOrCreate?: Prisma.ConsultorioCreateOrConnectWithoutSeriesTurnoInput
+  upsert?: Prisma.ConsultorioUpsertWithoutSeriesTurnoInput
+  connect?: Prisma.ConsultorioWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ConsultorioUpdateToOneWithWhereWithoutSeriesTurnoInput, Prisma.ConsultorioUpdateWithoutSeriesTurnoInput>, Prisma.ConsultorioUncheckedUpdateWithoutSeriesTurnoInput>
+}
+
 export type ConsultorioCreateNestedOneWithoutEvolucionesInput = {
   create?: Prisma.XOR<Prisma.ConsultorioCreateWithoutEvolucionesInput, Prisma.ConsultorioUncheckedCreateWithoutEvolucionesInput>
   connectOrCreate?: Prisma.ConsultorioCreateOrConnectWithoutEvolucionesInput
@@ -998,6 +1019,7 @@ export type ConsultorioCreateWithoutUsuariosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutUsuariosInput = {
@@ -1032,6 +1054,7 @@ export type ConsultorioUncheckedCreateWithoutUsuariosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutUsuariosInput = {
@@ -1081,6 +1104,7 @@ export type ConsultorioUpdateWithoutUsuariosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutUsuariosInput = {
@@ -1115,6 +1139,7 @@ export type ConsultorioUncheckedUpdateWithoutUsuariosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutPacientesInput = {
@@ -1148,6 +1173,7 @@ export type ConsultorioCreateWithoutPacientesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutPacientesInput = {
@@ -1182,6 +1208,7 @@ export type ConsultorioUncheckedCreateWithoutPacientesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutPacientesInput = {
@@ -1231,6 +1258,7 @@ export type ConsultorioUpdateWithoutPacientesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutPacientesInput = {
@@ -1265,6 +1293,7 @@ export type ConsultorioUncheckedUpdateWithoutPacientesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutProfesionalesInput = {
@@ -1298,6 +1327,7 @@ export type ConsultorioCreateWithoutProfesionalesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutProfesionalesInput = {
@@ -1332,6 +1362,7 @@ export type ConsultorioUncheckedCreateWithoutProfesionalesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutProfesionalesInput = {
@@ -1381,6 +1412,7 @@ export type ConsultorioUpdateWithoutProfesionalesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutProfesionalesInput = {
@@ -1415,6 +1447,7 @@ export type ConsultorioUncheckedUpdateWithoutProfesionalesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutEspecialidadesInput = {
@@ -1448,6 +1481,7 @@ export type ConsultorioCreateWithoutEspecialidadesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutEspecialidadesInput = {
@@ -1482,6 +1516,7 @@ export type ConsultorioUncheckedCreateWithoutEspecialidadesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutEspecialidadesInput = {
@@ -1531,6 +1566,7 @@ export type ConsultorioUpdateWithoutEspecialidadesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutEspecialidadesInput = {
@@ -1565,6 +1601,7 @@ export type ConsultorioUncheckedUpdateWithoutEspecialidadesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutEspecialidadesOcultasInput = {
@@ -1598,6 +1635,7 @@ export type ConsultorioCreateWithoutEspecialidadesOcultasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutEspecialidadesOcultasInput = {
@@ -1632,6 +1670,7 @@ export type ConsultorioUncheckedCreateWithoutEspecialidadesOcultasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutEspecialidadesOcultasInput = {
@@ -1681,6 +1720,7 @@ export type ConsultorioUpdateWithoutEspecialidadesOcultasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutEspecialidadesOcultasInput = {
@@ -1715,6 +1755,7 @@ export type ConsultorioUncheckedUpdateWithoutEspecialidadesOcultasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutProfesionalEspecialidadesInput = {
@@ -1748,6 +1789,7 @@ export type ConsultorioCreateWithoutProfesionalEspecialidadesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutProfesionalEspecialidadesInput = {
@@ -1782,6 +1824,7 @@ export type ConsultorioUncheckedCreateWithoutProfesionalEspecialidadesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutProfesionalEspecialidadesInput = {
@@ -1831,6 +1874,7 @@ export type ConsultorioUpdateWithoutProfesionalEspecialidadesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutProfesionalEspecialidadesInput = {
@@ -1865,6 +1909,7 @@ export type ConsultorioUncheckedUpdateWithoutProfesionalEspecialidadesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutObrasSocialesInput = {
@@ -1898,6 +1943,7 @@ export type ConsultorioCreateWithoutObrasSocialesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutObrasSocialesInput = {
@@ -1932,6 +1978,7 @@ export type ConsultorioUncheckedCreateWithoutObrasSocialesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutObrasSocialesInput = {
@@ -1981,6 +2028,7 @@ export type ConsultorioUpdateWithoutObrasSocialesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutObrasSocialesInput = {
@@ -2015,6 +2063,7 @@ export type ConsultorioUncheckedUpdateWithoutObrasSocialesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutObrasSocialesOcultasInput = {
@@ -2048,6 +2097,7 @@ export type ConsultorioCreateWithoutObrasSocialesOcultasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutObrasSocialesOcultasInput = {
@@ -2082,6 +2132,7 @@ export type ConsultorioUncheckedCreateWithoutObrasSocialesOcultasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutObrasSocialesOcultasInput = {
@@ -2131,6 +2182,7 @@ export type ConsultorioUpdateWithoutObrasSocialesOcultasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutObrasSocialesOcultasInput = {
@@ -2165,6 +2217,7 @@ export type ConsultorioUncheckedUpdateWithoutObrasSocialesOcultasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutTurnosInput = {
@@ -2198,6 +2251,7 @@ export type ConsultorioCreateWithoutTurnosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutTurnosInput = {
@@ -2232,6 +2286,7 @@ export type ConsultorioUncheckedCreateWithoutTurnosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutTurnosInput = {
@@ -2281,6 +2336,7 @@ export type ConsultorioUpdateWithoutTurnosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutTurnosInput = {
@@ -2300,6 +2356,161 @@ export type ConsultorioUncheckedUpdateWithoutTurnosInput = {
   profesionales?: Prisma.ProfesionalUncheckedUpdateManyWithoutConsultorioNestedInput
   especialidades?: Prisma.EspecialidadUncheckedUpdateManyWithoutConsultorioNestedInput
   obrasSociales?: Prisma.ObraSocialUncheckedUpdateManyWithoutConsultorioNestedInput
+  evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  profesionalEspecialidades?: Prisma.ProfesionalEspecialidadUncheckedUpdateManyWithoutConsultorioNestedInput
+  usuarios?: Prisma.UsuarioUncheckedUpdateManyWithoutConsultorioNestedInput
+  fichasIniciales?: Prisma.FichaInicialUncheckedUpdateManyWithoutConsultorioNestedInput
+  fichaAntecedentes?: Prisma.FichaAntecedenteUncheckedUpdateManyWithoutConsultorioNestedInput
+  fichaAlergias?: Prisma.FichaAlergiaUncheckedUpdateManyWithoutConsultorioNestedInput
+  fichaMedicaciones?: Prisma.FichaMedicacionUncheckedUpdateManyWithoutConsultorioNestedInput
+  fichaEstudios?: Prisma.FichaEstudioComplementarioUncheckedUpdateManyWithoutConsultorioNestedInput
+  fichaSeccionesEstado?: Prisma.FichaSeccionEstadoUncheckedUpdateManyWithoutConsultorioNestedInput
+  catalogoClinicoItems?: Prisma.CatalogoClinicoItemUncheckedUpdateManyWithoutConsultorioNestedInput
+  especialidadesOcultas?: Prisma.ConsultorioEspecialidadOcultaUncheckedUpdateManyWithoutConsultorioNestedInput
+  obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUncheckedUpdateManyWithoutConsultorioNestedInput
+  fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
+  gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
+}
+
+export type ConsultorioCreateWithoutSeriesTurnoInput = {
+  nombre: string
+  slug: string
+  email?: string | null
+  telefono?: string | null
+  direccion?: string | null
+  ciudad?: string | null
+  provincia?: string | null
+  zonaHoraria?: string
+  activo?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  pacientes?: Prisma.PacienteCreateNestedManyWithoutConsultorioInput
+  profesionales?: Prisma.ProfesionalCreateNestedManyWithoutConsultorioInput
+  especialidades?: Prisma.EspecialidadCreateNestedManyWithoutConsultorioInput
+  obrasSociales?: Prisma.ObraSocialCreateNestedManyWithoutConsultorioInput
+  turnos?: Prisma.TurnoCreateNestedManyWithoutConsultorioInput
+  evoluciones?: Prisma.EvolucionCreateNestedManyWithoutConsultorioInput
+  profesionalEspecialidades?: Prisma.ProfesionalEspecialidadCreateNestedManyWithoutConsultorioInput
+  usuarios?: Prisma.UsuarioCreateNestedManyWithoutConsultorioInput
+  fichasIniciales?: Prisma.FichaInicialCreateNestedManyWithoutConsultorioInput
+  fichaAntecedentes?: Prisma.FichaAntecedenteCreateNestedManyWithoutConsultorioInput
+  fichaAlergias?: Prisma.FichaAlergiaCreateNestedManyWithoutConsultorioInput
+  fichaMedicaciones?: Prisma.FichaMedicacionCreateNestedManyWithoutConsultorioInput
+  fichaEstudios?: Prisma.FichaEstudioComplementarioCreateNestedManyWithoutConsultorioInput
+  fichaSeccionesEstado?: Prisma.FichaSeccionEstadoCreateNestedManyWithoutConsultorioInput
+  catalogoClinicoItems?: Prisma.CatalogoClinicoItemCreateNestedManyWithoutConsultorioInput
+  especialidadesOcultas?: Prisma.ConsultorioEspecialidadOcultaCreateNestedManyWithoutConsultorioInput
+  obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaCreateNestedManyWithoutConsultorioInput
+  fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
+  gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
+  plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+}
+
+export type ConsultorioUncheckedCreateWithoutSeriesTurnoInput = {
+  id?: number
+  nombre: string
+  slug: string
+  email?: string | null
+  telefono?: string | null
+  direccion?: string | null
+  ciudad?: string | null
+  provincia?: string | null
+  zonaHoraria?: string
+  activo?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  pacientes?: Prisma.PacienteUncheckedCreateNestedManyWithoutConsultorioInput
+  profesionales?: Prisma.ProfesionalUncheckedCreateNestedManyWithoutConsultorioInput
+  especialidades?: Prisma.EspecialidadUncheckedCreateNestedManyWithoutConsultorioInput
+  obrasSociales?: Prisma.ObraSocialUncheckedCreateNestedManyWithoutConsultorioInput
+  turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutConsultorioInput
+  evoluciones?: Prisma.EvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  profesionalEspecialidades?: Prisma.ProfesionalEspecialidadUncheckedCreateNestedManyWithoutConsultorioInput
+  usuarios?: Prisma.UsuarioUncheckedCreateNestedManyWithoutConsultorioInput
+  fichasIniciales?: Prisma.FichaInicialUncheckedCreateNestedManyWithoutConsultorioInput
+  fichaAntecedentes?: Prisma.FichaAntecedenteUncheckedCreateNestedManyWithoutConsultorioInput
+  fichaAlergias?: Prisma.FichaAlergiaUncheckedCreateNestedManyWithoutConsultorioInput
+  fichaMedicaciones?: Prisma.FichaMedicacionUncheckedCreateNestedManyWithoutConsultorioInput
+  fichaEstudios?: Prisma.FichaEstudioComplementarioUncheckedCreateNestedManyWithoutConsultorioInput
+  fichaSeccionesEstado?: Prisma.FichaSeccionEstadoUncheckedCreateNestedManyWithoutConsultorioInput
+  catalogoClinicoItems?: Prisma.CatalogoClinicoItemUncheckedCreateNestedManyWithoutConsultorioInput
+  especialidadesOcultas?: Prisma.ConsultorioEspecialidadOcultaUncheckedCreateNestedManyWithoutConsultorioInput
+  obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUncheckedCreateNestedManyWithoutConsultorioInput
+  fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
+  gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+}
+
+export type ConsultorioCreateOrConnectWithoutSeriesTurnoInput = {
+  where: Prisma.ConsultorioWhereUniqueInput
+  create: Prisma.XOR<Prisma.ConsultorioCreateWithoutSeriesTurnoInput, Prisma.ConsultorioUncheckedCreateWithoutSeriesTurnoInput>
+}
+
+export type ConsultorioUpsertWithoutSeriesTurnoInput = {
+  update: Prisma.XOR<Prisma.ConsultorioUpdateWithoutSeriesTurnoInput, Prisma.ConsultorioUncheckedUpdateWithoutSeriesTurnoInput>
+  create: Prisma.XOR<Prisma.ConsultorioCreateWithoutSeriesTurnoInput, Prisma.ConsultorioUncheckedCreateWithoutSeriesTurnoInput>
+  where?: Prisma.ConsultorioWhereInput
+}
+
+export type ConsultorioUpdateToOneWithWhereWithoutSeriesTurnoInput = {
+  where?: Prisma.ConsultorioWhereInput
+  data: Prisma.XOR<Prisma.ConsultorioUpdateWithoutSeriesTurnoInput, Prisma.ConsultorioUncheckedUpdateWithoutSeriesTurnoInput>
+}
+
+export type ConsultorioUpdateWithoutSeriesTurnoInput = {
+  nombre?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  telefono?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direccion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  pacientes?: Prisma.PacienteUpdateManyWithoutConsultorioNestedInput
+  profesionales?: Prisma.ProfesionalUpdateManyWithoutConsultorioNestedInput
+  especialidades?: Prisma.EspecialidadUpdateManyWithoutConsultorioNestedInput
+  obrasSociales?: Prisma.ObraSocialUpdateManyWithoutConsultorioNestedInput
+  turnos?: Prisma.TurnoUpdateManyWithoutConsultorioNestedInput
+  evoluciones?: Prisma.EvolucionUpdateManyWithoutConsultorioNestedInput
+  profesionalEspecialidades?: Prisma.ProfesionalEspecialidadUpdateManyWithoutConsultorioNestedInput
+  usuarios?: Prisma.UsuarioUpdateManyWithoutConsultorioNestedInput
+  fichasIniciales?: Prisma.FichaInicialUpdateManyWithoutConsultorioNestedInput
+  fichaAntecedentes?: Prisma.FichaAntecedenteUpdateManyWithoutConsultorioNestedInput
+  fichaAlergias?: Prisma.FichaAlergiaUpdateManyWithoutConsultorioNestedInput
+  fichaMedicaciones?: Prisma.FichaMedicacionUpdateManyWithoutConsultorioNestedInput
+  fichaEstudios?: Prisma.FichaEstudioComplementarioUpdateManyWithoutConsultorioNestedInput
+  fichaSeccionesEstado?: Prisma.FichaSeccionEstadoUpdateManyWithoutConsultorioNestedInput
+  catalogoClinicoItems?: Prisma.CatalogoClinicoItemUpdateManyWithoutConsultorioNestedInput
+  especialidadesOcultas?: Prisma.ConsultorioEspecialidadOcultaUpdateManyWithoutConsultorioNestedInput
+  obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUpdateManyWithoutConsultorioNestedInput
+  fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
+  gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
+  plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+}
+
+export type ConsultorioUncheckedUpdateWithoutSeriesTurnoInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  nombre?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  telefono?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direccion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  pacientes?: Prisma.PacienteUncheckedUpdateManyWithoutConsultorioNestedInput
+  profesionales?: Prisma.ProfesionalUncheckedUpdateManyWithoutConsultorioNestedInput
+  especialidades?: Prisma.EspecialidadUncheckedUpdateManyWithoutConsultorioNestedInput
+  obrasSociales?: Prisma.ObraSocialUncheckedUpdateManyWithoutConsultorioNestedInput
+  turnos?: Prisma.TurnoUncheckedUpdateManyWithoutConsultorioNestedInput
   evoluciones?: Prisma.EvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   profesionalEspecialidades?: Prisma.ProfesionalEspecialidadUncheckedUpdateManyWithoutConsultorioNestedInput
   usuarios?: Prisma.UsuarioUncheckedUpdateManyWithoutConsultorioNestedInput
@@ -2348,6 +2559,7 @@ export type ConsultorioCreateWithoutEvolucionesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutEvolucionesInput = {
@@ -2382,6 +2594,7 @@ export type ConsultorioUncheckedCreateWithoutEvolucionesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutEvolucionesInput = {
@@ -2431,6 +2644,7 @@ export type ConsultorioUpdateWithoutEvolucionesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutEvolucionesInput = {
@@ -2465,6 +2679,7 @@ export type ConsultorioUncheckedUpdateWithoutEvolucionesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutGruposEvolucionInput = {
@@ -2498,6 +2713,7 @@ export type ConsultorioCreateWithoutGruposEvolucionInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaCreateNestedManyWithoutConsultorioInput
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutGruposEvolucionInput = {
@@ -2532,6 +2748,7 @@ export type ConsultorioUncheckedCreateWithoutGruposEvolucionInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUncheckedCreateNestedManyWithoutConsultorioInput
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutGruposEvolucionInput = {
@@ -2581,6 +2798,7 @@ export type ConsultorioUpdateWithoutGruposEvolucionInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUpdateManyWithoutConsultorioNestedInput
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutGruposEvolucionInput = {
@@ -2615,6 +2833,7 @@ export type ConsultorioUncheckedUpdateWithoutGruposEvolucionInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUncheckedUpdateManyWithoutConsultorioNestedInput
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutPlantillasEvolucionInput = {
@@ -2648,6 +2867,7 @@ export type ConsultorioCreateWithoutPlantillasEvolucionInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaCreateNestedManyWithoutConsultorioInput
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutPlantillasEvolucionInput = {
@@ -2682,6 +2902,7 @@ export type ConsultorioUncheckedCreateWithoutPlantillasEvolucionInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUncheckedCreateNestedManyWithoutConsultorioInput
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutPlantillasEvolucionInput = {
@@ -2731,6 +2952,7 @@ export type ConsultorioUpdateWithoutPlantillasEvolucionInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUpdateManyWithoutConsultorioNestedInput
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutPlantillasEvolucionInput = {
@@ -2765,6 +2987,7 @@ export type ConsultorioUncheckedUpdateWithoutPlantillasEvolucionInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUncheckedUpdateManyWithoutConsultorioNestedInput
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutFichasInicialesInput = {
@@ -2798,6 +3021,7 @@ export type ConsultorioCreateWithoutFichasInicialesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutFichasInicialesInput = {
@@ -2832,6 +3056,7 @@ export type ConsultorioUncheckedCreateWithoutFichasInicialesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutFichasInicialesInput = {
@@ -2881,6 +3106,7 @@ export type ConsultorioUpdateWithoutFichasInicialesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutFichasInicialesInput = {
@@ -2915,6 +3141,7 @@ export type ConsultorioUncheckedUpdateWithoutFichasInicialesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutFichaAlertasCampoInput = {
@@ -2948,6 +3175,7 @@ export type ConsultorioCreateWithoutFichaAlertasCampoInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutFichaAlertasCampoInput = {
@@ -2982,6 +3210,7 @@ export type ConsultorioUncheckedCreateWithoutFichaAlertasCampoInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutFichaAlertasCampoInput = {
@@ -3031,6 +3260,7 @@ export type ConsultorioUpdateWithoutFichaAlertasCampoInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutFichaAlertasCampoInput = {
@@ -3065,6 +3295,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaAlertasCampoInput = {
   obrasSocialesOcultas?: Prisma.ConsultorioObraSocialOcultaUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutCatalogoClinicoItemsInput = {
@@ -3098,6 +3329,7 @@ export type ConsultorioCreateWithoutCatalogoClinicoItemsInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutCatalogoClinicoItemsInput = {
@@ -3132,6 +3364,7 @@ export type ConsultorioUncheckedCreateWithoutCatalogoClinicoItemsInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutCatalogoClinicoItemsInput = {
@@ -3181,6 +3414,7 @@ export type ConsultorioUpdateWithoutCatalogoClinicoItemsInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutCatalogoClinicoItemsInput = {
@@ -3215,6 +3449,7 @@ export type ConsultorioUncheckedUpdateWithoutCatalogoClinicoItemsInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutFichaAntecedentesInput = {
@@ -3248,6 +3483,7 @@ export type ConsultorioCreateWithoutFichaAntecedentesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutFichaAntecedentesInput = {
@@ -3282,6 +3518,7 @@ export type ConsultorioUncheckedCreateWithoutFichaAntecedentesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutFichaAntecedentesInput = {
@@ -3331,6 +3568,7 @@ export type ConsultorioUpdateWithoutFichaAntecedentesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutFichaAntecedentesInput = {
@@ -3365,6 +3603,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaAntecedentesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutFichaAlergiasInput = {
@@ -3398,6 +3637,7 @@ export type ConsultorioCreateWithoutFichaAlergiasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutFichaAlergiasInput = {
@@ -3432,6 +3672,7 @@ export type ConsultorioUncheckedCreateWithoutFichaAlergiasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutFichaAlergiasInput = {
@@ -3481,6 +3722,7 @@ export type ConsultorioUpdateWithoutFichaAlergiasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutFichaAlergiasInput = {
@@ -3515,6 +3757,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaAlergiasInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutFichaMedicacionesInput = {
@@ -3548,6 +3791,7 @@ export type ConsultorioCreateWithoutFichaMedicacionesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutFichaMedicacionesInput = {
@@ -3582,6 +3826,7 @@ export type ConsultorioUncheckedCreateWithoutFichaMedicacionesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutFichaMedicacionesInput = {
@@ -3631,6 +3876,7 @@ export type ConsultorioUpdateWithoutFichaMedicacionesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutFichaMedicacionesInput = {
@@ -3665,6 +3911,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaMedicacionesInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutFichaEstudiosInput = {
@@ -3698,6 +3945,7 @@ export type ConsultorioCreateWithoutFichaEstudiosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutFichaEstudiosInput = {
@@ -3732,6 +3980,7 @@ export type ConsultorioUncheckedCreateWithoutFichaEstudiosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutFichaEstudiosInput = {
@@ -3781,6 +4030,7 @@ export type ConsultorioUpdateWithoutFichaEstudiosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutFichaEstudiosInput = {
@@ -3815,6 +4065,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaEstudiosInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioCreateWithoutFichaSeccionesEstadoInput = {
@@ -3848,6 +4099,7 @@ export type ConsultorioCreateWithoutFichaSeccionesEstadoInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioUncheckedCreateWithoutFichaSeccionesEstadoInput = {
@@ -3882,6 +4134,7 @@ export type ConsultorioUncheckedCreateWithoutFichaSeccionesEstadoInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedCreateNestedManyWithoutConsultorioInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedCreateNestedManyWithoutConsultorioInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedCreateNestedManyWithoutConsultorioInput
 }
 
 export type ConsultorioCreateOrConnectWithoutFichaSeccionesEstadoInput = {
@@ -3931,6 +4184,7 @@ export type ConsultorioUpdateWithoutFichaSeccionesEstadoInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUpdateManyWithoutConsultorioNestedInput
 }
 
 export type ConsultorioUncheckedUpdateWithoutFichaSeccionesEstadoInput = {
@@ -3965,6 +4219,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaSeccionesEstadoInput = {
   fichaAlertasCampo?: Prisma.FichaAlertaCampoUncheckedUpdateManyWithoutConsultorioNestedInput
   gruposEvolucion?: Prisma.GrupoEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
   plantillasEvolucion?: Prisma.PlantillaEvolucionUncheckedUpdateManyWithoutConsultorioNestedInput
+  seriesTurno?: Prisma.SerieTurnoUncheckedUpdateManyWithoutConsultorioNestedInput
 }
 
 
@@ -3993,6 +4248,7 @@ export type ConsultorioCountOutputType = {
   fichaAlertasCampo: number
   gruposEvolucion: number
   plantillasEvolucion: number
+  seriesTurno: number
 }
 
 export type ConsultorioCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4016,6 +4272,7 @@ export type ConsultorioCountOutputTypeSelect<ExtArgs extends runtime.Types.Exten
   fichaAlertasCampo?: boolean | ConsultorioCountOutputTypeCountFichaAlertasCampoArgs
   gruposEvolucion?: boolean | ConsultorioCountOutputTypeCountGruposEvolucionArgs
   plantillasEvolucion?: boolean | ConsultorioCountOutputTypeCountPlantillasEvolucionArgs
+  seriesTurno?: boolean | ConsultorioCountOutputTypeCountSeriesTurnoArgs
 }
 
 /**
@@ -4168,6 +4425,13 @@ export type ConsultorioCountOutputTypeCountPlantillasEvolucionArgs<ExtArgs exten
   where?: Prisma.PlantillaEvolucionWhereInput
 }
 
+/**
+ * ConsultorioCountOutputType without action
+ */
+export type ConsultorioCountOutputTypeCountSeriesTurnoArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SerieTurnoWhereInput
+}
+
 
 export type ConsultorioSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -4202,6 +4466,7 @@ export type ConsultorioSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   fichaAlertasCampo?: boolean | Prisma.Consultorio$fichaAlertasCampoArgs<ExtArgs>
   gruposEvolucion?: boolean | Prisma.Consultorio$gruposEvolucionArgs<ExtArgs>
   plantillasEvolucion?: boolean | Prisma.Consultorio$plantillasEvolucionArgs<ExtArgs>
+  seriesTurno?: boolean | Prisma.Consultorio$seriesTurnoArgs<ExtArgs>
   _count?: boolean | Prisma.ConsultorioCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["consultorio"]>
 
@@ -4244,6 +4509,7 @@ export type ConsultorioInclude<ExtArgs extends runtime.Types.Extensions.Internal
   fichaAlertasCampo?: boolean | Prisma.Consultorio$fichaAlertasCampoArgs<ExtArgs>
   gruposEvolucion?: boolean | Prisma.Consultorio$gruposEvolucionArgs<ExtArgs>
   plantillasEvolucion?: boolean | Prisma.Consultorio$plantillasEvolucionArgs<ExtArgs>
+  seriesTurno?: boolean | Prisma.Consultorio$seriesTurnoArgs<ExtArgs>
   _count?: boolean | Prisma.ConsultorioCountOutputTypeDefaultArgs<ExtArgs>
 }
 
@@ -4270,6 +4536,7 @@ export type $ConsultorioPayload<ExtArgs extends runtime.Types.Extensions.Interna
     fichaAlertasCampo: Prisma.$FichaAlertaCampoPayload<ExtArgs>[]
     gruposEvolucion: Prisma.$GrupoEvolucionPayload<ExtArgs>[]
     plantillasEvolucion: Prisma.$PlantillaEvolucionPayload<ExtArgs>[]
+    seriesTurno: Prisma.$SerieTurnoPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -4644,6 +4911,7 @@ export interface Prisma__ConsultorioClient<T, Null = never, ExtArgs extends runt
   fichaAlertasCampo<T extends Prisma.Consultorio$fichaAlertasCampoArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Consultorio$fichaAlertasCampoArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FichaAlertaCampoPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   gruposEvolucion<T extends Prisma.Consultorio$gruposEvolucionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Consultorio$gruposEvolucionArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GrupoEvolucionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   plantillasEvolucion<T extends Prisma.Consultorio$plantillasEvolucionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Consultorio$plantillasEvolucionArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlantillaEvolucionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  seriesTurno<T extends Prisma.Consultorio$seriesTurnoArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Consultorio$seriesTurnoArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SerieTurnoPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5510,6 +5778,30 @@ export type Consultorio$plantillasEvolucionArgs<ExtArgs extends runtime.Types.Ex
   take?: number
   skip?: number
   distinct?: Prisma.PlantillaEvolucionScalarFieldEnum | Prisma.PlantillaEvolucionScalarFieldEnum[]
+}
+
+/**
+ * Consultorio.seriesTurno
+ */
+export type Consultorio$seriesTurnoArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SerieTurno
+   */
+  select?: Prisma.SerieTurnoSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SerieTurno
+   */
+  omit?: Prisma.SerieTurnoOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SerieTurnoInclude<ExtArgs> | null
+  where?: Prisma.SerieTurnoWhereInput
+  orderBy?: Prisma.SerieTurnoOrderByWithRelationInput | Prisma.SerieTurnoOrderByWithRelationInput[]
+  cursor?: Prisma.SerieTurnoWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SerieTurnoScalarFieldEnum | Prisma.SerieTurnoScalarFieldEnum[]
 }
 
 /**

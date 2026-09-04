@@ -407,6 +407,7 @@ export const ModelName = {
   ObraSocial: 'ObraSocial',
   ConsultorioObraSocialOculta: 'ConsultorioObraSocialOculta',
   Turno: 'Turno',
+  SerieTurno: 'SerieTurno',
   Evolucion: 'Evolucion',
   EvolucionImagen: 'EvolucionImagen',
   GrupoEvolucion: 'GrupoEvolucion',
@@ -434,7 +435,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "consultorio" | "usuario" | "paciente" | "profesional" | "especialidad" | "consultorioEspecialidadOculta" | "profesionalEspecialidad" | "obraSocial" | "consultorioObraSocialOculta" | "turno" | "evolucion" | "evolucionImagen" | "grupoEvolucion" | "plantillaEvolucion" | "fichaInicial" | "fichaAlertaCampo" | "catalogoClinicoItem" | "fichaAntecedente" | "fichaAlergia" | "fichaMedicacion" | "fichaEstudioComplementario" | "fichaSeccionEstado"
+    modelProps: "consultorio" | "usuario" | "paciente" | "profesional" | "especialidad" | "consultorioEspecialidadOculta" | "profesionalEspecialidad" | "obraSocial" | "consultorioObraSocialOculta" | "turno" | "serieTurno" | "evolucion" | "evolucionImagen" | "grupoEvolucion" | "plantillaEvolucion" | "fichaInicial" | "fichaAlertaCampo" | "catalogoClinicoItem" | "fichaAntecedente" | "fichaAlergia" | "fichaMedicacion" | "fichaEstudioComplementario" | "fichaSeccionEstado"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1095,6 +1096,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TurnoCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TurnoCountAggregateOutputType> | number
+        }
+      }
+    }
+    SerieTurno: {
+      payload: Prisma.$SerieTurnoPayload<ExtArgs>
+      fields: Prisma.SerieTurnoFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SerieTurnoFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SerieTurnoPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SerieTurnoFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SerieTurnoPayload>
+        }
+        findFirst: {
+          args: Prisma.SerieTurnoFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SerieTurnoPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SerieTurnoFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SerieTurnoPayload>
+        }
+        findMany: {
+          args: Prisma.SerieTurnoFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SerieTurnoPayload>[]
+        }
+        create: {
+          args: Prisma.SerieTurnoCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SerieTurnoPayload>
+        }
+        createMany: {
+          args: Prisma.SerieTurnoCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.SerieTurnoDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SerieTurnoPayload>
+        }
+        update: {
+          args: Prisma.SerieTurnoUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SerieTurnoPayload>
+        }
+        deleteMany: {
+          args: Prisma.SerieTurnoDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SerieTurnoUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.SerieTurnoUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SerieTurnoPayload>
+        }
+        aggregate: {
+          args: Prisma.SerieTurnoAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSerieTurno>
+        }
+        groupBy: {
+          args: Prisma.SerieTurnoGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SerieTurnoGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SerieTurnoCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SerieTurnoCountAggregateOutputType> | number
         }
       }
     }
@@ -2070,6 +2137,8 @@ export const TurnoScalarFieldEnum = {
   especialidadId: 'especialidadId',
   obraSocialId: 'obraSocialId',
   grupoId: 'grupoId',
+  serieId: 'serieId',
+  ordenEnSerie: 'ordenEnSerie',
   inicio: 'inicio',
   duracionMinutos: 'duracionMinutos',
   numeroSesion: 'numeroSesion',
@@ -2086,6 +2155,18 @@ export const TurnoScalarFieldEnum = {
 } as const
 
 export type TurnoScalarFieldEnum = (typeof TurnoScalarFieldEnum)[keyof typeof TurnoScalarFieldEnum]
+
+
+export const SerieTurnoScalarFieldEnum = {
+  id: 'id',
+  consultorioId: 'consultorioId',
+  patron: 'patron',
+  frecuenciaSemanas: 'frecuenciaSemanas',
+  cantidadSesiones: 'cantidadSesiones',
+  createdAt: 'createdAt'
+} as const
+
+export type SerieTurnoScalarFieldEnum = (typeof SerieTurnoScalarFieldEnum)[keyof typeof SerieTurnoScalarFieldEnum]
 
 
 export const EvolucionScalarFieldEnum = {
@@ -2576,6 +2657,13 @@ export type EnumEstadoTurnoFieldRefInput<$PrismaModel> = FieldRefInputType<$Pris
 
 
 /**
+ * Reference to a field of type 'PatronRecurrenciaSerie'
+ */
+export type EnumPatronRecurrenciaSerieFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PatronRecurrenciaSerie'>
+    
+
+
+/**
  * Reference to a field of type 'EstadoDatoClinico'
  */
 export type EnumEstadoDatoClinicoFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EstadoDatoClinico'>
@@ -2777,6 +2865,7 @@ export type GlobalOmitConfig = {
   obraSocial?: Prisma.ObraSocialOmit
   consultorioObraSocialOculta?: Prisma.ConsultorioObraSocialOcultaOmit
   turno?: Prisma.TurnoOmit
+  serieTurno?: Prisma.SerieTurnoOmit
   evolucion?: Prisma.EvolucionOmit
   evolucionImagen?: Prisma.EvolucionImagenOmit
   grupoEvolucion?: Prisma.GrupoEvolucionOmit

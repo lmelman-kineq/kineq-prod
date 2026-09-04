@@ -263,6 +263,23 @@ export type EnumEstadoTurnoWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumEstadoTurnoFilter<$PrismaModel>
 }
 
+export type EnumPatronRecurrenciaSerieFilter<$PrismaModel = never> = {
+  equals?: $Enums.PatronRecurrenciaSerie | Prisma.EnumPatronRecurrenciaSerieFieldRefInput<$PrismaModel>
+  in?: $Enums.PatronRecurrenciaSerie[]
+  notIn?: $Enums.PatronRecurrenciaSerie[]
+  not?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel> | $Enums.PatronRecurrenciaSerie
+}
+
+export type EnumPatronRecurrenciaSerieWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PatronRecurrenciaSerie | Prisma.EnumPatronRecurrenciaSerieFieldRefInput<$PrismaModel>
+  in?: $Enums.PatronRecurrenciaSerie[]
+  notIn?: $Enums.PatronRecurrenciaSerie[]
+  not?: Prisma.NestedEnumPatronRecurrenciaSerieWithAggregatesFilter<$PrismaModel> | $Enums.PatronRecurrenciaSerie
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel>
+}
+
 export type EnumEstadoDatoClinicoNullableFilter<$PrismaModel = never> = {
   equals?: $Enums.EstadoDatoClinico | Prisma.EnumEstadoDatoClinicoFieldRefInput<$PrismaModel> | null
   in?: $Enums.EstadoDatoClinico[] | null
@@ -635,6 +652,23 @@ export type NestedEnumEstadoTurnoWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumEstadoTurnoFilter<$PrismaModel>
   _max?: Prisma.NestedEnumEstadoTurnoFilter<$PrismaModel>
+}
+
+export type NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel = never> = {
+  equals?: $Enums.PatronRecurrenciaSerie | Prisma.EnumPatronRecurrenciaSerieFieldRefInput<$PrismaModel>
+  in?: $Enums.PatronRecurrenciaSerie[]
+  notIn?: $Enums.PatronRecurrenciaSerie[]
+  not?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel> | $Enums.PatronRecurrenciaSerie
+}
+
+export type NestedEnumPatronRecurrenciaSerieWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PatronRecurrenciaSerie | Prisma.EnumPatronRecurrenciaSerieFieldRefInput<$PrismaModel>
+  in?: $Enums.PatronRecurrenciaSerie[]
+  notIn?: $Enums.PatronRecurrenciaSerie[]
+  not?: Prisma.NestedEnumPatronRecurrenciaSerieWithAggregatesFilter<$PrismaModel> | $Enums.PatronRecurrenciaSerie
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel>
 }
 
 export type NestedEnumEstadoDatoClinicoNullableFilter<$PrismaModel = never> = {

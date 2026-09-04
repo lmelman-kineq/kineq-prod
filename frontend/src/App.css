@@ -876,6 +876,19 @@ body,
   border-bottom: 1px solid var(--color-line-soft);
 }
 
+/* Quick-create: identificación liviana, sin el bloque de header pesado del
+   formulario tradicional (sin ícono grande, sin borde/separador ni
+   subtítulo) — el foco va a los controles, no al encabezado. */
+.modal-header--compact {
+  padding-bottom: 4px;
+  margin-bottom: 10px;
+  border-bottom: none;
+}
+
+.modal-header--compact h3 {
+  font-size: 16px;
+}
+
 .modal-header-title {
   display: flex;
   align-items: flex-start;
@@ -1176,6 +1189,28 @@ body,
   filter: brightness(0.97);
 }
 
+/* Acción secundaria "de texto" (ej. "Más opciones" en el quick-create): sin
+   fondo pesado, usa el accent de Kineq — nunca se ve deshabilitada ni como
+   link improvisado (padding/hover propios, no heredados de .secondary-button). */
+.ghost-button {
+  padding: 13px 14px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.ghost-button:hover {
+  background: var(--color-primary-soft);
+}
+
+.modal-actions-more {
+  margin-right: auto;
+}
+
 /* Acción destructiva y secundaria del modal de edición (no es la acción primaria) */
 .modal-delete-button {
   display: inline-flex;
@@ -1242,6 +1277,37 @@ body,
   padding: 11px 18px;
 }
 
+/* "Editar/Eliminar turno recurrente": Este turno / Este turno y los
+   siguientes — mismo look que .confirm-dialog, con una elección de 2 vías. */
+.serie-scope-options {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.serie-scope-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.serie-scope-option:has(input:checked) {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-soft);
+}
+
+.serie-scope-option input {
+  width: auto;
+  accent-color: var(--color-primary);
+}
+
 /* El mismo bloque de campos se reutiliza en Nuevo, Ver y Editar turno */
 .appointment-form {
   display: grid;
@@ -1283,6 +1349,140 @@ body,
   color: var(--color-text-muted);
   -webkit-text-fill-color: var(--color-text-muted);
   cursor: default;
+}
+
+/* Utilitario estándar: visible para lectores de pantalla, invisible en
+   pantalla — nunca `display:none` (eso también lo saca del árbol de
+   accesibilidad). Usado por los labels de campo del quick-create, que se
+   comunican visualmente vía ícono/placeholder en vez de texto (ver
+   docs/modules/appointments.md, "Quick-create"). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Alta rápida compacta (Home → calendario): ver TurnoFormFields `compact`.
+   Fecha + hora inicio + hora fin en una sola fila densa, en vez de los dos
+   bloques grandes Fecha/Hora del formulario completo. */
+.quick-datetime-row,
+.quick-recurrence-row,
+.quick-session-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-datetime-row {
+  flex-wrap: nowrap;
+}
+
+.quick-datetime-row .date-input {
+  flex: 1 1 150px;
+  /* Nunca por debajo de lo que necesita "dd/mm/aaaa" + el botón de
+     calendario (position:absolute dentro del input) — con min-width:0 el
+     input de fecha absorbía toda la compresión de la fila (los de hora
+     tienen su propio min-width) y el texto quedaba tapado por el ícono. */
+  min-width: 150px;
+}
+
+.quick-datetime-row input[type="time"] {
+  width: auto;
+  min-width: 104px;
+  flex: 1 1 122px;
+  padding: 12px 6px;
+}
+
+.quick-datetime-sep {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+}
+
+/* Ícono chico y consistente al inicio de cada fila compacta (Fecha/Hora,
+   Repetición, Paciente, Profesional, Sesión) — reemplaza el label grande
+   tradicional; el nombre del campo sigue accesible vía <label class="sr-only">. */
+.quick-field-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.quick-repeat-select {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.quick-repeat-count {
+  flex: 0 0 auto;
+  display: flex;
+}
+
+.quick-repeat-count input {
+  width: 60px;
+}
+
+/* Paciente/Profesional/Especialidad en modo compacto: ícono + control en una
+   fila, sin el bloque "label arriba / input grande abajo" del formulario
+   completo (el label sigue existiendo para accesibilidad, solo visualmente
+   oculto vía .sr-only). */
+.dropdown-field.dropdown-field--compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdown-field--compact .dropdown-input-row {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Especialidad sin elegir todavía, en modo compacto: mismo tamaño que el
+   punto de color real para no correr el resto de la fila cuando se elige una. */
+.turnos-specialty-dot--empty {
+  border: 1.5px solid var(--color-border);
+  background: transparent !important;
+}
+
+.quick-session-row {
+  justify-content: space-between;
+}
+
+.quick-session-row .checkbox-field {
+  flex: 0 0 auto;
+}
+
+.quick-session-number {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quick-session-number input {
+  width: 56px;
+}
+
+/* Card compacta: más angosta que el formulario completo, alto según
+   contenido (nunca ocupa el viewport entero) — ver docs/modules/appointments.md. */
+.modal-card--compact {
+  width: min(460px, 100%);
+}
+
+.modal-card--compact .appointment-form {
+  gap: 12px 16px;
 }
 
 /* =========================================================
@@ -1810,6 +2010,31 @@ select:disabled {
   word-break: break-word;
 }
 
+/* Indicador discreto de turno recurrente: una insignia posicionada absoluta
+   (nunca inline junto al nombre — un nombre largo la empujaría a una
+   segunda línea dentro de <strong>, desplazando el horario fuera del área
+   visible de la card, bug real corregido esta ronda). Prioridad visual
+   paciente > horario > recurrencia (ver docs/modules/appointments.md):
+   la insignia nunca reemplaza ni compite por el espacio del nombre/horario. */
+.turno-card-recurrence-badge {
+  position: absolute;
+  top: 10px;
+  right: 24px;
+  display: grid;
+  place-items: center;
+}
+
+.turno-card-recurrence-icon {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+
 .turno-card.short-turno {
   flex-direction: row;
   align-items: center;
@@ -1835,6 +2060,16 @@ select:disabled {
   height: 8px;
 }
 
+.turno-card.short-turno .turno-card-recurrence-badge {
+  top: 6px;
+  right: 18px;
+}
+
+.turno-card.short-turno .turno-card-recurrence-icon {
+  width: 9px;
+  height: 9px;
+}
+
 /* Turno compartiendo columna con otros superpuestos: menos padding para
    aprovechar el ancho angosto, sin que el indicador de estado se pegue al
    borde ni pise el texto. */
@@ -1845,6 +2080,11 @@ select:disabled {
 .turno-card--narrow .turno-card-status-dot {
   top: 6px;
   right: 6px;
+}
+
+.turno-card--narrow .turno-card-recurrence-badge {
+  top: 6px;
+  right: 18px;
 }
 
 /* Timer en vivo de En Espera/Atendiendo dentro de la tarjeta del calendario */
@@ -1961,6 +2201,29 @@ select:disabled {
 
 .context-menu-item--danger:hover {
   background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+}
+
+/* "Turno recurrente — Sesión X de Y" en Datos del turno (ver
+   docs/modules/appointments.md, "Detalle del Turno") */
+.turno-serie-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -8px 0 16px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.turno-serie-badge svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* Acciones rápidas de estado en el modal de turno (Editar/Ver turno) */

@@ -1618,3 +1618,240 @@ Playwright**: el popover del sidebar ya no genera scroll horizontal en
 `.sidebar` (`scrollWidth === clientWidth`, confirmado por script) y se
 renderiza completo con sus dos botones visibles; el popover de foto de
 paciente también verificado, sin regresión.
+
+---
+
+## Sesión: Turnos recurrentes (series) + alta rápida compacta desde Home
+
+Ronda grande de un solo pedido. Detalle técnico completo en "Turnos
+recurrentes (series)" dentro de `docs/modules/appointments.md` — acá el
+resumen ejecutivo. Migración nueva, aditiva:
+`20260904120000_turno_serie_recurrente` (tabla `SerieTurno` +
+`Turno.serieId`/`Turno.ordenEnSerie` nullable). Igual que la sesión de
+"pulido de UI" anterior, `prisma migrate dev` detectó el mismo drift de
+checksum preexistente en el historial de migraciones de este entorno — se
+generó el SQL con `prisma migrate diff` (contra la DB viva, no contra
+shadow db) y se aplicó a mano (`prisma db execute` + `migrate resolve
+--applied`), corrigiendo de paso una inconsistencia de casing
+`turno`/`Turno` en el script generado (ver nota de casing de
+`PlantillaEvolucion` en `docs/database.md`). **No aplicada a producción
+(Aiven) todavía.**
+
+### Backend
+
+Tres endpoints nuevos, co-ubicados en `app.ts` junto al resto de rutas de
+Turno (no se separaron a un módulo propio tipo `estadisticasRoutes.ts`
+porque dependen de varios helpers privados ya scopeados ahí —
+`overlapExists`, `sesionAutomaticaParaGrupo`,
+`especialidadesInvalidasParaConsultorio` — exportarlos/duplicarlos hubiera
+sido más costoso que el beneficio, y `app.ts` ya mezcla todo el CRUD de
+Turno en un solo lugar):
+
+- `POST /api/turnos/serie`: crea la serie + N turnos en una transacción
+  (`prisma.$transaction`, callback interactivo, mismo estilo que ya usaba el
+  alta de Profesional+Usuario). El frontend manda `fechasInicio` ya
+  calculadas (mismo criterio de siempre: la conversión de zona horaria es
+  responsabilidad del frontend, nunca del backend). Superposición nunca
+  bloquea — si hay conflictos y no se manda `confirmarSuperposicion: true`,
+  responde `409` con la lista antes de crear nada.
+- `PATCH /api/turnos/:id/serie` / `DELETE /api/turnos/:id/serie`: "este
+  turno y los siguientes". Parten la serie explícitamente en dos si quedan
+  turnos antes del corte (nueva `SerieTurno`, la original ajusta su
+  `cantidadSesiones`) — nunca cambian el significado retroactivo de una
+  serie ya existente. `numeroSesion` nunca se toca en estas dos rutas.
+- `GET /api/turnos/:id/serie`: turno-ancla + sus siguientes con `inicio`
+  real de cada uno — lo usa el frontend para armar el payload de arriba, ya
+  que el calendario diario de Home solo tiene cargado el día visible, no
+  toda la serie.
+
+16 tests nuevos en `app.test.ts` (describe `'series de turnos
+(recurrencia)'`): creación semanal/quincenal, cantidad de ocurrencias fuera
+de rango, aislamiento cross-consultorio, numeración consecutiva (inicial
+manual y automática), superposición con confirmación, edición/eliminación
+"este turno"/"este turno y los siguientes" (incluida la partición de serie),
+permisos (profesional propio/ajeno), y que eliminar no renumera lo que
+sobrevive. Suite completa: 252 tests (antes 236).
+
+### Frontend
+
+`TurnoFormFields` (`FormFields.tsx`) ganó un modo `compact` (+
+`allowRecurrence`) en vez de un formulario paralelo — comparte estado,
+dropdowns, validaciones y guardado con el formulario completo. En compacto:
+Fecha+Hora inicio+Hora fin en una fila (duración se deriva, sigue siendo la
+única fuente persistida), selector Repetición (`No se repite`/`Cada
+semana`/`Cada 2 semanas` — ver limitación de días múltiples en
+appointments.md) con `Cantidad de sesiones` condicional, Monto/Estado/
+Duración(min) ocultos. "Nuevo turno"/click en slot vacío en `App.tsx` ahora
+abre esta card compacta por default (`modal-card--compact`, `newTurnoForm`
+sin resetear); "Más opciones" (`newTurnoExpanded`) revela el mismo
+formulario completo de siempre.
+
+Nuevo diálogo custom `serieScopeDialog` (mismo `.confirm-dialog` visual que
+`confirmDialog`, pero de 2 vías con radios "Este turno"/"Este turno y los
+siguientes") — se dispara al guardar una edición (no al abrir el formulario)
+o al tocar "Eliminar turno", solo si el turno tiene `serieId`. Indicador de
+recurrencia: ícono chico junto al nombre en la card del calendario (tooltip
+"Sesión X de Y") y línea "Turno recurrente — Sesión X de Y" en "Datos del
+turno" — `X`/`Y` vienen de `ordenEnSerie`/`serie.cantidadSesiones`, nunca del
+`numeroSesion` clínico (pueden divergir).
+
+Nueva utilidad pura y testeada `frontend/src/utils/recurrence.ts`
+(`generateRecurrenceDates`/`buildSerieFechasInicio`/`weekdayLabel`) — la
+aritmética de fechas es pura (por componentes de calendario, nunca sumando
+milisegundos fijos), la conversión a UTC por ocurrencia reusa
+`zonedTimeToUtcIso` existente para resolver DST correctamente por instante.
+7 tests nuevos (`recurrence.test.ts`). Suite completa: 112 tests (antes
+105).
+
+### Qué no se implementó (a propósito)
+
+Ver "Qué no se implementó" en `docs/modules/appointments.md`: múltiples días
+por semana en la recurrencia, reasignar paciente en "este turno y los
+siguientes", cambiar el patrón/cantidad restante desde una edición en
+bloque, y migrar toda la edición de turnos (no solo la creación) al patrón
+de card compacta — se mantuvo el editor completo existente detrás del
+diálogo de alcance de serie.
+
+### Verificación manual
+
+`tsc -b`/`vitest run`/`npm run build` limpios en los dos paquetes (el único
+lint error preexistente sigue siendo el mismo de `AuthContext.tsx`, no
+tocado). Con Playwright (instalado en el scratchpad de la sesión, no como
+dependencia del proyecto): registro de consultorio nuevo → alta rápida de
+paciente/profesional/especialidad desde la propia card compacta → serie
+semanal de 3 turnos creada con `numeroSesion` consecutivo (1,2,3) y mismo
+`serieId`, verificado contra la API real; editar "este turno y los
+siguientes" desde la 1ra ocurrencia (diálogo apareció al guardar, no al
+abrir) cambió la hora de las 3; eliminar "este turno y los siguientes" desde
+la 1ra (diálogo apareció al tocar "Eliminar turno") eliminó las 3; card
+compacta también verificada en modo oscuro (todo el CSS nuevo usa
+exclusivamente los tokens `var(--color-*)` ya existentes, sin ningún color
+hardcodeado). Capturas guardadas en el scratchpad de la sesión.
+
+---
+
+## Sesión: corrección de UX del quick-create recurrente + recurrencia mensual
+
+Ronda de corrección sobre la sesión anterior (Turnos recurrentes) — la
+implementación funcional estaba bien, pero la card compacta seguía
+pareciendo el formulario largo de siempre con tamaños reducidos, no una card
+flotante real. Diagnóstico primero (con Playwright real, no solo lectura de
+código) antes de tocar nada — encontró dos bugs reales además del pedido de
+UX, ver abajo.
+
+### Dos bugs reales encontrados en el diagnóstico
+
+1. **El bloque de turno recurrente no mostraba el horario**: reproducido con
+   Playwright — un turno recurrente con nombre de paciente largo mostraba
+   "Nombre\n↻" sin `HH:MM - HH:MM`, exactamente como reportó el usuario. El
+   ícono de recurrencia se agregó la ronda anterior *inline dentro de*
+   `<strong>{patientDisplay}</strong>` — con un nombre lo bastante largo (o
+   la card angosta por columnas superpuestas), el ícono se envolvía a una
+   segunda línea dentro de ese mismo bloque de texto, duplicando su altura y
+   empujando el `<span>` del horario (el siguiente hermano) fuera del área
+   visible de la card (`overflow` implícito del bloque). Confirmado con
+   `getBoundingClientRect()` real antes de arreglar: el `<span>` del horario
+   arrancaba en un `y` posterior al borde inferior de la card. Fix: el ícono
+   pasó a ser un `<span className="turno-card-recurrence-badge">` hermano,
+   `position: absolute` en la esquina superior derecha (igual criterio que
+   el punto de estado ya existente) — nunca participa del flujo de texto,
+   así que ni el nombre ni el horario pueden perder espacio por su culpa,
+   sin importar el largo del nombre. Verificado de nuevo con Playwright: el
+   mismo nombre largo que antes rompía el layout ahora muestra nombre
+   (envuelto en 2 líneas si hace falta) + horario, ambos visibles, sin
+   overlap.
+2. **Condición de carrera real en `TurnoFormFields`**: reproducida con
+   Playwright sin esperas artificiales entre pasos (secuencia real de un
+   usuario apurado) — crear paciente → profesional → especialidad por alta
+   rápida y elegir Repetición inmediatamente después (sin esperar a que la
+   creación de la especialidad terminara) podía terminar creando un turno
+   único en vez de la serie elegida, sin ningún error visible. Causa:
+   `createPatient`/`createProfessional`/`createSpecialty` son funciones
+   async (esperan la respuesta de red de crear el recurso) que capturaban
+   por closure el `value`/`updateValue` del render en que arrancaron; si el
+   usuario tocaba otro campo (ej. Repetición) mientras esa promesa seguía
+   pendiente, el `updateValue({ specialtyId: ... })` que corría al resolver
+   pisaba silenciosamente cualquier cambio hecho mientras tanto con esa foto
+   vieja del formulario. Fix: patrón estándar de "ref con el valor más
+   reciente" — `valueRef` sincronizado en `useLayoutEffect` (no durante el
+   render: el lint nuevo de `eslint-plugin-react-hooks`,
+   `react-hooks/refs`, rechaza escribir un ref en el cuerpo del render) y
+   `updateValue` arma el patch siempre contra `valueRef.current`, nunca
+   contra el `value` cerrado en el momento en que arrancó el async. Cubre
+   los tres alta-rápida (paciente/profesional/especialidad), no solo el caso
+   de Repetición que lo destapó.
+
+### Recurrencia mensual por ordinal de día de semana
+
+Migración nueva, aditiva: `20260904150000_serie_turno_patron_mensual` —
+`SerieTurno` ganó `patron PatronRecurrenciaSerie @default(SEMANAL)`
+(`SEMANAL` | `MENSUAL_ORDINAL`) y `frecuenciaSemanas` pasó de `Int` a
+`Int?` (sin sentido para el patrón mensual). Mismo drift de checksum
+preexistente de siempre en este entorno → mismo mecanismo de recuperación
+manual (`prisma migrate diff` contra la DB viva + `db execute` +
+`migrate resolve --applied`), incluida la misma corrección de casing
+`serieturno`→`SerieTurno` en el SQL generado.
+
+`frontend/src/utils/recurrence.ts` ganó `ordinalOfWeekdayInMonth`,
+`ordinalLabel`, `monthlyRecurrenceLabel`, `generateMonthlyOrdinalDates` y
+`buildMonthlySerieFechasInicio` — mes calendario real (nunca sumando ~30
+días), con la regla explícita pedida para el caso "quinto X" (si un mes no
+tiene esa 5ta ocurrencia, se saltea y se sigue buscando en el siguiente,
+nunca se reinterpreta como "último X") para que `cantidad` sea siempre el
+total exacto. 8 tests nuevos, incluidos los dos ejemplos literales del
+pedido (04/09/2026 → "primer viernes", 18/09/2026 → "tercer viernes") y el
+caso de salto de mes (30/01/2026 → próxima real 29/05/2026). Backend:
+`POST /api/turnos/serie` acepta `patron` (default `SEMANAL`,
+`frecuenciaSemanas` solo se exige/persiste para ese patrón); partir una
+serie (`PATCH .../serie`) copia `patron`+`frecuenciaSemanas` de la serie
+original a la sub-serie nueva. 4 tests backend nuevos. Suites completas:
+backend 256 (antes 252), frontend 120 (antes 112).
+
+### Rediseño de la card compacta (sin tocar la arquitectura de recurrencia)
+
+`TurnoFormFields` (modo `compact`) dejó de ser el formulario largo con
+tamaños reducidos — ahora comparte el mismo estado/lógica pero con una
+composición visual propia: ícono + control por fila (Paciente, Profesional,
+Repetición) en vez de "label arriba, input grande abajo"; Especialidad usa
+el punto de color ya existente como único indicador (sin ícono extra);
+Sesión de consulta + Nro. de sesión comparten una fila; Diagnóstico nunca se
+muestra en este modo (antes sí aparecía — era el motivo real por el que la
+card seguía viéndose larga en la captura del pedido). Los labels
+tradicionales de cada campo pasaron a `<label class="sr-only">` (nuevo
+utilitario CSS estándar, nunca `display:none` — sigue siendo accesible para
+lectores de pantalla) asociados por `id`/`htmlFor`, no solo comunicados por
+placeholder. El header de la card compacta se achicó (sin ícono grande, sin
+línea separadora) y el footer perdió el botón "Cancelar" (la `X` ya cierra;
+"Cancelar" sigue existiendo, solo que ahora aparece exclusivamente en el
+formulario completo de "Más opciones") — "Más opciones" pasó de
+`secondary-button` a un nuevo `.ghost-button` (texto, sin fondo, accent de
+Kineq, hover sutil) para que se lea como acción secundaria real, no como un
+botón deshabilitado. Ancho de la card compacta: 460px (antes igual, pero
+ahora con contenido genuinamente compacto adentro — con un turno no
+recurrente, entra completo sin scroll interno, verificado con
+`scrollHeight <= clientHeight`).
+
+### Verificación manual
+
+`tsc -b`/`vitest run`/`npm run build`/`npm run lint` limpios en los dos
+paquetes (mismo único lint error preexistente de `AuthContext.tsx`, no
+tocado). Con Playwright: 16 checks automatizados contra los criterios de
+aceptación del pedido (sin Diagnóstico/Monto/Estado/Cancelar en compacto,
+labels `sr-only` presentes para cada campo, "Más opciones" muestra
+Cancelar/Monto/Estado, sin scroll interno) — los 16 pasaron. Reproducción
+del bug del horario con nombre largo real (confirmado roto antes del fix,
+confirmado arreglado después, con captura). Reproducción de la condición de
+carrera con la secuencia exacta que la dispara (confirmado roto antes,
+confirmado arreglado después — terminó pegándole a `/api/turnos/serie` en
+vez de `/api/turnos`). Serie mensual creada end-to-end desde la UI real
+("Todos los meses, el primer viernes"), turnos verificados contra la API.
+Editar/eliminar "este turno y los siguientes" reverificados sin regresión.
+Modo oscuro de la card rediseñada, verificado con captura.
+
+### Qué no se tocó
+
+Arquitectura de `SerieTurno`/split de series (sin cambios más allá de
+agregar `patron`), semántica de "este turno"/"este turno y los siguientes",
+límites ya documentados (múltiples días por semana, reasignar paciente en
+edición en bloque, cambiar patrón/cantidad desde una edición en bloque,
+migrar toda la edición de turnos al patrón compacto).

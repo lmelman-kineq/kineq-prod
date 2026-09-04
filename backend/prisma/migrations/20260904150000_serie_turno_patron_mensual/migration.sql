@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `SerieTurno` ADD COLUMN `patron` ENUM('SEMANAL', 'MENSUAL_ORDINAL') NOT NULL DEFAULT 'SEMANAL',
+    MODIFY `frecuenciaSemanas` INTEGER NULL;

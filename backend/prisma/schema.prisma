@@ -23,6 +23,17 @@ enum EstadoTurno {
   CANCELADO
 }
 
+// Patrón de una SerieTurno: SEMANAL usa frecuenciaSemanas (cada cuántas
+// semanas), MENSUAL_ORDINAL repite todos los meses en el mismo N-ésimo
+// día de semana que la fecha inicial (ej. "el tercer viernes de cada mes")
+// — el frontend calcula esas fechas (frontend/src/utils/recurrence.ts,
+// generateMonthlyOrdinalDates), el backend nunca hace aritmética de
+// calendario, solo valida y persiste.
+enum PatronRecurrenciaSerie {
+  SEMANAL
+  MENSUAL_ORDINAL
+}
+
 enum RolUsuario {
   ADMINISTRADOR
   PROFESIONAL
@@ -103,6 +114,7 @@ model Consultorio {
   fichaAlertasCampo         FichaAlertaCampo[]
   gruposEvolucion           GrupoEvolucion[]
   plantillasEvolucion       PlantillaEvolucion[]
+  seriesTurno               SerieTurno[]
 
   @@index([activo])
 }
@@ -307,6 +319,16 @@ model Turno {
   // ver `sesionAutomaticaParaGrupo()` en app.ts. Nunca obligatorio: un
   // turno sin diagnóstico sigue funcionando exactamente igual que antes.
   grupoId          Int?
+  // Turno recurrente: pertenece a una SerieTurno cuando fue creado como
+  // parte de un pack de sesiones. ordenEnSerie es la posición estructural
+  // (1-based) dentro de esa serie — nunca el numeroSesion clínico, que es
+  // independiente y puede divergir si se edita a mano (ver
+  // SerieTurno más abajo). "Editar/eliminar este turno y los siguientes"
+  // parte la serie: los turnos desde el punto de corte en adelante pasan a
+  // una SerieTurno nueva, para que la serie original nunca cambie de
+  // significado retroactivamente.
+  serieId          Int?
+  ordenEnSerie     Int?
   inicio           DateTime
   duracionMinutos  Int         @default(60)
   numeroSesion     Int?
@@ -345,6 +367,7 @@ model Turno {
   especialidad Especialidad    @relation(fields: [especialidadId], references: [id])
   obraSocial   ObraSocial?     @relation(fields: [obraSocialId], references: [id])
   grupo        GrupoEvolucion? @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+  serie        SerieTurno?     @relation(fields: [serieId], references: [id], onDelete: SetNull)
   evoluciones  Evolucion[]
 
   @@index([consultorioId, inicio])
@@ -354,6 +377,34 @@ model Turno {
   @@index([especialidadId])
   @@index([obraSocialId])
   @@index([grupoId])
+  @@index([serieId])
+}
+
+// Representa un pack finito de turnos generados de una sola vez (ej. "10
+// sesiones, todos los lunes"). Nunca recurrencia infinita — cantidadSesiones
+// es el total de turnos reales creados para esta serie (o sub-serie, si vino
+// de partir una serie más grande al editar/eliminar "este turno y los
+// siguientes"). No identifica turnos de una serie por heurística
+// (mismo paciente+profesional+hora) — la relación es siempre explícita vía
+// Turno.serieId.
+model SerieTurno {
+  id            Int                    @id @default(autoincrement())
+  consultorioId Int
+  patron        PatronRecurrenciaSerie @default(SEMANAL)
+  // Cada cuántas semanas se repite (1 = semanal, 2 = cada 2 semanas, etc).
+  // Solo aplica a patron SEMANAL — null para MENSUAL_ORDINAL (el mes
+  // calendario real reemplaza el concepto de "cada N semanas").
+  frecuenciaSemanas Int?
+  // Total de turnos de esta serie (o sub-serie tras un split), snapshot fijo
+  // — no se recalcula si se elimina una ocurrencia individual, para que
+  // "Sesión X de Y" no cambie de significado por una baja puntual.
+  cantidadSesiones Int
+  createdAt        DateTime @default(now())
+
+  consultorio Consultorio @relation(fields: [consultorioId], references: [id])
+  turnos      Turno[]
+
+  @@index([consultorioId])
 }
 
 model Evolucion {

@@ -3,6 +3,7 @@ import type {
   CategoriaCatalogoClinico,
   Consultorio,
   ConsultorioInput,
+  CreateSerieTurnoInput,
   CreateTurnoInput,
   Especialidad,
   EspecialidadInput,
@@ -31,8 +32,10 @@ import type {
   PlantillaEvolucionInput,
   Profesional,
   ProfesionalInput,
+  SerieTurno,
   Turno,
   TurnoFilters,
+  UpdateSerieTurnoInput,
   UpdateTurnoInput,
   Usuario,
   UsuarioInput,
@@ -59,15 +62,21 @@ export function getConsultorioTimeZone(): string {
 type ApiErrorBody = {
   error?: string
   message?: string
+  [key: string]: unknown
 }
 
 export class ApiError extends Error {
   status: number
+  // Body completo del error, ej. { overlaps, totalOcurrencias } que devuelve
+  // POST/PATCH .../serie en un 409 de superposición — para que el caller
+  // pueda armar un mensaje específico sin volver a parsear la respuesta.
+  body?: ApiErrorBody
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, body?: ApiErrorBody) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.body = body
   }
 }
 
@@ -87,7 +96,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as ApiErrorBody
-    throw new ApiError(body.error ?? body.message ?? `Error HTTP ${response.status}`, response.status)
+    throw new ApiError(body.error ?? body.message ?? `Error HTTP ${response.status}`, response.status, body)
   }
 
   if (response.status === 204) return undefined as T
@@ -430,6 +439,29 @@ export function patchTurno(turnoId: number, data: UpdateTurnoInput): Promise<Tur
 // Baja lógica en el backend (Turno.eliminadoAt) — nunca DELETE físico.
 export function deleteTurno(turnoId: number): Promise<void> {
   return request(`/api/turnos/${turnoId}`, { method: 'DELETE' })
+}
+
+export function createSerieTurno(data: CreateSerieTurnoInput): Promise<{ serie: SerieTurno; turnos: Turno[] }> {
+  return request('/api/turnos/serie', { method: 'POST', body: JSON.stringify(data) })
+}
+
+// Turno-ancla + sus "siguientes" (con `inicio` real de cada uno) — usado
+// para armar `ocurrencias` antes de patchSerieTurno/deleteSerieTurno, ya
+// que el calendario de Home solo tiene cargados los turnos del día visible.
+export function getSerieTurno(turnoId: number): Promise<{ turnos: Turno[] }> {
+  return request(`/api/turnos/${turnoId}/serie`)
+}
+
+// "Editar este turno y los siguientes" — turnoId es el turno-ancla (punto de
+// corte); `data.ocurrencias` debe incluir exactamente ese turno y todos los
+// posteriores de su serie, cada uno con su nuevo `inicio`.
+export function patchSerieTurno(turnoId: number, data: UpdateSerieTurnoInput): Promise<{ turnos: Turno[] }> {
+  return request(`/api/turnos/${turnoId}/serie`, { method: 'PATCH', body: JSON.stringify(data) })
+}
+
+// "Eliminar este turno y los siguientes" (baja lógica, misma semántica que deleteTurno).
+export function deleteSerieTurno(turnoId: number): Promise<{ eliminados: number }> {
+  return request(`/api/turnos/${turnoId}/serie`, { method: 'DELETE' })
 }
 
 export function getEvoluciones(pacienteId?: number): Promise<Evolucion[]> {

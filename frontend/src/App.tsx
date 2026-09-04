@@ -34,7 +34,8 @@ import { getSpecialtyColor, SPECIALTY_COLOR_TOKENS } from './utils/specialtyColo
 import { layoutTurnos } from './utils/turnoLayout'
 import { patientFullName } from './utils/patient'
 import { professionalName } from './utils/professional'
-import { utcIsoToZonedParts, todayInTimeZone, todayDateInTimeZone } from './utils/timezone'
+import { utcIsoToZonedParts, zonedTimeToUtcIso, todayInTimeZone, todayDateInTimeZone } from './utils/timezone'
+import { buildSerieFechasInicio, buildMonthlySerieFechasInicio } from './utils/recurrence'
 
 export type Turno = TurnosPageItem & {
   socialWorkId?: number | null
@@ -75,6 +76,20 @@ export type ConfirmDialogOptions = {
 }
 
 type ConfirmDialogState = ConfirmDialogOptions | null
+
+// "Editar/eliminar turno recurrente": Este turno / Este turno y los
+// siguientes (ver docs/modules/appointments.md). Mismo look que
+// ConfirmDialogOptions (reusa `.confirm-dialog`), pero con una elección de 2
+// vías en vez de un solo confirmar/cancelar.
+type SerieScopeDialogOptions = {
+  title: string
+  description: string
+  confirmLabel: string
+  destructive: boolean
+  onConfirm: (scope: 'unico' | 'siguientes') => void
+}
+
+type SerieScopeDialogState = SerieScopeDialogOptions | null
 
 const THEME_STORAGE_KEY = 'kineq-theme'
 
@@ -127,6 +142,20 @@ function CalendarIcon(props: MenuIconProps) {
       <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
       <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
       <path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" />
+    </svg>
+  )
+}
+
+// Indicador discreto de "turno recurrente" — mismo criterio que el punto de
+// color de Especialidad: un ícono chico, nunca una card cargada de metadata
+// (ver docs/modules/appointments.md, "Indicador visual de recurrencia").
+function RecurrenceIcon(props: MenuIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <path d="M4 12a8 8 0 0 1 14-5.3L21 9" />
+      <path d="M21 5v4h-4" />
+      <path d="M20 12a8 8 0 0 1-14 5.3L3 15" />
+      <path d="M3 19v-4h4" />
     </svg>
   )
 }
@@ -387,17 +416,29 @@ function Dashboard() {
     grupoId: null,
     status: 'Asignado',
     duration: 60,
+    recurrenceFrequency: 'none',
+    recurrenceCount: 2,
   })
+  // Card compacta (quick-create) por default al abrir "Nuevo turno" / click en
+  // un slot vacío; "Más opciones" pasa al formulario completo existente sin
+  // resetear nada (mismo newTurnoForm/setNewTurnoForm).
+  const [newTurnoExpanded, setNewTurnoExpanded] = useState(false)
   const [showViewTurno, setShowViewTurno] = useState(false)
   const [isEditingTurno, setIsEditingTurno] = useState(false)
   const [editingTurnoId, setEditingTurnoId] = useState<number | null>(null)
   const [editingTurnoForm, setEditingTurnoForm] = useState<TurnoFormValue | null>(null)
+  // serieId del turno que se está editando/viendo (null si no pertenece a
+  // una serie) — capturado en openTurnoDetails, no se deriva de
+  // editingTurnoForm porque TurnoFormValue no tiene ese campo.
+  const [editingTurnoSerieId, setEditingTurnoSerieId] = useState<number | null>(null)
   const [catalogsLoading, setCatalogsLoading] = useState(true)
   const [turnosLoading, setTurnosLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [contextMenu, setContextMenu] = useState<{ turnoId: number; x: number; y: number } | null>(null)
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>(null)
+  const [serieScopeDialog, setSerieScopeDialog] = useState<SerieScopeDialogState>(null)
+  const [serieScopeChoice, setSerieScopeChoice] = useState<'unico' | 'siguientes'>('unico')
 
   const contextMenuRef = useRef<HTMLDivElement | null>(null)
   const confirmDialogRef = useRef<HTMLDivElement | null>(null)
@@ -457,6 +498,9 @@ function Dashboard() {
       startAttention: t.inicioAtencion ?? null,
       color: t.especialidad.color || 'var(--color-primary)',
       updatedAt: t.updatedAt,
+      serieId: t.serieId ?? null,
+      ordenEnSerie: t.ordenEnSerie ?? null,
+      serieCantidadSesiones: t.serie?.cantidadSesiones ?? null,
     }
   }, [patientSocialWorkById])
 
@@ -473,6 +517,11 @@ function Dashboard() {
       grupoId: turno.grupoId ?? null,
       status: turno.status,
       duration: turno.duration,
+      // La recurrencia no se edita desde este formulario (ver el diálogo
+      // "Este turno / Este turno y los siguientes" en openTurnoDetails) —
+      // estos dos campos son irrelevantes acá, quedan en su default neutro.
+      recurrenceFrequency: 'none',
+      recurrenceCount: 2,
     }
   }
 
@@ -595,11 +644,14 @@ function Dashboard() {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node
 
-      // El diálogo de confirmación es la capa más alta: si está abierto, un click
-      // afuera solo lo cierra a él, sin cascadear al modal que pueda haber debajo.
-      if (confirmDialog) {
+      // El diálogo de confirmación (o el de elección de alcance de serie) es
+      // la capa más alta: si está abierto, un click afuera solo lo cierra a
+      // él, sin cascadear al modal que pueda haber debajo. Nunca están
+      // abiertos los dos a la vez.
+      if (confirmDialog || serieScopeDialog) {
         if (confirmDialogRef.current && !confirmDialogRef.current.contains(target)) {
           setConfirmDialog(null)
+          setSerieScopeDialog(null)
         }
         return
       }
@@ -621,7 +673,7 @@ function Dashboard() {
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [confirmDialog, filtersOpen, showNewTurno, showViewTurno, closeNewTurnoModal])
+  }, [confirmDialog, serieScopeDialog, filtersOpen, showNewTurno, showViewTurno, closeNewTurnoModal])
 
   // Cierra el popover de "Foto de perfil" al hacer click afuera o presionar Escape.
   useEffect(() => {
@@ -793,6 +845,7 @@ function Dashboard() {
 
   const openNewTurnoModal = (prefillDate?: string, prefillTime?: string, prefillPatientId?: number) => {
     setShowNewTurno(true)
+    setNewTurnoExpanded(false)
     setNewTurnoForm({
       date: prefillDate ?? (activePage === 'turnos' ? formatDate(new Date()) : selectedDate),
       time: prefillTime ?? '09:00',
@@ -805,6 +858,8 @@ function Dashboard() {
       grupoId: null,
       status: 'Asignado',
       duration: 60,
+      recurrenceFrequency: 'none',
+      recurrenceCount: 2,
     })
   }
 
@@ -933,8 +988,67 @@ function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showNewTurno, showViewTurno])
 
+  // Serie recurrente: crea todos los turnos de una vez (POST /api/turnos/serie).
+  // Si el backend avisa superposiciones (409 con `overlaps`, ver docs/modules/
+  // appointments.md), se ofrece confirmar y reintentar en vez de bloquear —
+  // Kineq nunca bloquea turnos superpuestos, solo advierte.
+  const saveNewTurnoSerie = async (confirmarSuperposicion: boolean) => {
+    if (!newTurnoForm.patientId || !newTurnoForm.professionalId || newTurnoForm.recurrenceFrequency === 'none') return
+    const timeZone = api.getConsultorioTimeZone()
+    const { recurrenceFrequency } = newTurnoForm
+
+    const [fechasInicio, patron, frecuenciaSemanas]: [string[], 'SEMANAL' | 'MENSUAL_ORDINAL', number | undefined] =
+      recurrenceFrequency === 'monthly'
+        ? [buildMonthlySerieFechasInicio(newTurnoForm.date, newTurnoForm.time, newTurnoForm.recurrenceCount, timeZone), 'MENSUAL_ORDINAL', undefined]
+        : [buildSerieFechasInicio(newTurnoForm.date, newTurnoForm.time, recurrenceFrequency, newTurnoForm.recurrenceCount, timeZone), 'SEMANAL', recurrenceFrequency]
+
+    try {
+      const { turnos } = await api.createSerieTurno({
+        pacienteId: newTurnoForm.patientId,
+        profesionalId: newTurnoForm.professionalId,
+        especialidadId: newTurnoForm.specialtyId,
+        duracionMinutos: newTurnoForm.duration,
+        patron,
+        frecuenciaSemanas,
+        fechasInicio,
+        numeroSesionInicial: newTurnoForm.sessionNumber,
+        esSesionConsulta: newTurnoForm.esSesionConsulta,
+        monto: newTurnoForm.monto.trim() ? Number(newTurnoForm.monto) : null,
+        grupoId: newTurnoForm.grupoId,
+        confirmarSuperposicion,
+      })
+      const mappedList = turnos.map(mapApiTurnoToUi)
+      setTurnosState((currentTurnos) => [...currentTurnos, ...mappedList.filter((t) => t.date === selectedDate)])
+      setSelectedTurnoId(mappedList[0]?.id ?? 0)
+      closeNewTurnoModal()
+      setTurnosPageRefreshKey((key) => key + 1)
+      setLoadError(null)
+    } catch (error) {
+      if (error instanceof api.ApiError && error.status === 409 && Array.isArray(error.body?.overlaps)) {
+        const overlapCount = error.body.overlaps.length
+        const total = (error.body.totalOcurrencias as number | undefined) ?? fechasInicio.length
+        setConfirmDialog({
+          title: 'Turnos superpuestos',
+          description: `${overlapCount} de ${total} turnos se superponen con otros turnos existentes. ¿Querés crearlos igualmente?`,
+          confirmLabel: 'Crear igualmente',
+          cancelLabel: 'Cancelar',
+          destructive: false,
+          onConfirm: () => { void saveNewTurnoSerie(true) },
+        })
+        return
+      }
+      setLoadError(getErrorMessage(error, 'No pudimos crear la serie de turnos.'))
+    }
+  }
+
   const saveNewTurno = async () => {
     if (!newTurnoForm.patientId || !newTurnoForm.professionalId || newTurnoForm.specialtyId === 0) return
+
+    if (newTurnoForm.recurrenceFrequency !== 'none') {
+      await saveNewTurnoSerie(false)
+      return
+    }
+
     try {
       const created = await api.createTurno({
         pacienteId: newTurnoForm.patientId,
@@ -963,6 +1077,7 @@ function Dashboard() {
   const openTurnoDetails = (turno: Turno) => {
   setEditingTurnoId(turno.id)
   setEditingTurnoForm(mapTurnoToFormValue(turno))
+  setEditingTurnoSerieId(turno.serieId ?? null)
   setIsEditingTurno(true)
   setShowViewTurno(true)
 }
@@ -972,17 +1087,22 @@ function Dashboard() {
     setIsEditingTurno(false)
     setEditingTurnoId(null)
     setEditingTurnoForm(null)
+    setEditingTurnoSerieId(null)
   }
 
   // Cierra el modal de turno (nuevo o edición) o el diálogo de confirmación con Escape.
   // El diálogo de confirmación tiene prioridad: si está abierto, Escape solo lo cierra a él.
   useEffect(() => {
-    if (!confirmDialog && !showNewTurno && !showViewTurno) return undefined
+    if (!confirmDialog && !serieScopeDialog && !showNewTurno && !showViewTurno) return undefined
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       if (confirmDialog) {
         setConfirmDialog(null)
+        return
+      }
+      if (serieScopeDialog) {
+        setSerieScopeDialog(null)
         return
       }
       if (showNewTurno) closeNewTurnoModal()
@@ -991,7 +1111,7 @@ function Dashboard() {
 
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [confirmDialog, showNewTurno, showViewTurno, closeNewTurnoModal])
+  }, [confirmDialog, serieScopeDialog, showNewTurno, showViewTurno, closeNewTurnoModal])
 
   // No existe un endpoint de borrado físico: "Cancelado" ya es, en el dominio
   // de Kineq, el estado que libera el horario.
@@ -1036,8 +1156,42 @@ function Dashboard() {
     }
   }
 
-  const handleDeleteTurno = (turnoId: number) => {
+  // "Eliminar este turno y los siguientes": baja lógica desde el turno-ancla
+  // en adelante dentro de su serie (DELETE /api/turnos/:id/serie). Los
+  // anteriores al corte nunca se tocan. Como los siguientes casi siempre
+  // caen en otro día del calendario diario, se recarga por reloadKey en vez
+  // de intentar parchear turnosState a mano.
+  const deleteTurnoSerie = async (turnoId: number) => {
+    try {
+      await api.deleteSerieTurno(turnoId)
+      if (selectedTurnoId === turnoId) setSelectedTurnoId(0)
+      if (editingTurnoId === turnoId) closeTurnoDetails()
+      setTurnosPageRefreshKey((key) => key + 1)
+      setReloadKey((key) => key + 1)
+      setLoadError(null)
+    } catch (error) {
+      setLoadError(getErrorMessage(error, 'No pudimos eliminar los turnos siguientes.'))
+    }
+  }
+
+  const handleDeleteTurno = (turnoId: number, serieId?: number | null) => {
     setContextMenu(null)
+
+    if (serieId) {
+      setSerieScopeChoice('unico')
+      setSerieScopeDialog({
+        title: 'Eliminar turno recurrente',
+        description: 'Este turno pertenece a una serie recurrente. Esta acción no se puede deshacer.',
+        confirmLabel: 'Eliminar',
+        destructive: true,
+        onConfirm: (scope) => {
+          if (scope === 'unico') void deleteTurno(turnoId)
+          else void deleteTurnoSerie(turnoId)
+        },
+      })
+      return
+    }
+
     setConfirmDialog({
       title: 'Eliminar turno',
       description: 'Esta acción eliminará el turno de forma permanente de la agenda. Esta acción no se puede deshacer.',
@@ -1171,7 +1325,7 @@ function Dashboard() {
     // estado: a diferencia de las transiciones de arriba, es una operación
     // administrativa que tiene sentido incluso sobre turnos ya finalizados,
     // ausentes o cancelados.
-    actions = [...actions, { key: 'eliminar', label: 'Eliminar turno', tone: 'danger', onClick: () => handleDeleteTurno(turnoId) }]
+    actions = [...actions, { key: 'eliminar', label: 'Eliminar turno', tone: 'danger', onClick: () => handleDeleteTurno(turnoId, turno.serieId) }]
 
     if (!user || user.rol === 'SUPERVISOR') return []
     if (user.rol === 'ADMINISTRADOR') return actions
@@ -1185,7 +1339,7 @@ function Dashboard() {
     return actions.filter((action) => clinicalKeys.includes(action.key))
   }
 
-  const saveEditedTurno = async () => {
+  const saveEditedTurnoSingle = async () => {
     if (editingTurnoId === null || !editingTurnoForm) return
     if (!editingTurnoForm.patientId || !editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) return
 
@@ -1219,6 +1373,86 @@ function Dashboard() {
     } catch (error) {
       setLoadError(getErrorMessage(error, 'No se pudieron guardar los cambios del turno.'))
     }
+  }
+
+  // "Editar este turno y los siguientes": solo cambia hora (de pared),
+  // duración, profesional, especialidad, diagnóstico, monto y "sesión de
+  // consulta" — nunca la fecha de cada ocurrencia (cada una conserva su
+  // propio día, ver docs/modules/appointments.md) ni numeroSesion (nunca se
+  // renumera en bloque). Recarga por reloadKey en vez de parchear
+  // turnosState a mano, ya que las ocurrencias afectadas casi siempre caen
+  // en otros días del calendario diario.
+  const saveEditedTurnoSiguientes = async (confirmarSuperposicion: boolean) => {
+    if (editingTurnoId === null || !editingTurnoForm) return
+    if (!editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) return
+
+    try {
+      const { turnos: siguientes } = await api.getSerieTurno(editingTurnoId)
+      const timeZone = api.getConsultorioTimeZone()
+      const ocurrencias = siguientes.map((t) => {
+        const { date } = utcIsoToZonedParts(t.inicio, timeZone)
+        return { turnoId: t.id, inicio: zonedTimeToUtcIso(date, editingTurnoForm.time, timeZone) }
+      })
+
+      const { turnos: actualizados } = await api.patchSerieTurno(editingTurnoId, {
+        ocurrencias,
+        profesionalId: editingTurnoForm.professionalId,
+        especialidadId: editingTurnoForm.specialtyId,
+        duracionMinutos: editingTurnoForm.duration,
+        monto: editingTurnoForm.monto.trim() ? Number(editingTurnoForm.monto) : null,
+        grupoId: editingTurnoForm.grupoId,
+        esSesionConsulta: editingTurnoForm.esSesionConsulta,
+        confirmarSuperposicion,
+      })
+
+      const mappedList = actualizados.map(mapApiTurnoToUi)
+      const updatedIds = new Set(mappedList.map((t) => t.id))
+      setTurnosState((currentTurnos) => [
+        ...currentTurnos.filter((t) => !updatedIds.has(t.id)),
+        ...mappedList.filter((t) => t.date === selectedDate),
+      ])
+      setLoadError(null)
+      closeTurnoDetails()
+      setTurnosPageRefreshKey((key) => key + 1)
+      setReloadKey((key) => key + 1)
+    } catch (error) {
+      if (error instanceof api.ApiError && error.status === 409 && Array.isArray(error.body?.overlaps)) {
+        const overlapCount = error.body.overlaps.length
+        const total = (error.body.totalOcurrencias as number | undefined) ?? overlapCount
+        setConfirmDialog({
+          title: 'Turnos superpuestos',
+          description: `${overlapCount} de ${total} turnos se superponen con otros turnos existentes. ¿Querés guardar igualmente?`,
+          confirmLabel: 'Guardar igualmente',
+          cancelLabel: 'Cancelar',
+          destructive: false,
+          onConfirm: () => { void saveEditedTurnoSiguientes(true) },
+        })
+        return
+      }
+      setLoadError(getErrorMessage(error, 'No pudimos modificar los turnos siguientes.'))
+    }
+  }
+
+  const saveEditedTurno = async () => {
+    if (editingTurnoId === null || !editingTurnoForm) return
+    if (!editingTurnoForm.patientId || !editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) return
+
+    if (editingTurnoSerieId) {
+      setSerieScopeChoice('unico')
+      setSerieScopeDialog({
+        title: 'Editar turno recurrente',
+        description: 'Este turno pertenece a una serie recurrente. Elegí qué querés modificar.',
+        confirmLabel: 'Continuar',
+        destructive: false,
+        onConfirm: (scope) => {
+          if (scope === 'unico') void saveEditedTurnoSingle()
+          else void saveEditedTurnoSiguientes(false)
+        },
+      })
+      return
+    }
+
+    await saveEditedTurnoSingle()
   }
 
   // compute month grid based on currentMonthDate
@@ -1921,6 +2155,20 @@ function Dashboard() {
                       aria-hidden="true"
                       title={turno.status}
                     />
+                    {/* Posicionado absoluto, fuera del flujo de texto a propósito: puesto
+                        inline junto al nombre, un nombre largo lo empuja a una segunda
+                        línea dentro de <strong> y esa línea extra desplaza el horario
+                        fuera del área visible de la card (bug real, ver HANDOVER.md).
+                        El nombre y el horario deben poder render siempre en su propia
+                        línea sin importar si el turno es recurrente. */}
+                    {turno.serieId ? (
+                      <span
+                        className="turno-card-recurrence-badge"
+                        title={turno.ordenEnSerie && turno.serieCantidadSesiones ? `Turno recurrente — Sesión ${turno.ordenEnSerie} de ${turno.serieCantidadSesiones}` : 'Turno recurrente'}
+                      >
+                        <RecurrenceIcon className="turno-card-recurrence-icon" aria-hidden="true" />
+                      </span>
+                    ) : null}
                     <strong>{turno.patientDisplay}</strong>
                     <span>{turno.time} - {endTime}</span>
                     {turno.duration >= 90 ? <TurnoCardTimer turno={turno} now={clockNow} /> : null}
@@ -1997,15 +2245,17 @@ function Dashboard() {
 
         {showNewTurno && (
           <div className="modal-overlay">
-            <div className="modal-card" ref={newModalRef}>
-              <div className="modal-header">
+            <div className={`modal-card ${newTurnoExpanded ? '' : 'modal-card--compact'}`} ref={newModalRef}>
+              <div className={`modal-header ${newTurnoExpanded ? '' : 'modal-header--compact'}`}>
                 <div className="modal-header-title">
-                  <span className="modal-header-icon" aria-hidden="true">
-                    <CalendarIcon />
-                  </span>
+                  {newTurnoExpanded ? (
+                    <span className="modal-header-icon" aria-hidden="true">
+                      <CalendarIcon />
+                    </span>
+                  ) : null}
                   <div>
                     <h3>Nuevo turno</h3>
-                    <p>Completá los datos para agendar el turno.</p>
+                    {newTurnoExpanded ? <p>Completá los datos para agendar el turno.</p> : null}
                   </div>
                 </div>
                 <button
@@ -2032,6 +2282,8 @@ function Dashboard() {
                 onCreateGrupo={canSeeDiagnostico ? createDiagnosticoInlineParaTurno : undefined}
                 onFetchProximaSesion={fetchProximaSesion}
                 hideProfessionalField={user?.rol === 'PROFESIONAL'}
+                compact={!newTurnoExpanded}
+                allowRecurrence={!newTurnoExpanded}
               />
 
               {user?.rol === 'PROFESIONAL' && !profesionalVinculadoActivo ? (
@@ -2041,9 +2293,22 @@ function Dashboard() {
               ) : null}
 
               <div className="modal-actions">
-                <button type="button" className="secondary-button" onClick={closeNewTurnoModal}>
-                  Cancelar
-                </button>
+                {newTurnoExpanded ? (
+                  <button type="button" className="secondary-button" onClick={closeNewTurnoModal}>
+                    Cancelar
+                  </button>
+                ) : (
+                  // Sin "Cancelar" acá a propósito: la X del header ya cierra
+                  // la card compacta — "Cancelar" solo vuelve a aparecer en
+                  // el formulario completo de "Más opciones" (arriba).
+                  <button
+                    type="button"
+                    className="ghost-button modal-actions-more"
+                    onClick={() => setNewTurnoExpanded(true)}
+                  >
+                    Más opciones
+                  </button>
+                )}
                 <button type="button" className="primary-button" onClick={saveNewTurno}>
                   Guardar turno
                 </button>
@@ -2098,6 +2363,22 @@ function Dashboard() {
                 </div>
               </div>
 
+              {editingTurnoSerieId && editingTurnoId !== null ? (() => {
+                const liveTurno = turnosState.find((item) => item.id === editingTurnoId)
+                // Posición dentro de la serie ≠ numeroSesion clínico (ver
+                // TurnoFormFields más abajo) — pueden divergir si el usuario
+                // editó el número a mano, por eso se muestran por separado.
+                return (
+                  <p className="turno-serie-badge">
+                    <RecurrenceIcon />
+                    Turno recurrente
+                    {liveTurno?.ordenEnSerie && liveTurno?.serieCantidadSesiones
+                      ? ` — Sesión ${liveTurno.ordenEnSerie} de ${liveTurno.serieCantidadSesiones}`
+                      : null}
+                  </p>
+                )
+              })() : null}
+
               {editingTurnoId !== null ? (() => {
                 const liveTurno = turnosState.find((item) => item.id === editingTurnoId)
                 // 'eliminar' se excluye acá: este modal ya tiene su propio
@@ -2145,7 +2426,7 @@ function Dashboard() {
                   <button
                     type="button"
                     className="modal-delete-button"
-                    onClick={() => handleDeleteTurno(editingTurnoId)}
+                    onClick={() => handleDeleteTurno(editingTurnoId, editingTurnoSerieId)}
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M4 7h16" />
@@ -2264,6 +2545,51 @@ function Dashboard() {
                   }}
                 >
                   {confirmDialog.confirmLabel}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {serieScopeDialog ? (
+          <div className="modal-overlay confirm-dialog-overlay">
+            <div className="confirm-dialog" ref={confirmDialogRef}>
+              <h3>{serieScopeDialog.title}</h3>
+              <p>{serieScopeDialog.description}</p>
+              <div className="serie-scope-options">
+                <label className="serie-scope-option">
+                  <input
+                    type="radio"
+                    name="serie-scope"
+                    checked={serieScopeChoice === 'unico'}
+                    onChange={() => setSerieScopeChoice('unico')}
+                  />
+                  Este turno
+                </label>
+                <label className="serie-scope-option">
+                  <input
+                    type="radio"
+                    name="serie-scope"
+                    checked={serieScopeChoice === 'siguientes'}
+                    onChange={() => setSerieScopeChoice('siguientes')}
+                  />
+                  Este turno y los siguientes
+                </label>
+              </div>
+              <div className="confirm-dialog-actions">
+                <button type="button" className="secondary-button" onClick={() => setSerieScopeDialog(null)}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className={`primary-button ${serieScopeDialog.destructive ? 'primary-button--danger' : ''}`}
+                  onClick={() => {
+                    const chosen = serieScopeChoice
+                    serieScopeDialog.onConfirm(chosen)
+                    setSerieScopeDialog(null)
+                  }}
+                >
+                  {serieScopeDialog.confirmLabel}
                 </button>
               </div>
             </div>

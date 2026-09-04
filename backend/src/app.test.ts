@@ -3508,3 +3508,420 @@ describe('catálogo global/custom, paciente archivado y profesional inactivo/eli
     })
   })
 })
+
+describe('series de turnos (recurrencia)', () => {
+  let consultorioAId: number
+  let consultorioBId: number
+  let especialidadAId: number
+  let profesionalAdminId: number
+  let profesionalPropioId: number
+  let profesionalAjenoId: number
+  let profesionalBId: number
+  let pacienteAId: number
+  let pacienteBId: number
+
+  const emails = {
+    admin: `serie-admin-${RUN_ID}@test.local`,
+    profesionalPropio: `serie-prof-propio-${RUN_ID}@test.local`,
+    profesionalAjeno: `serie-prof-ajeno-${RUN_ID}@test.local`,
+    adminB: `serie-admin-b-${RUN_ID}@test.local`,
+  }
+  const cookies: Record<string, string> = {}
+
+  function weeklyIsoDates(startIso: string, frecuenciaSemanas: number, cantidad: number): string[] {
+    const start = new Date(startIso)
+    return Array.from({ length: cantidad }, (_, i) => new Date(start.getTime() + i * frecuenciaSemanas * 7 * 24 * 60 * 60 * 1000).toISOString())
+  }
+
+  beforeAll(async () => {
+    const passwordHash = await hashPassword(PASSWORD)
+
+    const consultorioA = await prisma.consultorio.create({ data: { nombre: `Serie Consultorio A ${RUN_ID}`, slug: `serie-consultorio-a-${RUN_ID}` } })
+    const consultorioB = await prisma.consultorio.create({ data: { nombre: `Serie Consultorio B ${RUN_ID}`, slug: `serie-consultorio-b-${RUN_ID}` } })
+    consultorioAId = consultorioA.id
+    consultorioBId = consultorioB.id
+
+    const especialidad = await prisma.especialidad.create({ data: { consultorioId: consultorioAId, nombre: `Kinesiología serie ${RUN_ID}`, color: '#fff' } })
+    especialidadAId = especialidad.id
+
+    const profesionalAdmin = await prisma.profesional.create({ data: { consultorioId: consultorioAId, nombre: 'Serie', apellido: 'Admin' } })
+    profesionalAdminId = profesionalAdmin.id
+    const profesionalPropio = await prisma.profesional.create({ data: { consultorioId: consultorioAId, nombre: 'Serie', apellido: 'Propio' } })
+    profesionalPropioId = profesionalPropio.id
+    const profesionalAjeno = await prisma.profesional.create({ data: { consultorioId: consultorioAId, nombre: 'Serie', apellido: 'Ajeno' } })
+    profesionalAjenoId = profesionalAjeno.id
+    const profesionalB = await prisma.profesional.create({ data: { consultorioId: consultorioBId, nombre: 'Serie', apellido: 'B' } })
+    profesionalBId = profesionalB.id
+
+    const paciente = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'Paciente', apellido: 'Serie' } })
+    pacienteAId = paciente.id
+    const pacienteB = await prisma.paciente.create({ data: { consultorioId: consultorioBId, nombre: 'Paciente', apellido: 'SerieB' } })
+    pacienteBId = pacienteB.id
+
+    await prisma.usuario.createMany({
+      data: [
+        { consultorioId: consultorioAId, nombre: 'Admin', apellido: 'Serie', email: emails.admin, passwordHash, rol: RolUsuario.ADMINISTRADOR, profesionalId: profesionalAdminId },
+        { consultorioId: consultorioAId, nombre: 'Profesional', apellido: 'Propio', email: emails.profesionalPropio, passwordHash, rol: RolUsuario.PROFESIONAL, profesionalId: profesionalPropioId },
+        { consultorioId: consultorioAId, nombre: 'Profesional', apellido: 'Ajeno', email: emails.profesionalAjeno, passwordHash, rol: RolUsuario.PROFESIONAL, profesionalId: profesionalAjenoId },
+        { consultorioId: consultorioBId, nombre: 'Admin', apellido: 'B', email: emails.adminB, passwordHash, rol: RolUsuario.ADMINISTRADOR, profesionalId: profesionalBId },
+      ],
+    })
+
+    for (const [key, email] of Object.entries(emails)) {
+      const res = await loginRequest(email)
+      cookies[key] = cookieFrom(res)
+    }
+  })
+
+  afterAll(async () => {
+    await prisma.turno.deleteMany({ where: { consultorioId: { in: [consultorioAId, consultorioBId] } } })
+    await prisma.serieTurno.deleteMany({ where: { consultorioId: { in: [consultorioAId, consultorioBId] } } })
+    await prisma.usuario.deleteMany({ where: { consultorioId: { in: [consultorioAId, consultorioBId] } } })
+    await prisma.paciente.deleteMany({ where: { consultorioId: { in: [consultorioAId, consultorioBId] } } })
+    await prisma.profesional.deleteMany({ where: { consultorioId: { in: [consultorioAId, consultorioBId] } } })
+    await prisma.especialidad.deleteMany({ where: { consultorioId: { in: [consultorioAId, consultorioBId] } } })
+    await prisma.consultorio.deleteMany({ where: { id: { in: [consultorioAId, consultorioBId] } } })
+  })
+
+  describe('creación', () => {
+    it('crea una serie semanal de 5 turnos con fechas y numeroSesion consecutivos', async () => {
+      const fechasInicio = weeklyIsoDates('2027-01-04T13:00:00.000Z', 1, 5)
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({
+          pacienteId: pacienteAId,
+          profesionalId: profesionalPropioId,
+          especialidadId: especialidadAId,
+          duracionMinutos: 45,
+          frecuenciaSemanas: 1,
+          fechasInicio,
+          numeroSesionInicial: 4,
+        })
+
+      expect(res.status).toBe(201)
+      expect(res.body.serie.cantidadSesiones).toBe(5)
+      expect(res.body.serie.frecuenciaSemanas).toBe(1)
+      expect(res.body.turnos).toHaveLength(5)
+      res.body.turnos.forEach((t: any, i: number) => {
+        expect(t.serieId).toBe(res.body.serie.id)
+        expect(t.ordenEnSerie).toBe(i + 1)
+        expect(t.numeroSesion).toBe(4 + i)
+        expect(new Date(t.inicio).toISOString()).toBe(fechasInicio[i])
+      })
+
+      await prisma.turno.deleteMany({ where: { serieId: res.body.serie.id } })
+      await prisma.serieTurno.delete({ where: { id: res.body.serie.id } })
+    })
+
+    it('serie cada 2 semanas respeta las fechas enviadas y numeroSesion manual', async () => {
+      const fechasInicio = weeklyIsoDates('2027-02-01T13:00:00.000Z', 2, 3)
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({ pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 30, frecuenciaSemanas: 2, fechasInicio, numeroSesionInicial: 10 })
+
+      expect(res.status).toBe(201)
+      expect(res.body.turnos.map((t: any) => t.numeroSesion)).toEqual([10, 11, 12])
+      expect(res.body.turnos.map((t: any) => new Date(t.inicio).toISOString())).toEqual(fechasInicio)
+
+      await prisma.turno.deleteMany({ where: { serieId: res.body.serie.id } })
+      await prisma.serieTurno.delete({ where: { id: res.body.serie.id } })
+    })
+
+    it('serie mensual (MENSUAL_ORDINAL) persiste el patrón y frecuenciaSemanas queda null', async () => {
+      // Mismas fechas que generaría el frontend para "todos los meses, el
+      // primer viernes" a partir del 04/09/2026 (ver recurrence.test.ts).
+      const fechasInicio = [
+        '2026-09-04T13:00:00.000Z',
+        '2026-10-02T13:00:00.000Z',
+        '2026-11-06T13:00:00.000Z',
+        '2026-12-04T13:00:00.000Z',
+      ]
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({
+          pacienteId: pacienteAId,
+          profesionalId: profesionalPropioId,
+          especialidadId: especialidadAId,
+          duracionMinutos: 45,
+          patron: 'MENSUAL_ORDINAL',
+          fechasInicio,
+          numeroSesionInicial: 1,
+        })
+
+      expect(res.status).toBe(201)
+      expect(res.body.serie.patron).toBe('MENSUAL_ORDINAL')
+      expect(res.body.serie.frecuenciaSemanas).toBeNull()
+      expect(res.body.turnos.map((t: any) => new Date(t.inicio).toISOString())).toEqual(fechasInicio)
+      expect(res.body.turnos.map((t: any) => t.numeroSesion)).toEqual([1, 2, 3, 4])
+
+      await prisma.turno.deleteMany({ where: { serieId: res.body.serie.id } })
+      await prisma.serieTurno.delete({ where: { id: res.body.serie.id } })
+    })
+
+    it('patron mensual sin frecuenciaSemanas no rechaza (frecuenciaSemanas solo aplica a SEMANAL)', async () => {
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({
+          pacienteId: pacienteAId,
+          profesionalId: profesionalPropioId,
+          especialidadId: especialidadAId,
+          duracionMinutos: 30,
+          patron: 'MENSUAL_ORDINAL',
+          fechasInicio: ['2027-01-01T13:00:00.000Z', '2027-02-01T13:00:00.000Z'],
+        })
+      expect(res.status).toBe(201)
+      await prisma.turno.deleteMany({ where: { serieId: res.body.serie.id } })
+      await prisma.serieTurno.delete({ where: { id: res.body.serie.id } })
+    })
+
+    it('patron inválido rechazado (400)', async () => {
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({
+          pacienteId: pacienteAId,
+          profesionalId: profesionalPropioId,
+          especialidadId: especialidadAId,
+          duracionMinutos: 30,
+          patron: 'ANUAL',
+          fechasInicio: ['2027-01-01T13:00:00.000Z', '2027-02-01T13:00:00.000Z'],
+        })
+      expect(res.status).toBe(400)
+    })
+
+    it('rechaza menos de 2 o más de 60 ocurrencias', async () => {
+      const one = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({ pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 30, frecuenciaSemanas: 1, fechasInicio: weeklyIsoDates('2027-03-01T13:00:00.000Z', 1, 1) })
+      expect(one.status).toBe(400)
+
+      const many = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({ pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 30, frecuenciaSemanas: 1, fechasInicio: weeklyIsoDates('2027-03-01T13:00:00.000Z', 1, 61) })
+      expect(many.status).toBe(400)
+    })
+
+    it('paciente de otro consultorio rechazado (404) y no crea nada', async () => {
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({ pacienteId: pacienteBId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 30, frecuenciaSemanas: 1, fechasInicio: weeklyIsoDates('2027-04-01T13:00:00.000Z', 1, 3) })
+      expect(res.status).toBe(404)
+      const count = await prisma.turno.count({ where: { consultorioId: consultorioAId, pacienteId: pacienteBId } })
+      expect(count).toBe(0)
+    })
+
+    it('profesional de otro consultorio rechazado (404)', async () => {
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({ pacienteId: pacienteAId, profesionalId: profesionalBId, especialidadId: especialidadAId, duracionMinutos: 30, frecuenciaSemanas: 1, fechasInicio: weeklyIsoDates('2027-04-01T13:00:00.000Z', 1, 3) })
+      expect(res.status).toBe(404)
+    })
+
+    it('especialidad inválida rechazada (404) y no deja turnos ni serie a medio crear', async () => {
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({ pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: 999999, duracionMinutos: 30, frecuenciaSemanas: 1, fechasInicio: weeklyIsoDates('2027-04-08T13:00:00.000Z', 1, 3) })
+      expect(res.status).toBe(404)
+      const count = await prisma.turno.count({ where: { consultorioId: consultorioAId, pacienteId: pacienteAId, inicio: { gte: new Date('2027-04-08T00:00:00.000Z') } } })
+      expect(count).toBe(0)
+    })
+
+    it('un profesional crea una serie solo para sí mismo, ignorando profesionalId del body', async () => {
+      const fechasInicio = weeklyIsoDates('2027-05-03T13:00:00.000Z', 1, 2)
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.profesionalPropio)
+        .send({ pacienteId: pacienteAId, profesionalId: profesionalAjenoId, especialidadId: especialidadAId, duracionMinutos: 30, frecuenciaSemanas: 1, fechasInicio })
+      expect(res.status).toBe(201)
+      expect(res.body.turnos.every((t: any) => t.profesionalId === profesionalPropioId)).toBe(true)
+
+      await prisma.turno.deleteMany({ where: { serieId: res.body.serie.id } })
+      await prisma.serieTurno.delete({ where: { id: res.body.serie.id } })
+    })
+
+    it('superposición no bloquea, pero avisa y exige confirmación explícita', async () => {
+      const existente = await prisma.turno.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, inicio: new Date('2027-06-14T13:00:00.000Z'), duracionMinutos: 60 },
+      })
+      const fechasInicio = weeklyIsoDates('2027-06-07T13:00:00.000Z', 1, 3) // la 2da (14/06) pisa el turno existente
+
+      const sinConfirmar = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({ pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 60, frecuenciaSemanas: 1, fechasInicio })
+      expect(sinConfirmar.status).toBe(409)
+      expect(sinConfirmar.body.overlaps).toHaveLength(1)
+      const countAntes = await prisma.turno.count({ where: { serieId: { not: null }, consultorioId: consultorioAId } })
+      expect(countAntes).toBe(0)
+
+      const confirmado = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({ pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 60, frecuenciaSemanas: 1, fechasInicio, confirmarSuperposicion: true })
+      expect(confirmado.status).toBe(201)
+      expect(confirmado.body.turnos).toHaveLength(3)
+
+      await prisma.turno.deleteMany({ where: { serieId: confirmado.body.serie.id } })
+      await prisma.serieTurno.delete({ where: { id: confirmado.body.serie.id } })
+      await prisma.turno.delete({ where: { id: existente.id } })
+    })
+  })
+
+  describe('edición y eliminación (este turno / este turno y los siguientes)', () => {
+    let serieId: number
+    let turnoIds: number[]
+
+    beforeAll(async () => {
+      const fechasInicio = weeklyIsoDates('2027-08-02T13:00:00.000Z', 1, 5)
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({ pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 45, frecuenciaSemanas: 1, fechasInicio, numeroSesionInicial: 1 })
+      expect(res.status).toBe(201)
+      serieId = res.body.serie.id
+      turnoIds = res.body.turnos.map((t: any) => t.id)
+    })
+
+    afterAll(async () => {
+      await prisma.turno.deleteMany({ where: { id: { in: turnoIds } } })
+      await prisma.serieTurno.deleteMany({ where: { consultorioId: consultorioAId } })
+    })
+
+    it('GET .../serie devuelve el ancla y exactamente los turnos siguientes, con su inicio', async () => {
+      const res = await request(app).get(`/api/turnos/${turnoIds[1]}/serie`).set('Cookie', cookies.admin)
+      expect(res.status).toBe(200)
+      expect(res.body.turnos.map((t: any) => t.id)).toEqual([turnoIds[1], turnoIds[2], turnoIds[3], turnoIds[4]])
+      expect(res.body.turnos.every((t: any) => typeof t.inicio === 'string')).toBe(true)
+    })
+
+    it('GET .../serie de un turno que no pertenece a ninguna serie da 404', async () => {
+      const suelto = await prisma.turno.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, inicio: new Date('2027-09-01T13:00:00.000Z'), duracionMinutos: 30 },
+      })
+      const res = await request(app).get(`/api/turnos/${suelto.id}/serie`).set('Cookie', cookies.admin)
+      expect(res.status).toBe(404)
+      await prisma.turno.delete({ where: { id: suelto.id } })
+    })
+
+    it('editar "este turno" (PATCH normal) solo cambia esa ocurrencia', async () => {
+      const res = await request(app).patch(`/api/turnos/${turnoIds[1]}`).set('Cookie', cookies.admin).send({ notas: 'solo esta' })
+      expect(res.status).toBe(200)
+      expect(res.body.notas).toBe('solo esta')
+
+      const otras = await prisma.turno.findMany({ where: { id: { in: [turnoIds[0], turnoIds[2]] } } })
+      expect(otras.every((t) => t.notas === null)).toBe(true)
+    })
+
+    it('un profesional ajeno no puede editar "este turno y los siguientes"', async () => {
+      const anchor = await prisma.turno.findUniqueOrThrow({ where: { id: turnoIds[2] } })
+      const siguientes = await prisma.turno.findMany({ where: { serieId, ordenEnSerie: { gte: anchor.ordenEnSerie! } }, orderBy: { ordenEnSerie: 'asc' } })
+      const res = await request(app)
+        .patch(`/api/turnos/${turnoIds[2]}/serie`)
+        .set('Cookie', cookies.profesionalAjeno)
+        .send({ notas: 'no debería aplicar', ocurrencias: siguientes.map((t) => ({ turnoId: t.id, inicio: t.inicio })) })
+      expect(res.status).toBe(403)
+    })
+
+    it('un admin de otro consultorio recibe 404 (aislamiento)', async () => {
+      const res = await request(app).delete(`/api/turnos/${turnoIds[2]}/serie`).set('Cookie', cookies.adminB)
+      expect(res.status).toBe(404)
+    })
+
+    it('editar "este turno y los siguientes" desde la 3ra ocurrencia cambia 3,4,5 y no 1,2, partiendo la serie', async () => {
+      const anchor = await prisma.turno.findUniqueOrThrow({ where: { id: turnoIds[2] } })
+      const siguientesAntes = await prisma.turno.findMany({ where: { serieId, ordenEnSerie: { gte: anchor.ordenEnSerie! } }, orderBy: { ordenEnSerie: 'asc' } })
+      const ocurrencias = siguientesAntes.map((t) => ({ turnoId: t.id, inicio: new Date(t.inicio.getTime() + 90 * 60000).toISOString() })) // +90min
+
+      const res = await request(app)
+        .patch(`/api/turnos/${turnoIds[2]}/serie`)
+        .set('Cookie', cookies.admin)
+        .send({ duracionMinutos: 50, ocurrencias })
+      expect(res.status).toBe(200)
+      expect(res.body.turnos).toHaveLength(3)
+      expect(res.body.turnos.every((t: any) => t.duracionMinutos === 50)).toBe(true)
+
+      const primeras = await prisma.turno.findMany({ where: { id: { in: [turnoIds[0], turnoIds[1]] } } })
+      expect(primeras.every((t) => t.duracionMinutos === 45)).toBe(true)
+      expect(primeras.every((t) => t.serieId === serieId)).toBe(true)
+
+      const serieOriginal = await prisma.serieTurno.findUniqueOrThrow({ where: { id: serieId } })
+      expect(serieOriginal.cantidadSesiones).toBe(2)
+
+      const nuevaSerieId = res.body.turnos[0].serieId
+      expect(nuevaSerieId).not.toBe(serieId)
+      const nuevaSerie = await prisma.serieTurno.findUniqueOrThrow({ where: { id: nuevaSerieId } })
+      expect(nuevaSerie.cantidadSesiones).toBe(3)
+      expect(res.body.turnos.map((t: any) => t.ordenEnSerie)).toEqual([1, 2, 3])
+
+      // numeroSesion nunca se toca en esta operación
+      const actualizados = await prisma.turno.findMany({ where: { id: { in: [turnoIds[2], turnoIds[3], turnoIds[4]] } }, orderBy: { ordenEnSerie: 'asc' } })
+      expect(actualizados.map((t) => t.numeroSesion)).toEqual([3, 4, 5])
+    })
+
+    it('eliminar "este turno" (DELETE normal) solo elimina esa ocurrencia', async () => {
+      const res = await request(app).delete(`/api/turnos/${turnoIds[0]}`).set('Cookie', cookies.admin)
+      expect(res.status).toBe(204)
+      const t = await prisma.turno.findUniqueOrThrow({ where: { id: turnoIds[0] } })
+      expect(t.eliminadoAt).not.toBeNull()
+      const t2 = await prisma.turno.findUniqueOrThrow({ where: { id: turnoIds[1] } })
+      expect(t2.eliminadoAt).toBeNull()
+    })
+
+    it('eliminar "este turno y los siguientes" respeta el corte y no renumera numeroSesion de lo que sobrevive', async () => {
+      // Tras el test anterior, turnoIds[1] (numeroSesion 2, único sobreviviente de la serie
+      // original) sigue en la serie original; turnoIds[2..4] están ahora en la sub-serie nueva.
+      const nuevaSerie = await prisma.turno.findUniqueOrThrow({ where: { id: turnoIds[3] } })
+      const res = await request(app).delete(`/api/turnos/${turnoIds[3]}/serie`).set('Cookie', cookies.admin)
+      expect(res.status).toBe(200)
+      expect(res.body.eliminados).toBe(2) // turnoIds[3] y turnoIds[4]
+
+      const sobreviviente = await prisma.turno.findUniqueOrThrow({ where: { id: turnoIds[2] } })
+      expect(sobreviviente.eliminadoAt).toBeNull()
+      expect(sobreviviente.numeroSesion).toBe(3) // no se tocó
+
+      const eliminados = await prisma.turno.findMany({ where: { id: { in: [turnoIds[3], turnoIds[4]] } } })
+      expect(eliminados.every((t) => t.eliminadoAt !== null)).toBe(true)
+      expect(eliminados.map((t) => t.numeroSesion).sort()).toEqual([4, 5]) // tampoco se renumeraron al eliminar
+
+      const subSerie = await prisma.serieTurno.findUniqueOrThrow({ where: { id: nuevaSerie.serieId! } })
+      expect(subSerie.cantidadSesiones).toBe(1) // solo turnoIds[2] sobrevive en esa serie
+    })
+
+    it('partir una serie mensual (editar "este turno y los siguientes") propaga patron/frecuenciaSemanas a la sub-serie', async () => {
+      const fechasInicio = ['2027-04-02T13:00:00.000Z', '2027-05-07T13:00:00.000Z', '2027-06-04T13:00:00.000Z']
+      const creada = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({ pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 45, patron: 'MENSUAL_ORDINAL', fechasInicio })
+      expect(creada.status).toBe(201)
+      const ids: number[] = creada.body.turnos.map((t: any) => t.id)
+
+      const ocurrencias = [
+        { turnoId: ids[1], inicio: fechasInicio[1] },
+        { turnoId: ids[2], inicio: fechasInicio[2] },
+      ]
+      const editRes = await request(app)
+        .patch(`/api/turnos/${ids[1]}/serie`)
+        .set('Cookie', cookies.admin)
+        .send({ duracionMinutos: 50, ocurrencias })
+      expect(editRes.status).toBe(200)
+
+      const nuevaSerieId = editRes.body.turnos[0].serieId
+      const nuevaSerie = await prisma.serieTurno.findUniqueOrThrow({ where: { id: nuevaSerieId } })
+      expect(nuevaSerie.patron).toBe('MENSUAL_ORDINAL')
+      expect(nuevaSerie.frecuenciaSemanas).toBeNull()
+
+      await prisma.turno.deleteMany({ where: { id: { in: ids } } })
+      await prisma.serieTurno.deleteMany({ where: { consultorioId: consultorioAId, id: { in: [creada.body.serie.id, nuevaSerieId] } } })
+    })
+  })
+})

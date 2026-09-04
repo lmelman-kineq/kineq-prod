@@ -61,6 +61,7 @@ export const ModelName = {
   ObraSocial: 'ObraSocial',
   ConsultorioObraSocialOculta: 'ConsultorioObraSocialOculta',
   Turno: 'Turno',
+  SerieTurno: 'SerieTurno',
   Evolucion: 'Evolucion',
   EvolucionImagen: 'EvolucionImagen',
   GrupoEvolucion: 'GrupoEvolucion',
@@ -232,6 +233,8 @@ export const TurnoScalarFieldEnum = {
   especialidadId: 'especialidadId',
   obraSocialId: 'obraSocialId',
   grupoId: 'grupoId',
+  serieId: 'serieId',
+  ordenEnSerie: 'ordenEnSerie',
   inicio: 'inicio',
   duracionMinutos: 'duracionMinutos',
   numeroSesion: 'numeroSesion',
@@ -248,6 +251,18 @@ export const TurnoScalarFieldEnum = {
 } as const
 
 export type TurnoScalarFieldEnum = (typeof TurnoScalarFieldEnum)[keyof typeof TurnoScalarFieldEnum]
+
+
+export const SerieTurnoScalarFieldEnum = {
+  id: 'id',
+  consultorioId: 'consultorioId',
+  patron: 'patron',
+  frecuenciaSemanas: 'frecuenciaSemanas',
+  cantidadSesiones: 'cantidadSesiones',
+  createdAt: 'createdAt'
+} as const
+
+export type SerieTurnoScalarFieldEnum = (typeof SerieTurnoScalarFieldEnum)[keyof typeof SerieTurnoScalarFieldEnum]
 
 
 export const EvolucionScalarFieldEnum = {

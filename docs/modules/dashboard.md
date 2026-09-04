@@ -286,6 +286,8 @@ Si hay superposición, puede mostrarse una advertencia visual, pero no impedir l
 
 **Actualización**: implementado. Los turnos superpuestos se distribuyen en columnas (`frontend/src/utils/turnoLayout.ts`, ver detalle en `docs/modules/appointments.md`) en vez de dibujarse unos encima de otros. El indicador circular de estado de cada bloque (`.turno-card-status-dot`) tiene más padding respecto del borde (`top`/`right: 10px`, antes `8px`) y una variante más compacta para turnos angostos (`.turno-card--narrow`) o cortos (`.short-turno`), para que nunca quede cortado ni pise el texto.
 
+**Actualización (implementado) — Turnos recurrentes**: un bloque de turno perteneciente a una serie (`Turno.serieId`) suma un ícono chico de recurrencia junto al indicador de estado, en la esquina superior derecha del bloque — nunca reemplaza el nombre del paciente ni el horario (`HH:MM - HH:MM`), que siempre se muestran igual sea el turno recurrente o no (ver "Turnos recurrentes (series)" en `docs/modules/appointments.md` para el detalle completo, incluido un bug real donde el ícono desplazaba el horario fuera del bloque, ya corregido). "Nuevo turno" y el click en un horario vacío abren una card flotante compacta (no el formulario completo) con soporte de recurrencia semanal y mensual.
+
 ---
 
 ## Calendario mensual lateral

@@ -126,13 +126,35 @@ export interface Turno {
   finAtencion?: string | null
   canceladoAt?: string | null
   grupoId?: number | null
+  serieId?: number | null
+  ordenEnSerie?: number | null
   paciente: Paciente
   profesional: Profesional
   especialidad: Especialidad
   obraSocial?: ObraSocial | null
   grupo?: GrupoEvolucion | null
+  serie?: SerieTurno | null
   createdAt?: string
   updatedAt?: string
+}
+
+// SEMANAL usa frecuenciaSemanas (cada cuántas semanas); MENSUAL_ORDINAL
+// repite todos los meses en el mismo N-ésimo día de semana que la fecha
+// inicial (ej. "el tercer viernes de cada mes", ver utils/recurrence.ts).
+export type PatronRecurrenciaSerie = 'SEMANAL' | 'MENSUAL_ORDINAL'
+
+// Pack finito de turnos generados de una sola vez (turnos recurrentes) — ver
+// SerieTurno en backend/prisma/schema.prisma. cantidadSesiones es un
+// snapshot fijo (no se recalcula si se elimina una ocurrencia individual),
+// nunca el numeroSesion clínico de cada Turno.
+export interface SerieTurno {
+  id: number
+  consultorioId: number
+  patron: PatronRecurrenciaSerie
+  // Solo tiene valor para patron 'SEMANAL' — null para 'MENSUAL_ORDINAL'.
+  frecuenciaSemanas: number | null
+  cantidadSesiones: number
+  createdAt: string
 }
 
 export interface GrupoEvolucion {
@@ -462,6 +484,52 @@ export interface CreateTurnoInput {
 }
 
 export type UpdateTurnoInput = Partial<CreateTurnoInput>
+
+// Alta de una serie recurrente: `fechasInicio` ya viene calculada por el
+// cliente (misma responsabilidad de conversión fecha/hora → UTC según la
+// zona horaria del consultorio que usa createTurno/patchTurno vía toInicio,
+// nunca el backend). Un pack siempre tiene entre 2 y 60 ocurrencias.
+export interface CreateSerieTurnoInput {
+  pacienteId: number
+  profesionalId: number
+  especialidadId: number
+  obraSocialId?: number | null
+  duracionMinutos: number
+  // Default 'SEMANAL' si se omite (compatibilidad con el contrato anterior).
+  patron?: PatronRecurrenciaSerie
+  // Requerido solo si patron es 'SEMANAL' (u omitido).
+  frecuenciaSemanas?: number
+  fechasInicio: string[]
+  numeroSesionInicial?: number | null
+  esSesionConsulta?: boolean
+  monto?: number | null
+  grupoId?: number | null
+  notas?: string
+  confirmarSuperposicion?: boolean
+}
+
+export interface SerieOverlapWarning {
+  index?: number
+  turnoId?: number
+  inicio: string
+}
+
+// "Editar/eliminar este turno y los siguientes": `ocurrencias` mapea cada
+// turno afectado (el ancla + todos los posteriores en su serie) a su nuevo
+// `inicio` — ya calculado en el cliente igual que en la creación. El resto
+// de los campos se aplican por igual a todas las ocurrencias seleccionadas.
+export interface UpdateSerieTurnoInput {
+  ocurrencias: { turnoId: number; inicio: string }[]
+  profesionalId?: number
+  especialidadId?: number
+  obraSocialId?: number | null
+  duracionMinutos?: number
+  notas?: string
+  monto?: number | null
+  grupoId?: number | null
+  esSesionConsulta?: boolean
+  confirmarSuperposicion?: boolean
+}
 
 export interface UsuarioInput {
   nombre: string

@@ -76,6 +76,73 @@ La pantalla de Turnos actualmente muestra una tabla con turnos visibles, filtros
 
 La pantalla de Inicio funciona como una vista rápida del día, mostrando el calendario diario y el detalle del turno seleccionado.
 
+**Actualización (implementado) — Turnos recurrentes y alta rápida compacta desde Home**: ver sección completa "Turnos recurrentes (series)" más abajo. Resumen: un pack finito de turnos (`SerieTurno`, nunca recurrencia infinita) se crea de una sola vez con `Cantidad de sesiones` fija, con patrón semanal (cada N semanas) o mensual por ordinal de día de semana ("todos los meses, el tercer viernes"); el alta rápida desde Home (`Nuevo turno` / click en un horario vacío) ahora abre una card flotante compacta de verdad (ícono + control en cada fila, sin labels tradicionales, sin scroll interno) en vez del formulario completo de siempre — "Más opciones" sigue llevando al mismo formulario completo (Monto, Estado incluidos), compartiendo el mismo estado/validaciones/guardado. Editar o eliminar una ocurrencia de una serie pregunta "Este turno" / "Este turno y los siguientes" antes de aplicar el cambio.
+
+**Actualización (implementado) — corrección de UX del quick-create + recurrencia mensual**: ronda de corrección sobre la implementación anterior. Ver el resto de esta sección para el detalle completo — resumen ejecutivo: la card compacta pasó de ser un formulario tradicional con tamaños reducidos a una card real con densidad Google-Calendar (íconos en vez de labels, sin `Cancelar` en el footer); se agregó recurrencia mensual por ordinal de día de semana; se corrigió un bug real donde un turno recurrente en el calendario mostraba el ícono de recurrencia pero no el horario; y se corrigió una condición de carrera real donde elegir Repetición justo después de un alta rápida de paciente/profesional/especialidad podía revertirse silenciosamente.
+
+---
+
+## Turnos recurrentes (series)
+
+### Concepto
+
+Un turno recurrente representa varias citas reales generadas a partir de una misma configuración (ej. "10 sesiones, todos los lunes"). Cada ocurrencia sigue siendo un `Turno` real e independiente — nunca una recurrencia "virtual" expandida solo en frontend. La recurrencia en Kineq es siempre **finita**: crear una serie exige indicar `Cantidad de sesiones` (2 a 60), nunca "para siempre".
+
+### Modelo
+
+```
+SerieTurno (id, consultorioId, patron, frecuenciaSemanas, cantidadSesiones, createdAt)
+        1
+        |
+        N
+      Turno (serieId nullable, ordenEnSerie nullable)
+```
+
+`ordenEnSerie` es la posición estructural (1-based) del turno dentro de su serie actual — **nunca se confunde con `numeroSesion`** (el número clínico, editable a mano, que puede divergir). Un turno perteneciente a una serie nunca se identifica por heurística (mismo paciente+profesional+hora): la relación siempre pasa por `Turno.serieId`.
+
+`patron` (`PatronRecurrenciaSerie`, migración `20260904150000_serie_turno_patron_mensual`) distingue dos formas de generar las fechas, ambas calculadas por el frontend (el backend nunca hace aritmética de fechas/zona horaria):
+
+- `SEMANAL`: usa `frecuenciaSemanas` (cada cuántas semanas — 1 o 2 hoy), siempre el día de semana de la fecha inicial.
+- `MENSUAL_ORDINAL`: repite todos los meses en el mismo N-ésimo día de semana que la fecha inicial (ej. el 04/09/2026 es el primer viernes de septiembre → "todos los meses, el primer viernes"). `frecuenciaSemanas` queda `null` para este patrón — no aplica.
+
+### Recurrencia mensual por ordinal de día de semana
+
+`frontend/src/utils/recurrence.ts`: `ordinalOfWeekdayInMonth(fecha)` calcula la posición 1-5 que ocupa una fecha entre las ocurrencias de su mismo día de semana dentro de su mes (`Math.floor((día-1)/7)+1` — aritmética de calendario pura, nunca sumando ~30 días). `generateMonthlyOrdinalDates(fechaInicial, cantidad)` genera esa cantidad de fechas, mes calendario real por mes calendario real. Si un mes no tiene esa N-ésima ocurrencia (solo relevante para un "quinto X" — todo mes tiene al menos 4 ocurrencias de cualquier día de semana, nunca menos), ese mes se **salta** y se sigue buscando en el siguiente — nunca se reinterpreta como "último X" — así `cantidad` sigue siendo siempre el total exacto de turnos generados. Ejemplo real (ver `recurrence.test.ts`): desde el 30/01/2026 (5to viernes de enero), la siguiente ocurrencia real es el 29/05/2026 (ni febrero, marzo ni abril tienen un 5to viernes).
+
+### Creación
+
+`POST /api/turnos/serie` (mismos roles/aislamiento que `POST /api/turnos`; un `PROFESIONAL` solo crea para sí mismo). El frontend calcula cada fecha de ocurrencia (`buildSerieFechasInicio` para semanal, `buildMonthlySerieFechasInicio` para mensual) usando la misma utilidad de zona horaria del consultorio que ya usa el turno individual (`zonedTimeToUtcIso`) — el backend solo valida y persiste `fechasInicio` + `patron`. `numeroSesionInicial` es editable por el usuario (default: el mismo cálculo automático que ya existía para un turno individual con Diagnóstico); cada ocurrencia siguiente incrementa en 1. La creación es atómica (`prisma.$transaction`): la serie + sus N turnos se crean todos o ninguno. Igual que un turno individual, una superposición nunca bloquea — si una o más ocurrencias se superponen con turnos existentes, el backend responde `409` con la lista de conflictos (`overlaps`) y el frontend ofrece confirmar (`confirmarSuperposicion: true`) y reintentar en vez de bloquear.
+
+### Edición y eliminación: "Este turno" / "Este turno y los siguientes"
+
+- **Este turno**: usa los endpoints normales de siempre (`PATCH`/`DELETE /api/turnos/:id`) — la ocurrencia se edita/elimina sola, sin afectar a las demás. `numeroSesion` nunca se renumera automáticamente por esto (ni por eliminar una ocurrencia intermedia).
+- **Este turno y los siguientes**: `PATCH /api/turnos/:id/serie` / `DELETE /api/turnos/:id/serie`, donde `:id` es el turno-ancla (punto de corte). Nunca tocan turnos anteriores al corte — incluidos los ya `FINALIZADO`/`AUSENTE`/`CANCELADO`. Si quedan turnos antes del corte en la serie original, la operación **parte la serie explícitamente en dos**: los turnos del corte en adelante pasan a una `SerieTurno` nueva (con su propio `cantidadSesiones`), la original ajusta el suyo al total que le queda — así ninguna serie cambia de significado retroactivamente. El PATCH solo permite cambiar hora (de pared, preservando la fecha propia de cada ocurrencia), duración, profesional, especialidad, diagnóstico, monto y "sesión de consulta" — nunca `numeroSesion` (se mantiene lo que cada turno ya tenía) ni el paciente (ver "Qué no se implementó" abajo). `GET /api/turnos/:id/serie` expone el ancla + sus siguientes (con `inicio` real de cada uno) para que el frontend arme el payload sin depender de lo que ya tenga cargado en pantalla (el calendario diario de Home solo carga el día visible).
+
+En el frontend, tanto editar como eliminar un turno de una serie muestran primero un diálogo custom ("Este turno" / "Este turno y los siguientes", nunca `confirm()`/`alert()` nativos) — para editar, aparece recién al guardar ("antes de aplicar los cambios"), no al abrir el formulario.
+
+### Alta rápida compacta (Home)
+
+`TurnoFormFields` (`frontend/src/components/FormFields.tsx`) tiene un modo `compact` (más `allowRecurrence` para el selector de Repetición) en vez de un formulario paralelo — comparte estado, dropdowns, validaciones y guardado con el formulario completo de siempre; lo que cambia es la composición visual, no la lógica. En modo compacto:
+
+- Fecha + Hora inicio + Hora fin en una sola fila con ícono de reloj (la duración se deriva de esas dos horas, `duracionMinutos` sigue siendo la única fuente de verdad persistida — nunca se guarda un "fin" separado).
+- Repetición en su propia fila (ícono, sin label visible) con `No se repite` / `Cada semana` / `Cada 2 semanas` / `Todos los meses, el N-ésimo díaDeSemana` (calculado según la fecha elegida — ver "Recurrencia mensual" arriba); `Cantidad de sesiones` aparece al lado, solo si hay recurrencia elegida.
+- Paciente, Profesional y Especialidad: ícono + control (buscador/selector), **sin** el label grande tradicional arriba de cada campo — el nombre del campo sigue siendo accesible vía un `<label class="sr-only">` asociado por `id`/`htmlFor` (visible para lectores de pantalla, nunca solo un placeholder).
+- "Sesión de consulta" y "Nro. de sesión" comparten una misma fila.
+- Diagnóstico, Monto, Estado y Duración (min) **nunca** se muestran en este modo — son datos avanzados, solo están en "Más opciones".
+
+"Más opciones" abre el mismo formulario completo de siempre (`compact` en `false`), sin resetear nada ya cargado — mismo objeto de estado (`newTurnoForm`), nada se vuelve a pedir. El footer de la card compacta tiene únicamente `Más opciones` (acción secundaria "de texto", sin fondo pesado) y `Guardar turno` — **no** tiene `Cancelar`: la `X` del header ya cierra la card. `Cancelar` vuelve a aparecer solo en el formulario completo. "No se repite" (el caso normal) sigue siendo tan rápido como antes — no exige tocar Repetición ni Cantidad de sesiones.
+
+### Indicador visual
+
+Un turno de una serie muestra un ícono chico de recurrencia en la esquina superior derecha de la card del calendario diario (tooltip "Sesión X de Y") y, en "Datos del turno", una línea discreta "Turno recurrente — Sesión X de Y" (`X`/`Y` = `ordenEnSerie`/`cantidadSesiones`, nunca el `numeroSesion` clínico). El ícono está **posicionado absoluto, deliberadamente fuera del flujo de texto** — nunca inline junto al nombre del paciente: un nombre largo lo empujaba a una segunda línea dentro del mismo bloque de texto que el nombre, y esa línea extra desplazaba el horario (`HH:MM - HH:MM`) fuera del área visible de la card (bug real de la ronda anterior, corregido esta ronda — ver HANDOVER.md). El nombre del paciente y el horario siempre se renderean en su propia línea, con o sin recurrencia; el ícono es metadata secundaria, nunca reemplaza esa información.
+
+### Qué no se implementó (limitaciones intencionales)
+
+- **Múltiples días por semana** (ej. "lunes y jueves"): el selector de Repetición no lo ofrece — el modelo (`SerieTurno.patron`/`frecuenciaSemanas`) puede evolucionar para soportarlo más adelante, pero agregarlo ahora era desproporcionado para esta ronda.
+- **Reasignar el paciente** en un "editar este turno y los siguientes": el paciente de toda una serie/sub-serie se asume constante en esta implementación — no está en el whitelist de campos editables de `PATCH /api/turnos/:id/serie`.
+- **Cambiar el patrón de recurrencia o la cantidad restante** desde una edición "este turno y los siguientes": esa operación cambia solo hora/duración/profesional/especialidad/diagnóstico/monto/sesión de consulta de las ocurrencias ya generadas, nunca regenera fechas nuevas ni agrega/quita ocurrencias, ni cambia semanal↔mensual de una serie ya creada.
+- Migrar toda la edición de turnos al patrón de card compacta: se mantuvo el editor completo existente (`TurnoFormFields` sin `compact`) para editar, con el diálogo de alcance de serie delante — migrar edición completa a la card compacta hubiera excedido el alcance de esta ronda (permitido explícitamente, ver criterio de la ronda).
+
 ---
 
 ## Entidades relacionadas
@@ -83,6 +150,7 @@ La pantalla de Inicio funciona como una vista rápida del día, mostrando el cal
 El módulo de Turnos se relaciona principalmente con:
 
 - `Turno`
+- `SerieTurno`
 - `Paciente`
 - `Profesional`
 - `Especialidad`
@@ -428,7 +496,7 @@ La interfaz debe priorizar:
 
 Kineq debe sentirse como una herramienta moderna, simple e impulsada por tecnología actual.
 
-La UI de crear y modificar turno existe, pero debe mejorarse visualmente porque actualmente se percibe básica.
+La alta rápida desde Home ahora usa una card compacta (ver "Turnos recurrentes (series)" más arriba). La UI de edición completa (y la de creación vía "Más opciones") sigue siendo el formulario largo de siempre — no se rediseñó visualmente en esta ronda.
 
 ---
 
@@ -436,8 +504,8 @@ La UI de crear y modificar turno existe, pero debe mejorarse visualmente porque 
 
 Pendientes importantes:
 
-- Mejorar UI de creación de turno.
-- Mejorar UI de edición de turno.
+- Mejorar UI de edición de turno (la creación rápida desde Home ya tiene card compacta, ver arriba).
+- Repetición con múltiples días por semana (ej. lunes y jueves) — ver "Qué no se implementó" en Turnos recurrentes.
 - Mostrar timer visible para pacientes en espera.
 - Desarrollar flujo de atención en curso.
 - Crear vista de sesión activa.

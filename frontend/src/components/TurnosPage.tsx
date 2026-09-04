@@ -35,6 +35,12 @@ export type TurnosPageItem = {
   startAttention?: string | null
   color: string
   updatedAt?: string
+  // Turno recurrente (ver SerieTurno) — serieCantidadSesiones es el total de
+  // la serie/sub-serie actual (no el numeroSesion clínico, que es
+  // independiente). Ambos ausentes si el turno no pertenece a ninguna serie.
+  serieId?: number | null
+  ordenEnSerie?: number | null
+  serieCantidadSesiones?: number | null
 }
 
 type QuickFilter = 'waiting' | 'remaining' | 'attending' | null
@@ -119,6 +125,9 @@ function mapApiTurno(
     startAttention: turno.inicioAtencion ?? null,
     color: turno.especialidad.color || 'var(--color-primary)',
     updatedAt: turno.updatedAt,
+    serieId: turno.serieId ?? null,
+    ordenEnSerie: turno.ordenEnSerie ?? null,
+    serieCantidadSesiones: turno.serie?.cantidadSesiones ?? null,
   }
 }
 

@@ -1,7 +1,59 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type SVGProps } from 'react'
 import DateInput from './DateInput'
 import DiagnosticoSelect from './DiagnosticoSelect'
 import type { GrupoEvolucion } from '../types/domain'
+import { weekdayLabel, monthlyRecurrenceLabel, type RecurrenceFrequency } from '../utils/recurrence'
+
+// Íconos chicos para las filas compactas del quick-create (alta rápida desde
+// Home) — mismo estilo trazo-simple que el resto de Kineq (viewBox 24x24,
+// stroke=currentColor, sin relleno). Reemplazan el label grande de cada
+// campo ("Paciente", "Profesional", etc.) en modo `compact`.
+function PersonFieldIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M4.5 20c1.4-4 4.2-6 7.5-6s6.1 2 7.5 6" />
+    </svg>
+  )
+}
+
+function ProfessionalFieldIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <path d="M9 3.5h6v3a3 3 0 0 1-6 0z" />
+      <path d="M6 9.5v3a6 6 0 0 0 12 0v-3" />
+      <path d="M12 15.5v3M8 20.5h8" />
+    </svg>
+  )
+}
+
+function HashFieldIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <path d="M9 4 7 20M17 4l-2 16M4.5 9h15M3.5 15h15" />
+    </svg>
+  )
+}
+
+function ClockFieldIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </svg>
+  )
+}
+
+function RepeatFieldIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <path d="M4 12a8 8 0 0 1 14-5.3L21 9" />
+      <path d="M21 5v4h-4" />
+      <path d="M20 12a8 8 0 0 1-14 5.3L3 15" />
+      <path d="M3 19v-4h4" />
+    </svg>
+  )
+}
 
 export type TurnoStatus =
   | 'Asignado'
@@ -24,6 +76,11 @@ export type TurnoFormValue = {
   grupoId: number | null
   status: TurnoStatus
   duration: number
+  // Solo tiene efecto en la creación (alta rápida compacta) — ver
+  // `allowRecurrence` más abajo. 'none' = turno único, 1/2 = cada cuántas
+  // semanas se repite (siempre el día de la semana de `date`).
+  recurrenceFrequency: RecurrenceFrequency
+  recurrenceCount: number
 }
 
 export type SpecialtyOption = {
@@ -93,6 +150,32 @@ type TurnoFormFieldsProps = {
    */
   socialWorks?: Item[]
   onCreateSocialWork?: (name: string) => Promise<Item> | Item
+
+  /*
+   * Alta rápida compacta (Home → calendario): fusiona Fecha/Hora inicio/Hora
+   * fin en una fila, deriva la duración de esas dos horas (nunca se muestra
+   * el campo "Duración (min)"), y oculta Monto/Estado (disponibles solo en
+   * "Más opciones", ver App.tsx). El resto de los campos (Paciente,
+   * Profesional, Especialidad, Diagnóstico, Sesión) se comparten sin cambios
+   * con el formulario completo — mismo componente, mismo estado.
+   */
+  compact?: boolean
+  // Selector de Repetición + Cantidad de sesiones: solo tiene sentido en la
+  // creación de un turno nuevo (nunca al editar uno ya existente).
+  allowRecurrence?: boolean
+}
+
+function addMinutesToTimeOfDay(time: string, minutesToAdd: number): string {
+  const [h, m] = time.split(':').map(Number)
+  const totalMinutes = (h * 60 + m + minutesToAdd + 1440) % 1440
+  return `${pad(Math.floor(totalMinutes / 60))}:${pad(totalMinutes % 60)}`
+}
+
+function minutesBetweenTimesOfDay(start: string, end: string): number {
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  const diff = eh * 60 + em - (sh * 60 + sm)
+  return diff > 0 ? diff : diff + 1440
 }
 
 const minuteOptions = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55']
@@ -124,6 +207,8 @@ export function TurnoFormFields({
   onCreateGrupo,
   onFetchProximaSesion,
   hideProfessionalField = false,
+  compact = false,
+  allowRecurrence = false,
 }: TurnoFormFieldsProps) {
   const [activeDropdown, setActiveDropdown] = useState<DropdownName | null>(null)
   const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition>(null)
@@ -153,6 +238,16 @@ export function TurnoFormFields({
   const dropdownRef = useRef<HTMLDivElement | null>(null)
 
   const specialtyInputId = useId()
+  const specialtyFieldLabelId = useId()
+  const dateInputId = useId()
+  const startTimeId = useId()
+  const endTimeId = useId()
+  const patientInputId = useId()
+  const professionalInputId = useId()
+  const repeatSelectId = useId()
+  const recurrenceCountId = useId()
+  const sessionConsultaCheckboxId = useId()
+  const sessionNumberId = useId()
 
   const fieldRefs = useMemo<Record<DropdownName, React.RefObject<HTMLDivElement | null>>>(
     () => ({
@@ -220,8 +315,22 @@ export function TurnoFormFields({
     [professionalSearch, professionals],
   )
 
+  // `valueRef` sigue siempre el `value` más reciente, aunque cambie mientras
+  // hay una operación async en vuelo (ej. alta rápida de paciente/
+  // profesional/especialidad, que espera una respuesta de red). Sin esto,
+  // `createPatient`/`createProfessional`/`createSpecialty` — todas async —
+  // capturarían por closure el `value` de cuando arrancaron, y al resolver
+  // pisarían silenciosamente cualquier otro campo tocado mientras tanto (ej.
+  // Repetición) con esa foto vieja. Bug real: crear paciente → profesional →
+  // especialidad y elegir Repetición entre medio podía terminar creando un
+  // turno único en vez de la serie elegida, sin ningún error visible.
+  const valueRef = useRef(value)
+  useLayoutEffect(() => {
+    valueRef.current = value
+  })
+
   const updateValue = (patch: Partial<TurnoFormValue>) => {
-    onChange({ ...value, ...patch })
+    onChange({ ...valueRef.current, ...patch })
   }
 
   const openDropdown = (dropdown: DropdownName) => {
@@ -326,7 +435,11 @@ export function TurnoFormFields({
   // abajo); al destildarla, si ya hay un diagnóstico elegido, se vuelve a
   // sugerir el próximo número — mismo criterio que elegir el diagnóstico.
   const toggleSesionConsulta = (checked: boolean) => {
-    updateValue({ esSesionConsulta: checked })
+    // Una sesión de consulta es una visita administrativa puntual — nunca
+    // parte de un pack recurrente. Se oculta el selector de Repetición (más
+    // abajo) y se resetea a "No se repite" para que no quede un valor
+    // recurrente invisible pero todavía vigente al guardar.
+    updateValue({ esSesionConsulta: checked, ...(checked ? { recurrenceFrequency: 'none' as const } : {}) })
     if (!checked && value.grupoId) fetchProximaSesion(value.grupoId)
   }
 
@@ -335,47 +448,119 @@ export function TurnoFormFields({
   const selectedSpecialty = specialties.find((specialty) => specialty.id === value.specialtyId)
   const [selectedHour = '09', selectedMinute = '00'] = value.time.split(':')
 
+  const endTime = addMinutesToTimeOfDay(value.time, value.duration)
+
   return (
-    <div className={`modal-body appointment-form ${disabled ? 'appointment-form--readonly' : ''}`}>
-      <label>
-        Fecha
-        <DateInput
-          className="narrow-input"
-          value={value.date}
-          onChange={(date) => updateValue({ date })}
-          disabled={disabled}
-        />
-      </label>
-
-      <label>
-        Hora
-        <div className="time-selects">
-          <select
-            value={selectedHour}
-            onChange={(event) => updateValue({ time: `${pad(Number(event.target.value))}:${selectedMinute}` })}
+    <div className={`modal-body appointment-form ${disabled ? 'appointment-form--readonly' : ''} ${compact ? 'appointment-form--compact' : ''}`}>
+      {compact ? (
+        <div className="quick-datetime-row">
+          <ClockFieldIcon className="quick-field-icon" aria-hidden="true" />
+          <label className="sr-only" htmlFor={dateInputId}>Fecha</label>
+          <DateInput id={dateInputId} value={value.date} onChange={(date) => updateValue({ date })} disabled={disabled} />
+          <label className="sr-only" htmlFor={startTimeId}>Hora de inicio</label>
+          <input
+            id={startTimeId}
+            type="time"
+            value={value.time}
+            onChange={(event) => updateValue({ time: event.target.value })}
             disabled={disabled}
-          >
-            {Array.from({ length: 24 }, (_, index) => pad(index)).map((hour) => (
-              <option key={hour} value={hour}>{hour}</option>
-            ))}
-          </select>
-          <span className="colon">:</span>
-          <select
-            value={selectedMinute}
-            onChange={(event) => updateValue({ time: `${selectedHour}:${event.target.value}` })}
+          />
+          <span className="quick-datetime-sep" aria-hidden="true">–</span>
+          <label className="sr-only" htmlFor={endTimeId}>Hora de fin</label>
+          <input
+            id={endTimeId}
+            type="time"
+            value={endTime}
+            onChange={(event) => {
+              const duration = minutesBetweenTimesOfDay(value.time, event.target.value)
+              if (duration >= 15) updateValue({ duration })
+            }}
             disabled={disabled}
-          >
-            {minuteOptions.map((minute) => (
-              <option key={minute} value={minute}>{minute}</option>
-            ))}
-          </select>
+          />
         </div>
-      </label>
+      ) : (
+        <>
+          <label>
+            Fecha
+            <DateInput
+              className="narrow-input"
+              value={value.date}
+              onChange={(date) => updateValue({ date })}
+              disabled={disabled}
+            />
+          </label>
 
-      <div className="dropdown-field">
-        <label>Paciente</label>
+          <label>
+            Hora
+            <div className="time-selects">
+              <select
+                value={selectedHour}
+                onChange={(event) => updateValue({ time: `${pad(Number(event.target.value))}:${selectedMinute}` })}
+                disabled={disabled}
+              >
+                {Array.from({ length: 24 }, (_, index) => pad(index)).map((hour) => (
+                  <option key={hour} value={hour}>{hour}</option>
+                ))}
+              </select>
+              <span className="colon">:</span>
+              <select
+                value={selectedMinute}
+                onChange={(event) => updateValue({ time: `${selectedHour}:${event.target.value}` })}
+                disabled={disabled}
+              >
+                {minuteOptions.map((minute) => (
+                  <option key={minute} value={minute}>{minute}</option>
+                ))}
+              </select>
+            </div>
+          </label>
+        </>
+      )}
+
+      {compact && allowRecurrence && !value.esSesionConsulta ? (
+        <div className="quick-recurrence-row">
+          <RepeatFieldIcon className="quick-field-icon" aria-hidden="true" />
+          <label className="sr-only" htmlFor={repeatSelectId}>Repetición</label>
+          <select
+            id={repeatSelectId}
+            className="quick-repeat-select"
+            value={value.recurrenceFrequency}
+            onChange={(event) => {
+              const raw = event.target.value
+              const next: RecurrenceFrequency = raw === 'none' ? 'none' : raw === 'monthly' ? 'monthly' : (Number(raw) as 1 | 2)
+              updateValue({ recurrenceFrequency: next })
+            }}
+            disabled={disabled}
+          >
+            <option value="none">No se repite</option>
+            <option value={1}>{`Cada semana, el ${weekdayLabel(value.date)}`}</option>
+            <option value={2}>{`Cada 2 semanas, el ${weekdayLabel(value.date)}`}</option>
+            <option value="monthly">{monthlyRecurrenceLabel(value.date)}</option>
+          </select>
+          {value.recurrenceFrequency !== 'none' ? (
+            <span className="quick-repeat-count">
+              <label className="sr-only" htmlFor={recurrenceCountId}>Cantidad de sesiones</label>
+              <input
+                id={recurrenceCountId}
+                type="number"
+                title="Cantidad de sesiones"
+                min={2}
+                max={60}
+                value={value.recurrenceCount}
+                onChange={(event) => updateValue({ recurrenceCount: Number(event.target.value) })}
+                disabled={disabled}
+              />
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''}`}>
+        {compact ? <PersonFieldIcon className="quick-field-icon" aria-hidden="true" /> : null}
+        <label className={compact ? 'sr-only' : undefined} htmlFor={patientInputId}>Paciente</label>
         <div className="dropdown-input-row" ref={patientFieldRef}>
           <input
+            id={patientInputId}
             type="text"
             value={activeDropdown === 'patient' ? patientSearch : (selectedPatient?.displayName ?? '')}
             placeholder="Buscar paciente..."
@@ -449,10 +634,12 @@ export function TurnoFormFields({
       ) : null}
 
       {hideProfessionalField ? null : (
-        <div className="dropdown-field">
-          <label>Profesional</label>
+        <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''}`}>
+          {compact ? <ProfessionalFieldIcon className="quick-field-icon" aria-hidden="true" /> : null}
+          <label className={compact ? 'sr-only' : undefined} htmlFor={professionalInputId}>Profesional</label>
           <div className="dropdown-input-row" ref={professionalFieldRef}>
             <input
+              id={professionalInputId}
               type="text"
               value={activeDropdown === 'professional' ? professionalSearch : (selectedProfessional?.displayName ?? '')}
               placeholder="Buscar profesional..."
@@ -531,8 +718,8 @@ export function TurnoFormFields({
         </div>
       ) : null}
 
-      <div className="dropdown-field">
-        <label>Especialidad</label>
+      <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''}`}>
+        <label className={compact ? 'sr-only' : undefined} htmlFor={specialtyFieldLabelId}>Especialidad</label>
         <div
           className="dropdown-input-row"
           ref={specialtyFieldRef}
@@ -547,10 +734,16 @@ export function TurnoFormFields({
             }
           }}
         >
+          {/* El punto de color siempre se muestra cuando hay una especialidad
+              elegida (compact y full); sin selección, en compact ocupa el
+              mismo lugar el ícono genérico de la fila para no perder la
+              alineación con Paciente/Profesional. */}
           {selectedSpecialty ? (
             <span className="turnos-specialty-dot" style={{ backgroundColor: selectedSpecialty.color }} aria-hidden="true" />
+          ) : compact ? (
+            <span className="turnos-specialty-dot turnos-specialty-dot--empty" aria-hidden="true" />
           ) : null}
-          <input readOnly value={selectedSpecialty?.name ?? ''} disabled={disabled} />
+          <input id={specialtyFieldLabelId} readOnly placeholder="Buscar especialidad..." value={selectedSpecialty?.name ?? ''} disabled={disabled} />
           {!disabled && value.specialtyId !== 0 ? (
             <button
               type="button"
@@ -570,7 +763,9 @@ export function TurnoFormFields({
 
 
 
-      {grupos && onCreateGrupo ? (
+      {/* Diagnóstico es un campo avanzado: nunca se muestra en el quick-create
+          compacto, solo en el formulario completo ("Más opciones"). */}
+      {!compact && grupos && onCreateGrupo ? (
         <DiagnosticoSelect
           grupos={grupos}
           value={value.grupoId ?? ''}
@@ -580,71 +775,96 @@ export function TurnoFormFields({
         />
       ) : null}
 
-      <label className="checkbox-field">
-        <input
-          type="checkbox"
-          checked={value.esSesionConsulta}
-          onChange={(event) => toggleSesionConsulta(event.target.checked)}
-          disabled={disabled}
-        />
-        Sesión de consulta
-      </label>
-
-      {!value.esSesionConsulta ? (
-        <label>
-          {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
+      <div className={compact ? 'quick-session-row' : undefined}>
+        <label className="checkbox-field" htmlFor={sessionConsultaCheckboxId}>
           <input
-            type="number"
-            className="narrow-input"
-            min={1}
-            value={value.sessionNumber}
-            onChange={(event) => updateValue({ sessionNumber: Number(event.target.value) })}
-            disabled={disabled || proximaSesionLoading}
-          />
-        </label>
-      ) : null}
-
-      <label>
-        Monto
-        <div className="turno-monto-field">
-          <span className="turno-monto-symbol" aria-hidden="true">$</span>
-          <input
-            type="number"
-            className="narrow-input"
-            min={0}
-            step={0.01}
-            placeholder="Opcional"
-            value={value.monto}
-            onChange={(event) => updateValue({ monto: event.target.value })}
+            id={sessionConsultaCheckboxId}
+            type="checkbox"
+            checked={value.esSesionConsulta}
+            onChange={(event) => toggleSesionConsulta(event.target.checked)}
             disabled={disabled}
           />
-        </div>
-      </label>
+          Sesión de consulta
+        </label>
 
-      <label>
-        Estado
-        <select
-          value={value.status}
-          onChange={(event) => updateValue({ status: event.target.value as TurnoStatus })}
-          disabled={disabled}
-        >
-          {statusOptions.map((status) => (
-            <option key={status} value={status}>{status}</option>
-          ))}
-        </select>
-      </label>
+        {!value.esSesionConsulta ? (
+          compact ? (
+            <span className="quick-session-number">
+              <HashFieldIcon className="quick-field-icon" aria-hidden="true" />
+              <label className="sr-only" htmlFor={sessionNumberId}>
+                {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
+              </label>
+              <input
+                id={sessionNumberId}
+                type="number"
+                title={selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
+                min={1}
+                value={value.sessionNumber}
+                onChange={(event) => updateValue({ sessionNumber: Number(event.target.value) })}
+                disabled={disabled || proximaSesionLoading}
+              />
+            </span>
+          ) : (
+            <label>
+              {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
+              <input
+                type="number"
+                className="narrow-input"
+                min={1}
+                value={value.sessionNumber}
+                onChange={(event) => updateValue({ sessionNumber: Number(event.target.value) })}
+                disabled={disabled || proximaSesionLoading}
+              />
+            </label>
+          )
+        ) : null}
+      </div>
 
-      <label className="appointment-form-full-row">
-        Duración (min)
-        <input
-          type="number"
-          min={15}
-          step={5}
-          value={value.duration}
-          onChange={(event) => updateValue({ duration: Number(event.target.value) })}
-          disabled={disabled}
-        />
-      </label>
+      {compact ? null : (
+        <>
+          <label>
+            Monto
+            <div className="turno-monto-field">
+              <span className="turno-monto-symbol" aria-hidden="true">$</span>
+              <input
+                type="number"
+                className="narrow-input"
+                min={0}
+                step={0.01}
+                placeholder="Opcional"
+                value={value.monto}
+                onChange={(event) => updateValue({ monto: event.target.value })}
+                disabled={disabled}
+              />
+            </div>
+          </label>
+
+          <label>
+            Estado
+            <select
+              value={value.status}
+              onChange={(event) => updateValue({ status: event.target.value as TurnoStatus })}
+              disabled={disabled}
+            >
+              {statusOptions.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="appointment-form-full-row">
+            Duración (min)
+            <input
+              type="number"
+              min={15}
+              step={5}
+              value={value.duration}
+              onChange={(event) => updateValue({ duration: Number(event.target.value) })}
+              disabled={disabled}
+            />
+          </label>
+        </>
+      )}
 
       {!disabled && activeDropdown && dropdownPosition ? (
         <div

@@ -68,6 +68,11 @@ export type ConsultorioObraSocialOculta = Prisma.ConsultorioObraSocialOcultaMode
  */
 export type Turno = Prisma.TurnoModel
 /**
+ * Model SerieTurno
+ * 
+ */
+export type SerieTurno = Prisma.SerieTurnoModel
+/**
  * Model Evolucion
  * 
  */

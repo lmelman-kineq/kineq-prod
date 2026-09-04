@@ -888,7 +888,7 @@ app.get('/api/turnos', async (req, res) => {
   if (obraSocialId) where.obraSocialId = Number(obraSocialId)
   if (estado) where.estado = String(estado)
 
-  const turnos = await prisma.turno.findMany({ where, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true } })
+  const turnos = await prisma.turno.findMany({ where, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true } })
   res.json(turnos)
 })
 
@@ -986,7 +986,7 @@ app.post('/api/turnos', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
 
     const turno = await prisma.turno.create({ data: { consultorioId, pacienteId, profesionalId, especialidadId, obraSocialId: obraSocialId || null, grupoId: resolvedGrupoId, inicio: inicioDate, duracionMinutos: Number(duracionMinutos), numeroSesion: resolvedNumeroSesion, esSesionConsulta: resolvedEsSesionConsulta, monto: monto ?? null, notas: notas || null } })
 
-    const result = await prisma.turno.findUnique({ where: { id: turno.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true } })
+    const result = await prisma.turno.findUnique({ where: { id: turno.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true } })
     res.status(201).json(result)
   } catch (err) {
     res.status(500).json({ error: 'failed to create turno' })
@@ -1077,7 +1077,7 @@ app.patch(
       }
 
       const updated = await prisma.turno.update({ where: { id: turnoId }, data: payload })
-      const result = await prisma.turno.findUnique({ where: { id: updated.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true } })
+      const result = await prisma.turno.findUnique({ where: { id: updated.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true } })
       res.json(result)
     } catch (err) {
       res.status(500).json({ error: 'failed to update turno' })
@@ -1119,6 +1119,374 @@ app.delete(
     }
   },
 )
+
+// SERIES DE TURNOS (recurrencia)
+// Un pack finito de turnos generados de una sola vez (ver SerieTurno en
+// schema.prisma). Mismas reglas de permisos/aislamiento que el resto de
+// Turnos — estos tres endpoints solo agregan la semántica de "grupo de
+// ocurrencias", nunca la saltean.
+
+// Cantidad de ocurrencias permitida para una serie: mínimo 2 (1 ocurrencia
+// no es una serie, usar POST /api/turnos), máximo 60 para evitar abuso
+// (más de un año de sesiones semanales).
+const SERIE_MIN_OCURRENCIAS = 2
+const SERIE_MAX_OCURRENCIAS = 60
+
+// Crea una serie + todos sus Turnos de forma atómica. Las fechas de cada
+// ocurrencia ya vienen calculadas por el cliente (mismo criterio que el
+// resto de la app: la conversión de fecha/hora a UTC según la zona horaria
+// del consultorio es una responsabilidad del frontend, `zonedTimeToUtcIso`
+// en frontend/src/utils/timezone.ts — el backend nunca hace aritmética de
+// fechas/zona horaria). paciente/profesional/especialidad/obraSocial/grupo
+// son compartidos por todas las ocurrencias y se validan una sola vez.
+app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const {
+    pacienteId,
+    especialidadId,
+    obraSocialId,
+    duracionMinutos = 60,
+    notas,
+    grupoId,
+    esSesionConsulta,
+    monto,
+    frecuenciaSemanas,
+    patron = 'SEMANAL',
+    fechasInicio,
+    numeroSesionInicial,
+    confirmarSuperposicion,
+  } = req.body
+
+  let profesionalId = req.body.profesionalId
+  if (req.usuario!.rol === RolUsuario.PROFESIONAL) {
+    const vinculado = await requireProfesionalVinculado(req, res)
+    if (vinculado === null) return
+    const propio = await prisma.profesional.findFirst({ where: { id: vinculado, consultorioId } })
+    if (!propio || !propio.activo) {
+      return res.status(403).json({
+        error: 'Tu usuario no está vinculado a un profesional activo. Un administrador debe completar el vínculo para que puedas crear turnos.',
+      })
+    }
+    profesionalId = vinculado
+  }
+
+  if (!pacienteId || !profesionalId || !especialidadId) return res.status(400).json({ error: 'missing required fields' })
+  if (!Array.isArray(fechasInicio) || fechasInicio.length < SERIE_MIN_OCURRENCIAS || fechasInicio.length > SERIE_MAX_OCURRENCIAS) {
+    return res.status(400).json({ error: `fechasInicio debe tener entre ${SERIE_MIN_OCURRENCIAS} y ${SERIE_MAX_OCURRENCIAS} ocurrencias` })
+  }
+  if (patron !== 'SEMANAL' && patron !== 'MENSUAL_ORDINAL') return res.status(400).json({ error: 'invalid patron' })
+  if (patron === 'SEMANAL' && (!Number.isInteger(frecuenciaSemanas) || frecuenciaSemanas < 1)) {
+    return res.status(400).json({ error: 'invalid frecuenciaSemanas' })
+  }
+  if (!Number.isInteger(duracionMinutos) || duracionMinutos < 15) return res.status(400).json({ error: 'invalid duracionMinutos' })
+  if (numeroSesionInicial !== undefined && numeroSesionInicial !== null && Number(numeroSesionInicial) <= 0) {
+    return res.status(400).json({ error: 'invalid numeroSesionInicial' })
+  }
+  if (monto !== undefined && monto !== null && (typeof monto !== 'number' || monto < 0)) return res.status(400).json({ error: 'invalid monto' })
+
+  const inicios: Date[] = []
+  for (const raw of fechasInicio) {
+    const d = new Date(raw)
+    if (Number.isNaN(d.getTime())) return res.status(400).json({ error: 'invalid fechasInicio' })
+    inicios.push(d)
+  }
+
+  try {
+    const paciente = await prisma.paciente.findFirst({ where: { id: pacienteId, consultorioId, activo: true } })
+    if (!paciente) return res.status(404).json({ error: 'paciente not found in consultorio' })
+
+    const profesional = await prisma.profesional.findFirst({ where: { id: profesionalId, consultorioId } })
+    if (!profesional) return res.status(404).json({ error: 'profesional not found in consultorio' })
+
+    if (await especialidadesInvalidasParaConsultorio([Number(especialidadId)], consultorioId)) {
+      return res.status(404).json({ error: 'especialidad not found in consultorio' })
+    }
+
+    if (obraSocialId) {
+      const obra = await prisma.obraSocial.findFirst({ where: { id: obraSocialId, consultorioId } })
+      if (!obra) return res.status(404).json({ error: 'obra social not found in consultorio' })
+    }
+
+    let resolvedGrupoId: number | null = null
+    if (grupoId) {
+      const check = await resolveGrupoParaAsignar(consultorioId, pacienteId, Number(grupoId))
+      if (!check.ok) return res.status(check.status).json({ error: check.error })
+      resolvedGrupoId = Number(grupoId)
+    }
+
+    const resolvedEsSesionConsulta = Boolean(esSesionConsulta)
+
+    let numeroSesionBase: number | null = null
+    if (!resolvedEsSesionConsulta) {
+      if (numeroSesionInicial) {
+        numeroSesionBase = Number(numeroSesionInicial)
+      } else if (resolvedGrupoId) {
+        numeroSesionBase = await sesionAutomaticaParaGrupo(consultorioId, pacienteId, resolvedGrupoId)
+      }
+    }
+
+    // Advertencia de superposición: se revisa cada ocurrencia contra los
+    // turnos ya existentes (nunca bloquea, ver overlapExists más arriba) —
+    // si hay conflictos y el cliente no confirmó explícitamente, se informa
+    // sin crear nada todavía, para que el usuario decida antes de generar
+    // los N turnos.
+    const overlaps: { index: number; inicio: string }[] = []
+    for (let i = 0; i < inicios.length; i++) {
+      if (await overlapExists(consultorioId, profesionalId, inicios[i], Number(duracionMinutos))) {
+        overlaps.push({ index: i, inicio: inicios[i].toISOString() })
+      }
+    }
+    if (overlaps.length > 0 && !confirmarSuperposicion) {
+      return res.status(409).json({
+        error: 'overlap with existing turnos',
+        overlaps,
+        totalOcurrencias: inicios.length,
+      })
+    }
+
+    const { serie, turnos } = await prisma.$transaction(async (tx) => {
+      const serie = await tx.serieTurno.create({
+        data: {
+          consultorioId,
+          patron,
+          frecuenciaSemanas: patron === 'SEMANAL' ? Number(frecuenciaSemanas) : null,
+          cantidadSesiones: inicios.length,
+        },
+      })
+      const turnos = []
+      for (let i = 0; i < inicios.length; i++) {
+        const numeroSesion = numeroSesionBase !== null ? numeroSesionBase + i : null
+        turnos.push(
+          await tx.turno.create({
+            data: {
+              consultorioId,
+              pacienteId,
+              profesionalId,
+              especialidadId,
+              obraSocialId: obraSocialId || null,
+              grupoId: resolvedGrupoId,
+              serieId: serie.id,
+              ordenEnSerie: i + 1,
+              inicio: inicios[i],
+              duracionMinutos: Number(duracionMinutos),
+              numeroSesion,
+              esSesionConsulta: resolvedEsSesionConsulta,
+              monto: monto ?? null,
+              notas: notas || null,
+            },
+            include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true },
+          }),
+        )
+      }
+      return { serie, turnos }
+    })
+
+    res.status(201).json({ serie, turnos })
+  } catch (err) {
+    res.status(500).json({ error: 'failed to create serie de turnos' })
+  }
+})
+
+// Ubica un turno perteneciente a una serie y sus "siguientes" (mismo
+// serieId, ordenEnSerie >= al del turno ancla, sin eliminar) — la base
+// compartida por PATCH y DELETE .../serie. Nunca toca turnos anteriores al
+// punto de corte.
+async function turnoYSiguientesDeSerie(consultorioId: number, turnoId: number) {
+  const anchor = await prisma.turno.findFirst({ where: { id: turnoId, consultorioId, eliminadoAt: null } })
+  if (!anchor || !anchor.serieId || anchor.ordenEnSerie === null) return null
+  const siguientes = await prisma.turno.findMany({
+    where: { consultorioId, serieId: anchor.serieId, eliminadoAt: null, ordenEnSerie: { gte: anchor.ordenEnSerie } },
+    orderBy: { ordenEnSerie: 'asc' },
+  })
+  const anteriores = await prisma.turno.count({
+    where: { consultorioId, serieId: anchor.serieId, eliminadoAt: null, ordenEnSerie: { lt: anchor.ordenEnSerie } },
+  })
+  return { anchor, siguientes, anteriores }
+}
+
+// Turno-ancla + sus "siguientes" con los datos completos (incluye `inicio`
+// de cada uno) — el frontend lo usa para armar `ocurrencias` antes de
+// mandar PATCH/DELETE .../serie, sin tener que adivinar qué turnos entran
+// en el corte a partir de lo que ya tenga cargado en pantalla (el
+// calendario de Home solo carga turnos del día visible, no toda la serie).
+app.get('/api/turnos/:turnoId/serie', async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const turnoId = Number(req.params.turnoId)
+  if (Number.isNaN(turnoId)) return res.status(400).json({ error: 'invalid id' })
+
+  const found = await turnoYSiguientesDeSerie(consultorioId, turnoId)
+  if (!found) return res.status(404).json({ error: 'turno not found in consultorio or not part of a serie' })
+
+  const siguientesConDatos = await prisma.turno.findMany({
+    where: { id: { in: found.siguientes.map((t) => t.id) } },
+    orderBy: { ordenEnSerie: 'asc' },
+    include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true },
+  })
+  res.json({ turnos: siguientesConDatos })
+})
+
+// Edición de "este turno y los siguientes": parte la serie explícitamente en
+// dos si quedan turnos anteriores al corte (para que la serie original nunca
+// cambie de significado retroactivamente), reasigna serieId/ordenEnSerie a
+// los turnos seleccionados y aplica los cambios compartidos. `numeroSesion`
+// nunca se toca acá — ver Turno.serieId en schema.prisma.
+app.patch('/api/turnos/:turnoId/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const turnoId = Number(req.params.turnoId)
+  if (Number.isNaN(turnoId)) return res.status(400).json({ error: 'invalid id' })
+
+  try {
+    const found = await turnoYSiguientesDeSerie(consultorioId, turnoId)
+    if (!found) return res.status(404).json({ error: 'turno not found in consultorio or not part of a serie' })
+    const { anchor, siguientes, anteriores } = found
+
+    const esProfesional = req.usuario!.rol === RolUsuario.PROFESIONAL
+    if (esProfesional) {
+      const profesionalIdVinculado = await requireProfesionalVinculado(req, res)
+      if (profesionalIdVinculado === null) return
+      if (anchor.profesionalId !== profesionalIdVinculado) {
+        return res.status(403).json({ error: 'No podés modificar turnos de otro profesional' })
+      }
+    }
+
+    const { ocurrencias } = req.body
+    if (!Array.isArray(ocurrencias) || ocurrencias.length !== siguientes.length) {
+      return res.status(400).json({ error: 'ocurrencias debe incluir exactamente los turnos de este punto en adelante' })
+    }
+    const inicioPorTurno = new Map<number, Date>()
+    for (const o of ocurrencias) {
+      const d = new Date(o?.inicio)
+      if (!o || typeof o.turnoId !== 'number' || Number.isNaN(d.getTime())) return res.status(400).json({ error: 'invalid ocurrencias' })
+      inicioPorTurno.set(o.turnoId, d)
+    }
+    if (!siguientes.every((t) => inicioPorTurno.has(t.id))) {
+      return res.status(400).json({ error: 'ocurrencias debe incluir exactamente los turnos de este punto en adelante' })
+    }
+
+    const payload: any = {}
+    const fields = ['especialidadId', 'obraSocialId', 'grupoId', 'duracionMinutos', 'notas', 'monto', 'esSesionConsulta', ...(esProfesional ? [] : ['profesionalId'])]
+    for (const f of fields) if (f in req.body) payload[f] = req.body[f]
+
+    if (payload.duracionMinutos !== undefined) {
+      if (!Number.isInteger(payload.duracionMinutos) || payload.duracionMinutos < 15) return res.status(400).json({ error: 'invalid duracionMinutos' })
+    }
+    if (payload.monto !== undefined && payload.monto !== null && (typeof payload.monto !== 'number' || payload.monto < 0)) {
+      return res.status(400).json({ error: 'invalid monto' })
+    }
+    if (payload.especialidadId !== undefined && await especialidadesInvalidasParaConsultorio([Number(payload.especialidadId)], consultorioId)) {
+      return res.status(404).json({ error: 'especialidad not found in consultorio' })
+    }
+    if (payload.obraSocialId) {
+      const obra = await prisma.obraSocial.findFirst({ where: { id: payload.obraSocialId, consultorioId } })
+      if (!obra) return res.status(404).json({ error: 'obra social not found in consultorio' })
+    }
+    if (payload.profesionalId) {
+      const prof = await prisma.profesional.findFirst({ where: { id: payload.profesionalId, consultorioId } })
+      if (!prof) return res.status(404).json({ error: 'profesional not found in consultorio' })
+    }
+    if ('grupoId' in payload) {
+      if (payload.grupoId) {
+        const check = await resolveGrupoParaAsignar(consultorioId, anchor.pacienteId, Number(payload.grupoId))
+        if (!check.ok) return res.status(check.status).json({ error: check.error })
+        payload.grupoId = Number(payload.grupoId)
+      } else {
+        payload.grupoId = null
+      }
+    }
+    if ('esSesionConsulta' in payload) payload.esSesionConsulta = Boolean(payload.esSesionConsulta)
+
+    const newProfesionalId = payload.profesionalId ?? anchor.profesionalId
+    const newDuracion = payload.duracionMinutos ?? anchor.duracionMinutos
+
+    const overlaps: { turnoId: number; inicio: string }[] = []
+    for (const t of siguientes) {
+      const nuevoInicio = inicioPorTurno.get(t.id)!
+      if (await overlapExists(consultorioId, newProfesionalId, nuevoInicio, Number(newDuracion), t.id)) {
+        overlaps.push({ turnoId: t.id, inicio: nuevoInicio.toISOString() })
+      }
+    }
+    if (overlaps.length > 0 && !req.body.confirmarSuperposicion) {
+      return res.status(409).json({ error: 'overlap with existing turnos', overlaps, totalOcurrencias: siguientes.length })
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      let targetSerieId = anchor.serieId!
+      if (anteriores > 0) {
+        // Quedan turnos antes del corte en la serie original: se parte en
+        // dos — los seleccionados pasan a una serie nueva (mismo patrón/
+        // frecuencia que la original, es solo metadata informativa — las
+        // fechas de cada turno ya están fijas), la original conserva solo
+        // lo anterior al corte.
+        const serieOriginal = await tx.serieTurno.findUniqueOrThrow({ where: { id: anchor.serieId! } })
+        const nuevaSerie = await tx.serieTurno.create({
+          data: {
+            consultorioId,
+            patron: serieOriginal.patron,
+            frecuenciaSemanas: serieOriginal.frecuenciaSemanas,
+            cantidadSesiones: siguientes.length,
+          },
+        })
+        targetSerieId = nuevaSerie.id
+        await tx.serieTurno.update({ where: { id: anchor.serieId! }, data: { cantidadSesiones: anteriores } })
+      } else {
+        // El corte es el primer turno de la serie: no hace falta partir,
+        // se actualiza la serie existente in-place.
+        await tx.serieTurno.update({ where: { id: anchor.serieId! }, data: { cantidadSesiones: siguientes.length } })
+      }
+
+      const actualizados = []
+      for (let i = 0; i < siguientes.length; i++) {
+        const t = siguientes[i]
+        actualizados.push(
+          await tx.turno.update({
+            where: { id: t.id },
+            data: { ...payload, inicio: inicioPorTurno.get(t.id)!, serieId: targetSerieId, ordenEnSerie: i + 1 },
+            include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true },
+          }),
+        )
+      }
+      return actualizados
+    })
+
+    res.json({ turnos: result })
+  } catch (err) {
+    res.status(500).json({ error: 'failed to update serie de turnos' })
+  }
+})
+
+// Eliminación de "este turno y los siguientes": baja lógica (nunca DELETE
+// físico, mismo criterio que DELETE /api/turnos/:turnoId) para todos los
+// turnos desde el ancla en adelante dentro de su serie. Los anteriores al
+// corte nunca se tocan; la serie original ajusta su cantidadSesiones al
+// total que le queda.
+app.delete('/api/turnos/:turnoId/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const turnoId = Number(req.params.turnoId)
+  if (Number.isNaN(turnoId)) return res.status(400).json({ error: 'invalid id' })
+
+  try {
+    const found = await turnoYSiguientesDeSerie(consultorioId, turnoId)
+    if (!found) return res.status(404).json({ error: 'turno not found in consultorio or not part of a serie' })
+    const { anchor, siguientes, anteriores } = found
+
+    if (req.usuario!.rol === RolUsuario.PROFESIONAL) {
+      const profesionalIdVinculado = await requireProfesionalVinculado(req, res)
+      if (profesionalIdVinculado === null) return
+      if (anchor.profesionalId !== profesionalIdVinculado) {
+        return res.status(403).json({ error: 'No podés eliminar turnos de otro profesional' })
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.turno.updateMany({ where: { id: { in: siguientes.map((t) => t.id) } }, data: { eliminadoAt: new Date() } })
+      await tx.serieTurno.update({ where: { id: anchor.serieId! }, data: { cantidadSesiones: anteriores } })
+    })
+
+    res.json({ eliminados: siguientes.length })
+  } catch (err) {
+    res.status(500).json({ error: 'failed to delete serie de turnos' })
+  }
+})
 
 // EVOLUCIONES
 // Contenido clínico: solo administrador y profesional. Recepción y supervisor no acceden.
