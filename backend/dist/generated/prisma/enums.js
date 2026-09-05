@@ -9,7 +9,7 @@
 * 🟢 You can import this file directly.
 */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EstadoRevisionSeccion = exports.SeccionFicha = exports.GravedadAlergia = exports.CategoriaCatalogoClinico = exports.EstadoDatoClinico = exports.EstadoFichaInicial = exports.RolUsuario = exports.PatronRecurrenciaSerie = exports.EstadoTurno = void 0;
+exports.EstadoRevisionSeccion = exports.SeccionFicha = exports.GravedadAlergia = exports.CategoriaCatalogoClinico = exports.EstadoDatoClinico = exports.EstadoFichaInicial = exports.RolUsuario = exports.UnidadRecurrenciaPersonalizada = exports.PatronRecurrenciaSerie = exports.EstadoTurno = void 0;
 exports.EstadoTurno = {
     ASIGNADO: 'ASIGNADO',
     EN_ESPERA: 'EN_ESPERA',
@@ -20,7 +20,14 @@ exports.EstadoTurno = {
 };
 exports.PatronRecurrenciaSerie = {
     SEMANAL: 'SEMANAL',
-    MENSUAL_ORDINAL: 'MENSUAL_ORDINAL'
+    MENSUAL_ORDINAL: 'MENSUAL_ORDINAL',
+    PERSONALIZADO: 'PERSONALIZADO'
+};
+exports.UnidadRecurrenciaPersonalizada = {
+    DIA: 'DIA',
+    SEMANA: 'SEMANA',
+    MES: 'MES',
+    ANIO: 'ANIO'
 };
 exports.RolUsuario = {
     ADMINISTRADOR: 'ADMINISTRADOR',

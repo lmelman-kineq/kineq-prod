@@ -2,7 +2,8 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type SVGP
 import DateInput from './DateInput'
 import DiagnosticoSelect from './DiagnosticoSelect'
 import type { GrupoEvolucion } from '../types/domain'
-import { weekdayLabel, monthlyRecurrenceLabel, type RecurrenceFrequency } from '../utils/recurrence'
+import { weekdayLabel, monthlyRecurrenceLabel, customRecurrenceSummary, type RecurrenceFrequency, type CustomRecurrenceConfig } from '../utils/recurrence'
+import CustomRecurrenceModal from './CustomRecurrenceModal'
 
 // Íconos chicos para las filas compactas del quick-create (alta rápida desde
 // Home) — mismo estilo trazo-simple que el resto de Kineq (viewBox 24x24,
@@ -44,6 +45,15 @@ function ClockFieldIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+function EditFieldIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  )
+}
+
 function RepeatFieldIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
@@ -81,6 +91,11 @@ export type TurnoFormValue = {
   // semanas se repite (siempre el día de la semana de `date`).
   recurrenceFrequency: RecurrenceFrequency
   recurrenceCount: number
+  // Configuración de "Personalizado..." — solo tiene valor cuando
+  // recurrenceFrequency === 'custom'; se conserva aunque el usuario cambie
+  // a otra opción y vuelva, para no perder lo ya configurado (ver "Reabrir
+  // Personalizado" en docs/modules/appointments.md).
+  customRecurrence: CustomRecurrenceConfig | null
 }
 
 export type SpecialtyOption = {
@@ -231,6 +246,7 @@ export function TurnoFormFields({
   const [newProfessionalError, setNewProfessionalError] = useState<string | null>(null)
 
   const [proximaSesionLoading, setProximaSesionLoading] = useState(false)
+  const [customModalOpen, setCustomModalOpen] = useState(false)
 
   const patientFieldRef = useRef<HTMLDivElement | null>(null)
   const professionalFieldRef = useRef<HTMLDivElement | null>(null)
@@ -451,6 +467,7 @@ export function TurnoFormFields({
   const endTime = addMinutesToTimeOfDay(value.time, value.duration)
 
   return (
+    <>
     <div className={`modal-body appointment-form ${disabled ? 'appointment-form--readonly' : ''} ${compact ? 'appointment-form--compact' : ''}`}>
       {compact ? (
         <div className="quick-datetime-row">
@@ -527,6 +544,10 @@ export function TurnoFormFields({
             value={value.recurrenceFrequency}
             onChange={(event) => {
               const raw = event.target.value
+              if (raw === 'custom') {
+                setCustomModalOpen(true)
+                return
+              }
               const next: RecurrenceFrequency = raw === 'none' ? 'none' : raw === 'monthly' ? 'monthly' : (Number(raw) as 1 | 2)
               updateValue({ recurrenceFrequency: next })
             }}
@@ -536,7 +557,20 @@ export function TurnoFormFields({
             <option value={1}>{`Cada semana, el ${weekdayLabel(value.date)}`}</option>
             <option value={2}>{`Cada 2 semanas, el ${weekdayLabel(value.date)}`}</option>
             <option value="monthly">{monthlyRecurrenceLabel(value.date)}</option>
+            <option value="custom">{value.customRecurrence ? customRecurrenceSummary(value.customRecurrence) : 'Personalizado...'}</option>
           </select>
+          {value.recurrenceFrequency === 'custom' ? (
+            <button
+              type="button"
+              className="quick-repeat-edit"
+              aria-label="Editar recurrencia personalizada"
+              title="Editar recurrencia personalizada"
+              onClick={() => setCustomModalOpen(true)}
+              disabled={disabled}
+            >
+              <EditFieldIcon aria-hidden="true" />
+            </button>
+          ) : null}
           {value.recurrenceFrequency !== 'none' ? (
             <span className="quick-repeat-count">
               <label className="sr-only" htmlFor={recurrenceCountId}>Cantidad de sesiones</label>
@@ -775,20 +809,20 @@ export function TurnoFormFields({
         />
       ) : null}
 
-      <div className={compact ? 'quick-session-row' : undefined}>
-        <label className="checkbox-field" htmlFor={sessionConsultaCheckboxId}>
-          <input
-            id={sessionConsultaCheckboxId}
-            type="checkbox"
-            checked={value.esSesionConsulta}
-            onChange={(event) => toggleSesionConsulta(event.target.checked)}
-            disabled={disabled}
-          />
-          Sesión de consulta
-        </label>
+      {compact ? (
+        <div className="quick-session-row">
+          <label className="checkbox-field" htmlFor={sessionConsultaCheckboxId}>
+            <input
+              id={sessionConsultaCheckboxId}
+              type="checkbox"
+              checked={value.esSesionConsulta}
+              onChange={(event) => toggleSesionConsulta(event.target.checked)}
+              disabled={disabled}
+            />
+            Sesión de consulta
+          </label>
 
-        {!value.esSesionConsulta ? (
-          compact ? (
+          {!value.esSesionConsulta ? (
             <span className="quick-session-number">
               <HashFieldIcon className="quick-field-icon" aria-hidden="true" />
               <label className="sr-only" htmlFor={sessionNumberId}>
@@ -804,7 +838,26 @@ export function TurnoFormFields({
                 disabled={disabled || proximaSesionLoading}
               />
             </span>
-          ) : (
+          ) : null}
+        </div>
+      ) : (
+        <>
+          {/* "Sesión de consulta" ocupa su propia fila completa (antes
+              compartía celda de grid con "Nro. de sesión", lo que estiraba
+              esa fila y hacía parecer que "Monto" tenía un gap enorme
+              label→input — en realidad era la fila del grid, no el campo). */}
+          <label className="checkbox-field checkbox-field--section appointment-form-full-row" htmlFor={sessionConsultaCheckboxId}>
+            <input
+              id={sessionConsultaCheckboxId}
+              type="checkbox"
+              checked={value.esSesionConsulta}
+              onChange={(event) => toggleSesionConsulta(event.target.checked)}
+              disabled={disabled}
+            />
+            Sesión de consulta
+          </label>
+
+          {!value.esSesionConsulta ? (
             <label>
               {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
               <input
@@ -816,12 +869,8 @@ export function TurnoFormFields({
                 disabled={disabled || proximaSesionLoading}
               />
             </label>
-          )
-        ) : null}
-      </div>
+          ) : null}
 
-      {compact ? null : (
-        <>
           <label>
             Monto
             <div className="turno-monto-field">
@@ -852,7 +901,7 @@ export function TurnoFormFields({
             </select>
           </label>
 
-          <label className="appointment-form-full-row">
+          <label>
             Duración (min)
             <input
               type="number"
@@ -1016,6 +1065,20 @@ export function TurnoFormFields({
         </div>
       ) : null}
     </div>
+
+    {customModalOpen ? (
+      <CustomRecurrenceModal
+        startDate={value.date}
+        initialConfig={value.customRecurrence}
+        initialCount={value.recurrenceCount}
+        onCancel={() => setCustomModalOpen(false)}
+        onConfirm={(config, cantidadSesiones) => {
+          updateValue({ recurrenceFrequency: 'custom', customRecurrence: config, recurrenceCount: cantidadSesiones })
+          setCustomModalOpen(false)
+        }}
+      />
+    ) : null}
+    </>
   )
 }
 

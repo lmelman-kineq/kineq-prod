@@ -270,6 +270,13 @@ export type EnumPatronRecurrenciaSerieFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel> | $Enums.PatronRecurrenciaSerie
 }
 
+export type EnumUnidadRecurrenciaPersonalizadaNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.UnidadRecurrenciaPersonalizada | Prisma.EnumUnidadRecurrenciaPersonalizadaFieldRefInput<$PrismaModel> | null
+  in?: $Enums.UnidadRecurrenciaPersonalizada[] | null
+  notIn?: $Enums.UnidadRecurrenciaPersonalizada[] | null
+  not?: Prisma.NestedEnumUnidadRecurrenciaPersonalizadaNullableFilter<$PrismaModel> | $Enums.UnidadRecurrenciaPersonalizada | null
+}
+
 export type EnumPatronRecurrenciaSerieWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.PatronRecurrenciaSerie | Prisma.EnumPatronRecurrenciaSerieFieldRefInput<$PrismaModel>
   in?: $Enums.PatronRecurrenciaSerie[]
@@ -278,6 +285,16 @@ export type EnumPatronRecurrenciaSerieWithAggregatesFilter<$PrismaModel = never>
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel>
+}
+
+export type EnumUnidadRecurrenciaPersonalizadaNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.UnidadRecurrenciaPersonalizada | Prisma.EnumUnidadRecurrenciaPersonalizadaFieldRefInput<$PrismaModel> | null
+  in?: $Enums.UnidadRecurrenciaPersonalizada[] | null
+  notIn?: $Enums.UnidadRecurrenciaPersonalizada[] | null
+  not?: Prisma.NestedEnumUnidadRecurrenciaPersonalizadaNullableWithAggregatesFilter<$PrismaModel> | $Enums.UnidadRecurrenciaPersonalizada | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumUnidadRecurrenciaPersonalizadaNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumUnidadRecurrenciaPersonalizadaNullableFilter<$PrismaModel>
 }
 
 export type EnumEstadoDatoClinicoNullableFilter<$PrismaModel = never> = {
@@ -661,6 +678,13 @@ export type NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel> | $Enums.PatronRecurrenciaSerie
 }
 
+export type NestedEnumUnidadRecurrenciaPersonalizadaNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.UnidadRecurrenciaPersonalizada | Prisma.EnumUnidadRecurrenciaPersonalizadaFieldRefInput<$PrismaModel> | null
+  in?: $Enums.UnidadRecurrenciaPersonalizada[] | null
+  notIn?: $Enums.UnidadRecurrenciaPersonalizada[] | null
+  not?: Prisma.NestedEnumUnidadRecurrenciaPersonalizadaNullableFilter<$PrismaModel> | $Enums.UnidadRecurrenciaPersonalizada | null
+}
+
 export type NestedEnumPatronRecurrenciaSerieWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.PatronRecurrenciaSerie | Prisma.EnumPatronRecurrenciaSerieFieldRefInput<$PrismaModel>
   in?: $Enums.PatronRecurrenciaSerie[]
@@ -669,6 +693,16 @@ export type NestedEnumPatronRecurrenciaSerieWithAggregatesFilter<$PrismaModel = 
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPatronRecurrenciaSerieFilter<$PrismaModel>
+}
+
+export type NestedEnumUnidadRecurrenciaPersonalizadaNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.UnidadRecurrenciaPersonalizada | Prisma.EnumUnidadRecurrenciaPersonalizadaFieldRefInput<$PrismaModel> | null
+  in?: $Enums.UnidadRecurrenciaPersonalizada[] | null
+  notIn?: $Enums.UnidadRecurrenciaPersonalizada[] | null
+  not?: Prisma.NestedEnumUnidadRecurrenciaPersonalizadaNullableWithAggregatesFilter<$PrismaModel> | $Enums.UnidadRecurrenciaPersonalizada | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumUnidadRecurrenciaPersonalizadaNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumUnidadRecurrenciaPersonalizadaNullableFilter<$PrismaModel>
 }
 
 export type NestedEnumEstadoDatoClinicoNullableFilter<$PrismaModel = never> = {

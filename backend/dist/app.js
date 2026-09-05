@@ -1080,7 +1080,7 @@ const SERIE_MAX_OCURRENCIAS = 60;
 // son compartidos por todas las ocurrencias y se validan una sola vez.
 app.post('/api/turnos/serie', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
-    const { pacienteId, especialidadId, obraSocialId, duracionMinutos = 60, notas, grupoId, esSesionConsulta, monto, frecuenciaSemanas, patron = 'SEMANAL', fechasInicio, numeroSesionInicial, confirmarSuperposicion, } = req.body;
+    const { pacienteId, especialidadId, obraSocialId, duracionMinutos = 60, notas, grupoId, esSesionConsulta, monto, frecuenciaSemanas, patron = 'SEMANAL', intervaloPersonalizado, unidadPersonalizada, diasSemanaPersonalizado, fechasInicio, numeroSesionInicial, confirmarSuperposicion, } = req.body;
     let profesionalId = req.body.profesionalId;
     if (req.usuario.rol === client_1.RolUsuario.PROFESIONAL) {
         const vinculado = await (0, auth_1.requireProfesionalVinculado)(req, res);
@@ -1099,10 +1099,27 @@ app.post('/api/turnos/serie', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES
     if (!Array.isArray(fechasInicio) || fechasInicio.length < SERIE_MIN_OCURRENCIAS || fechasInicio.length > SERIE_MAX_OCURRENCIAS) {
         return res.status(400).json({ error: `fechasInicio debe tener entre ${SERIE_MIN_OCURRENCIAS} y ${SERIE_MAX_OCURRENCIAS} ocurrencias` });
     }
-    if (patron !== 'SEMANAL' && patron !== 'MENSUAL_ORDINAL')
+    if (!['SEMANAL', 'MENSUAL_ORDINAL', 'PERSONALIZADO'].includes(patron))
         return res.status(400).json({ error: 'invalid patron' });
     if (patron === 'SEMANAL' && (!Number.isInteger(frecuenciaSemanas) || frecuenciaSemanas < 1)) {
         return res.status(400).json({ error: 'invalid frecuenciaSemanas' });
+    }
+    let diasSemanaPersonalizadoCsv = null;
+    if (patron === 'PERSONALIZADO') {
+        if (!Number.isInteger(intervaloPersonalizado) || intervaloPersonalizado < 1) {
+            return res.status(400).json({ error: 'invalid intervaloPersonalizado' });
+        }
+        if (!['DIA', 'SEMANA', 'MES', 'ANIO'].includes(unidadPersonalizada)) {
+            return res.status(400).json({ error: 'invalid unidadPersonalizada' });
+        }
+        if (unidadPersonalizada === 'SEMANA') {
+            if (!Array.isArray(diasSemanaPersonalizado) ||
+                diasSemanaPersonalizado.length === 0 ||
+                !diasSemanaPersonalizado.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)) {
+                return res.status(400).json({ error: 'invalid diasSemanaPersonalizado' });
+            }
+            diasSemanaPersonalizadoCsv = [...new Set(diasSemanaPersonalizado)].sort((a, b) => a - b).join(',');
+        }
     }
     if (!Number.isInteger(duracionMinutos) || duracionMinutos < 15)
         return res.status(400).json({ error: 'invalid duracionMinutos' });
@@ -1174,6 +1191,9 @@ app.post('/api/turnos/serie', (0, auth_1.requireRole)(...auth_1.ADMIN_DATA_ROLES
                     consultorioId,
                     patron,
                     frecuenciaSemanas: patron === 'SEMANAL' ? Number(frecuenciaSemanas) : null,
+                    intervaloPersonalizado: patron === 'PERSONALIZADO' ? Number(intervaloPersonalizado) : null,
+                    unidadPersonalizada: patron === 'PERSONALIZADO' ? unidadPersonalizada : null,
+                    diasSemanaPersonalizado: patron === 'PERSONALIZADO' ? diasSemanaPersonalizadoCsv : null,
                     cantidadSesiones: inicios.length,
                 },
             });
@@ -1347,6 +1367,9 @@ app.patch('/api/turnos/:turnoId/serie', (0, auth_1.requireRole)(...auth_1.ADMIN_
                         consultorioId,
                         patron: serieOriginal.patron,
                         frecuenciaSemanas: serieOriginal.frecuenciaSemanas,
+                        intervaloPersonalizado: serieOriginal.intervaloPersonalizado,
+                        unidadPersonalizada: serieOriginal.unidadPersonalizada,
+                        diasSemanaPersonalizado: serieOriginal.diasSemanaPersonalizado,
                         cantidadSesiones: siguientes.length,
                     },
                 });

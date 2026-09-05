@@ -140,8 +140,11 @@ export interface Turno {
 
 // SEMANAL usa frecuenciaSemanas (cada cuántas semanas); MENSUAL_ORDINAL
 // repite todos los meses en el mismo N-ésimo día de semana que la fecha
-// inicial (ej. "el tercer viernes de cada mes", ver utils/recurrence.ts).
-export type PatronRecurrenciaSerie = 'SEMANAL' | 'MENSUAL_ORDINAL'
+// inicial (ej. "el tercer viernes de cada mes", ver utils/recurrence.ts);
+// PERSONALIZADO usa intervaloPersonalizado + unidadPersonalizada (+
+// diasSemanaPersonalizado si la unidad es SEMANA) — ver "Personalizado..."
+// en docs/modules/appointments.md.
+export type PatronRecurrenciaSerie = 'SEMANAL' | 'MENSUAL_ORDINAL' | 'PERSONALIZADO'
 
 // Pack finito de turnos generados de una sola vez (turnos recurrentes) — ver
 // SerieTurno en backend/prisma/schema.prisma. cantidadSesiones es un
@@ -151,8 +154,16 @@ export interface SerieTurno {
   id: number
   consultorioId: number
   patron: PatronRecurrenciaSerie
-  // Solo tiene valor para patron 'SEMANAL' — null para 'MENSUAL_ORDINAL'.
+  // Solo tiene valor para patron 'SEMANAL' — null para los demás patrones.
   frecuenciaSemanas: number | null
+  // Metadata de "Personalizado..." — solo tienen valor para patron
+  // 'PERSONALIZADO' (diasSemanaPersonalizado solo además si unidad es
+  // 'SEMANA'). Puramente informativa: las fechas ya están fijas en cada
+  // Turno, esto solo permite reconstruir un resumen legible y propagarse al
+  // partir la serie.
+  intervaloPersonalizado?: number | null
+  unidadPersonalizada?: 'DIA' | 'SEMANA' | 'MES' | 'ANIO' | null
+  diasSemanaPersonalizado?: number[] | null
   cantidadSesiones: number
   createdAt: string
 }
@@ -499,6 +510,11 @@ export interface CreateSerieTurnoInput {
   patron?: PatronRecurrenciaSerie
   // Requerido solo si patron es 'SEMANAL' (u omitido).
   frecuenciaSemanas?: number
+  // Requeridos solo si patron es 'PERSONALIZADO' (diasSemanaPersonalizado
+  // además solo si unidadPersonalizada es 'SEMANA').
+  intervaloPersonalizado?: number
+  unidadPersonalizada?: 'DIA' | 'SEMANA' | 'MES' | 'ANIO'
+  diasSemanaPersonalizado?: number[]
   fechasInicio: string[]
   numeroSesionInicial?: number | null
   esSesionConsulta?: boolean

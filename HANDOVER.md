@@ -1855,3 +1855,239 @@ agregar `patron`), semántica de "este turno"/"este turno y los siguientes",
 límites ya documentados (múltiples días por semana, reasignar paciente en
 edición en bloque, cambiar patrón/cantidad desde una edición en bloque,
 migrar toda la edición de turnos al patrón compacto).
+
+---
+
+## Sesión: ajustes finales de UI en Turnos + recurrencia "Personalizado..."
+
+Tercera ronda sobre Turnos recurrentes/quick-create — sin rehacer la
+arquitectura de recurrencia ni el flujo de series, que ya funcionaban bien.
+Dos frentes: (1) tres bugs de UI puntuales en el formulario de Turno
+(compacto y completo), (2) recurrencia "Personalizado..." con intervalo
+genérico + múltiples días de semana, la limitación explícita que había
+quedado documentada en la ronda anterior.
+
+### Bugs de UI corregidos (con causa raíz real, no parches)
+
+1. **Doble recuadro en Paciente/Profesional/Especialidad/Diagnóstico**: los
+   cuatro reusan `.dropdown-input-row` para verse como un único combobox
+   custom (input + ícono/chevron/clear-button en una sola caja). El reset
+   del input interior (`.dropdown-input-row input { border:none; ... }`)
+   tenía **menos especificidad CSS** ((0,1,1)) que la regla global
+   `.modal-body input:not([type="checkbox"])` ((0,2,1)) que le da estilo a
+   todos los inputs del formulario — esa ganaba y le devolvía borde/fondo/
+   padding al input de adentro, con el resultado de dos bordes visibles
+   superpuestos. Fix real: `.dropdown-input-row input:not([type="checkbox"])`
+   (empata la especificidad, y ya estaba declarada después en el archivo, así
+   que gana el desempate) — mismo ajuste en la variante `:focus`. Nunca se
+   usó `!important`.
+2. **Spacing raro de "Sesión de consulta"/"Monto" en el formulario completo**:
+   la ronda anterior había envuelto "Sesión de consulta" + "Nro. de sesión"
+   en un mismo `<div>` (para compartir fila en la card compacta) sin pensar
+   en el formulario completo, donde ese div sin `grid-column` caía en una
+   sola celda del grid de 2 columnas — con dos líneas apiladas ahí adentro
+   contra una sola en la celda vecina ("Monto"), la fila del grid se
+   estiraba y Monto se veía con un "gap" enorme entre label e input que en
+   realidad era la altura de la fila, no el campo. Fix: en el formulario
+   completo, "Sesión de consulta" pasó a tener su propia fila completa
+   (`grid-column:1/-1`, con `.checkbox-field--section` para un poco más de
+   aire) y "Nro. de sesión"/"Monto" volvieron a ser celdas independientes
+   normales, como antes de la ronda de Turnos recurrentes. El modo `compact`
+   (quick-create) no se tocó — sigue compartiendo fila a propósito ahí.
+3. **`Estado` + `Duración (min)` ahora comparten fila en desktop** (antes
+   `Duración` tenía `.appointment-form-full-row` y quedaba sola en su
+   propia fila) — se sacó esa clase, ahora es una celda normal consecutiva
+   a Estado.
+
+### Recurrencia "Personalizado..."
+
+Cuarta opción del selector de Repetición. Al elegirla abre
+`CustomRecurrenceModal.tsx` (modal/card custom Kineq, nunca un popup
+nativo): `Repetir cada [N] [día/semana/mes/año]`, chips de día de semana
+(`L M X J V S D`, solo si la unidad es semana, mínimo 1 seleccionado,
+`aria-pressed`) y `Cantidad de sesiones` (sigue siendo el único límite de la
+serie — nunca "Finaliza: Nunca/El/Después de X" de Google Calendar). `Listo`
+solo valida y guarda la config en el propio `TurnoFormValue`
+(`customRecurrence`) — la creación real sigue pasando por "Guardar turno".
+El selector principal muestra un resumen legible (ej. "Cada semana, lunes y
+miércoles"), nunca JSON; un ícono de lápiz al lado reabre el modal con los
+valores ya guardados (nunca resetea). Cancelar el modal no cambia nada.
+
+Generación de fechas nueva en `frontend/src/utils/recurrence.ts` (siempre
+calendario real):
+
+- `generateEveryNDaysDates` — cada N días.
+- `generateWeeklyMultiDayDates` — uno o más días de semana, en **orden
+  estrictamente cronológico** (nunca "todos los lunes primero"): cada semana
+  de intervalo se recorre día por día en orden L→D. Regla de ancla: nunca
+  ocurrencias antes de la fecha inicial; si la fecha inicial coincide con un
+  día elegido es la primera ocurrencia, si no, la primera ocurrencia real es
+  el próximo día válido posterior. Verificado con el ejemplo literal del
+  pedido: viernes 04/09/2026, cada 1 semana lunes+viernes, cantidad 5 →
+  `04/09, 07/09, 11/09, 14/09, 18/09`.
+- `generateEveryNMonthsDates`/`generateEveryNYearsDates` — mismo día del
+  mes/misma fecha, con clamp al último día real si el mes destino es más
+  corto (31/01 + 1 mes → 28/02 o 29/02 en bisiesto) — deliberadamente
+  distinto (y más simple) del patrón `MENSUAL_ORDINAL` ya existente
+  ("el N-ésimo día de semana de cada mes"), que sigue existiendo sin cambios
+  como opción directa del selector — no se duplicó esa lógica dentro de
+  "Personalizado".
+- `customRecurrenceSummary`/`generateCustomRecurrenceDates` — resumen legible
+  y dispatcher según unidad, respectivamente.
+
+Migración nueva, aditiva: `20260904200000_serie_turno_patron_personalizado`
+— `SerieTurno.patron` gana `PERSONALIZADO`; tres columnas nuevas
+`intervaloPersonalizado Int?`, `unidadPersonalizada
+UnidadRecurrenciaPersonalizada?` (enum nuevo `DIA`/`SEMANA`/`MES`/`ANIO`),
+`diasSemanaPersonalizado String?` (CSV `"1,5"`, solo con unidad `SEMANA`) —
+todo `null` salvo `patron: PERSONALIZADO`, series `SEMANAL`/`MENSUAL_ORDINAL`
+existentes intactas. Mismo mecanismo de recuperación de drift de checksum
+preexistente de siempre en este entorno (`prisma migrate diff` contra la DB
+viva + aplicar a mano + `migrate resolve --applied`), incluida la misma
+corrección de casing `serieturno`→`SerieTurno`. Backend (`POST
+/api/turnos/serie`) valida intervalo ≥ 1, unidad soportada, y semana con al
+menos un día 0-6 válido — nunca confía solo en el frontend. Partir una serie
+(`PATCH .../serie`, "este turno y los siguientes") propaga los tres campos
+nuevos a la sub-serie igual que ya hacía con `patron`/`frecuenciaSemanas` —
+mismo split existente, ninguna semántica nueva.
+
+### Tests
+
+Backend: 7 tests nuevos (creación PERSONALIZADO semanal con días
+desordenados que persisten normalizados/ordenados, PERSONALIZADO sin
+diasSemana para unidad día, validaciones de intervalo/unidad/días
+inválidos, propagación de patron/intervalo/unidad/días al partir una serie
+PERSONALIZADO). Suite completa: 259 (antes 252). Frontend: 16 tests nuevos
+en `recurrence.test.ts` (día/semana-múltiples-días incluido el ejemplo
+literal del pedido y el caso "nunca antes de la fecha inicial"/mes/año,
+dispatcher, resumen legible, helpers de label de día de semana). Suite
+completa: 136 (antes 120).
+
+### Verificación manual
+
+`tsc -b`/`vitest run`/`npm run build`/`npm run lint` limpios en los dos
+paquetes (mismo único lint error preexistente de `AuthContext.tsx`, no
+tocado); `prisma validate`/`migrate status` sin drift. Con Playwright,
+contra los dev servers reales: confirmado un solo borde visual en los cuatro
+comboboxes (`getComputedStyle` del input interior: `0px none`); capturas del
+formulario completo mostrando Sesión de consulta en su propia fila y
+Estado+Duración compartiendo fila; modal "Recurrencia personalizada"
+end-to-end — día inicial preseleccionado por default, agregar/quitar días,
+"Listo" arma el resumen correcto en el selector, reabrir con el ícono de
+lápiz conserva la configuración exacta, Cancelar no cambia nada; serie real
+de 5 turnos creada con lunes+viernes desde el 04/09/2026 → fechas exactas
+`04/09, 07/09, 11/09, 14/09, 18/09` verificadas contra la API (mismo
+resultado que el test puro); editar/eliminar "este turno y los siguientes"
+reverificados sin regresión sobre una serie PERSONALIZADO real; modo oscuro
+del modal, verificado con captura.
+
+### Qué no se tocó
+
+Arquitectura de `SerieTurno`/split de series (solo se agregaron los tres
+campos *Personalizado, propagados igual que los existentes), semántica de
+"este turno"/"este turno y los siguientes", límites ya documentados
+(reasignar paciente en edición en bloque, cambiar patrón/cantidad desde una
+edición en bloque, migrar toda la edición de turnos al patrón compacto,
+combinar "Personalizado" mensual con el N-ésimo-día-de-semana ya existente
+como opción directa).
+
+---
+
+## Sesión: Refinar Recurrencia Personalizada, acciones fijas en dropdowns y vistas Día/Semana/Mes/Año
+
+Tres bloques, sin backend nuevo (`GET /api/turnos` ya soportaba `from`/`to`,
+usado por `TurnosPage.tsx` — Semana/Mes lo reusan tal cual). Sin migraciones.
+
+### Bloque 1 — Recurrencia Personalizada: estilo + bug real de sincronización
+
+`CustomRecurrenceModal.tsx` vivía fuera de `.modal-body`, así que ninguno de
+los estilos globales de Kineq (inputs/selects con padding/border-radius/foco)
+le aplicaba — se veía nativo. Fix: contenido envuelto en
+`<div className="modal-body custom-recurrence-body">` (hereda todo, sin
+duplicar reglas); el `<select>` de unidad se envolvió en
+`<span className="select-chevron-wrap">` (`appearance: none` + `::after`
+con el mismo chevron `▾` que ya usan los demás selects custom de la app —
+nunca la flecha nativa). Los chips de día de semana ya tenían la lógica;
+solo se ajustó especificidad para heredar el acento morado de Kineq.
+
+**El bug real de "Cantidad de sesiones desaparece"** no era de estado
+duplicado — `recurrenceCount` ya era la única fuente de verdad en ambas
+direcciones (`CustomRecurrenceModal` recibía `initialCount` y su `onConfirm`
+escribía al mismo campo). Era una condición de visibilidad de una ronda
+anterior: `FormFields.tsx` ocultaba el input externo
+`.quick-repeat-count` cuando `recurrenceFrequency === 'custom'`. Fix de una
+línea (`!== 'none'` en vez de `!== 'none' && !== 'custom'`). Verificado en
+vivo: confirmar Personalizado con 8 → el campo externo muestra 8; editarlo
+a 12 desde afuera y reabrir Personalizado → el modal muestra 12.
+
+### Bloque 2 — Pie fijo "+ Agregar..." en los cuatro dropdowns
+
+Paciente/Profesional/Especialidad/Diagnóstico comparten las mismas clases
+(`.dropdown-list`/`.dropdown-footer`/`.dropdown-footer-edit`) en Nuevo turno
+y Editar turno — un solo fix de CSS cubrió los cuatro campos y ambos flujos.
+`position: sticky; bottom: -10px` + `background: var(--color-surface)` +
+`border-top` en el footer; la lista de opciones sigue siendo el único
+elemento que scrollea (mismo `max-height` de siempre). Verificado con 15
+pacientes seedeados: el botón "+ Agregar paciente" queda fijo, con fondo
+sólido, en modo oscuro también.
+
+### Bloque 3 — Vistas de calendario Día/Semana/Mes/Año
+
+Ver detalle completo en "Vistas de calendario: Día / Semana / Mes / Año" en
+`docs/modules/dashboard.md`. Resumen de arquitectura: un solo ancla de
+fecha (`selectedDate`, el mismo state que ya existía) del que las cuatro
+vistas derivan su rango con utilidades puras nuevas
+(`frontend/src/utils/calendarRange.ts`, 13 tests) — nunca cuatro
+calendarios independientes. `WeekView`/`MonthView`/`YearView` (nuevos
+componentes en `App.tsx`) comparten navegación, filtros, la card de turno y
+el contexto de creación con la vista Día existente, que **no se tocó**
+(sigue siendo el mismo `day-grid` de siempre).
+
+Semana/Mes cargan turnos por rango (`rangeTurnosState`/`rangeTurnosLoading`,
+un solo `getTurnos({from,to})` por cambio de rango — nunca por día/celda),
+deliberadamente separado del estado de carga de Día para descartar
+cualquier regresión ahí. Año no carga turnos — los indicadores de turno por
+día eran opcionales en el pedido y no se implementaron (prioridad:
+navegación > 12 meses > responsive, según el pedido).
+
+Selector de vista persistido en `localStorage`
+(`kineq-calendar-view`, try/catch). "Hoy" vuelve al período con la fecha
+actual sin resetear la vista activa. El sidebar (mini calendario + "Datos
+del turno") no se rediseñó — elegir un día ahí mueve `selectedDate` y cada
+vista lo interpreta a su manera (Semana → su semana, Mes → su mes, Día →
+directo).
+
+### Verificación manual
+
+`tsc -b --force`/`vitest run` (149 tests, frontend)/`npm run build`/
+`npm run lint` limpios (mismo único error preexistente de
+`AuthContext.tsx`). Sin cambios de backend, sin necesidad de reverificar esa
+suite. Con Playwright contra los dev servers reales: las 4 vistas con datos
+seedeados vía API (conteos exactos de turno-cards/chips/meses en cada una);
+navegación prev/next Semana y "Hoy" en Año → vuelve a Día; sincronización de
+"Cantidad de sesiones" en ambas direcciones; pie fijo del dropdown con 15
+pacientes; regresión explícita de Día (vista por defecto, click derecho →
+menú contextual, click izquierdo → detalle, click en slot vacío → alta
+rápida) — todo sin abrir dos interacciones a la vez, evitando el error de
+"modal ya abierto tapa el siguiente click" del propio script de prueba, no
+de la app. Modo oscuro verificado en Semana/Mes/Año, el modal de
+Recurrencia Personalizada y el dropdown con pie fijo. Responsive verificado
+a 390px: Semana scrollea horizontalmente dentro de su propio contenedor sin
+overflow de página, Año cae a 1 columna — `document.documentElement.
+scrollWidth - clientWidth === 0` en los tres casos.
+
+Nota aparte, no un bug de la app: una primera pasada de verificación mostró
+el boot screen ("Preparando Kineq") tapando la vista Semana en una captura
+— el splash es `position: fixed`/`z-index: 9999`, con un mínimo visible de
+1900ms + 400ms de fade (`useBootPhase.ts`, sin cambios). El script de prueba
+no esperaba a que el splash se ocultara antes de capturar; agregando
+`page.waitForSelector('.boot-screen', { state: 'detached' })` antes de cada
+captura, las tres vistas se ven limpias. Comportamiento normal de la app,
+sin relación con las vistas nuevas.
+
+### Qué no se tocó
+
+Backend (el endpoint de turnos ya soportaba rango), esquema de Prisma, la
+vista Día (`day-grid`) en sí misma, el sidebar (mini calendario + "Datos
+del turno"), los indicadores de turno por día en Año (opcional, no
+implementado por prioridad explícita del pedido).

@@ -3693,6 +3693,91 @@ describe('series de turnos (recurrencia)', () => {
       expect(res.status).toBe(400)
     })
 
+    it('serie PERSONALIZADO semanal con varios días persiste intervalo/unidad/diasSemana', async () => {
+      // Mismas fechas que generaría el frontend para "cada 1 semana, lunes y
+      // viernes" desde el 04/09/2026 (ver recurrence.test.ts).
+      const fechasInicio = [
+        '2026-09-04T13:00:00.000Z',
+        '2026-09-07T13:00:00.000Z',
+        '2026-09-11T13:00:00.000Z',
+      ]
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({
+          pacienteId: pacienteAId,
+          profesionalId: profesionalPropioId,
+          especialidadId: especialidadAId,
+          duracionMinutos: 45,
+          patron: 'PERSONALIZADO',
+          intervaloPersonalizado: 1,
+          unidadPersonalizada: 'SEMANA',
+          diasSemanaPersonalizado: [5, 1], // desordenado a propósito
+          fechasInicio,
+          numeroSesionInicial: 1,
+        })
+
+      expect(res.status).toBe(201)
+      expect(res.body.serie.patron).toBe('PERSONALIZADO')
+      expect(res.body.serie.frecuenciaSemanas).toBeNull()
+      expect(res.body.serie.intervaloPersonalizado).toBe(1)
+      expect(res.body.serie.unidadPersonalizada).toBe('SEMANA')
+      expect(res.body.serie.diasSemanaPersonalizado).toBe('1,5') // normalizado y ordenado
+      expect(res.body.turnos.map((t: any) => new Date(t.inicio).toISOString())).toEqual(fechasInicio)
+      expect(res.body.turnos.map((t: any) => t.numeroSesion)).toEqual([1, 2, 3])
+
+      await prisma.turno.deleteMany({ where: { serieId: res.body.serie.id } })
+      await prisma.serieTurno.delete({ where: { id: res.body.serie.id } })
+    })
+
+    it('serie PERSONALIZADO cada 3 días no requiere diasSemana', async () => {
+      const res = await request(app)
+        .post('/api/turnos/serie')
+        .set('Cookie', cookies.admin)
+        .send({
+          pacienteId: pacienteAId,
+          profesionalId: profesionalPropioId,
+          especialidadId: especialidadAId,
+          duracionMinutos: 30,
+          patron: 'PERSONALIZADO',
+          intervaloPersonalizado: 3,
+          unidadPersonalizada: 'DIA',
+          fechasInicio: ['2027-03-01T13:00:00.000Z', '2027-03-04T13:00:00.000Z'],
+        })
+      expect(res.status).toBe(201)
+      expect(res.body.serie.diasSemanaPersonalizado).toBeNull()
+
+      await prisma.turno.deleteMany({ where: { serieId: res.body.serie.id } })
+      await prisma.serieTurno.delete({ where: { id: res.body.serie.id } })
+    })
+
+    it('PERSONALIZADO rechaza intervalo < 1, unidad inválida y semana sin días', async () => {
+      const base = {
+        pacienteId: pacienteAId,
+        profesionalId: profesionalPropioId,
+        especialidadId: especialidadAId,
+        duracionMinutos: 30,
+        patron: 'PERSONALIZADO',
+        fechasInicio: ['2027-04-01T13:00:00.000Z', '2027-04-02T13:00:00.000Z'],
+      }
+
+      const intervaloInvalido = await request(app).post('/api/turnos/serie').set('Cookie', cookies.admin)
+        .send({ ...base, intervaloPersonalizado: 0, unidadPersonalizada: 'DIA' })
+      expect(intervaloInvalido.status).toBe(400)
+
+      const unidadInvalida = await request(app).post('/api/turnos/serie').set('Cookie', cookies.admin)
+        .send({ ...base, intervaloPersonalizado: 1, unidadPersonalizada: 'HORA' })
+      expect(unidadInvalida.status).toBe(400)
+
+      const semanaSinDias = await request(app).post('/api/turnos/serie').set('Cookie', cookies.admin)
+        .send({ ...base, intervaloPersonalizado: 1, unidadPersonalizada: 'SEMANA', diasSemanaPersonalizado: [] })
+      expect(semanaSinDias.status).toBe(400)
+
+      const weekdayInvalido = await request(app).post('/api/turnos/serie').set('Cookie', cookies.admin)
+        .send({ ...base, intervaloPersonalizado: 1, unidadPersonalizada: 'SEMANA', diasSemanaPersonalizado: [7] })
+      expect(weekdayInvalido.status).toBe(400)
+    })
+
     it('rechaza menos de 2 o más de 60 ocurrencias', async () => {
       const one = await request(app)
         .post('/api/turnos/serie')

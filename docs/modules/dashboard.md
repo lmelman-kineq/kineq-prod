@@ -286,7 +286,39 @@ Si hay superposición, puede mostrarse una advertencia visual, pero no impedir l
 
 **Actualización**: implementado. Los turnos superpuestos se distribuyen en columnas (`frontend/src/utils/turnoLayout.ts`, ver detalle en `docs/modules/appointments.md`) en vez de dibujarse unos encima de otros. El indicador circular de estado de cada bloque (`.turno-card-status-dot`) tiene más padding respecto del borde (`top`/`right: 10px`, antes `8px`) y una variante más compacta para turnos angostos (`.turno-card--narrow`) o cortos (`.short-turno`), para que nunca quede cortado ni pise el texto.
 
-**Actualización (implementado) — Turnos recurrentes**: un bloque de turno perteneciente a una serie (`Turno.serieId`) suma un ícono chico de recurrencia junto al indicador de estado, en la esquina superior derecha del bloque — nunca reemplaza el nombre del paciente ni el horario (`HH:MM - HH:MM`), que siempre se muestran igual sea el turno recurrente o no (ver "Turnos recurrentes (series)" en `docs/modules/appointments.md` para el detalle completo, incluido un bug real donde el ícono desplazaba el horario fuera del bloque, ya corregido). "Nuevo turno" y el click en un horario vacío abren una card flotante compacta (no el formulario completo) con soporte de recurrencia semanal y mensual.
+**Actualización (implementado) — Turnos recurrentes**: un bloque de turno perteneciente a una serie (`Turno.serieId`) suma un ícono chico de recurrencia junto al indicador de estado, en la esquina superior derecha del bloque — nunca reemplaza el nombre del paciente ni el horario (`HH:MM - HH:MM`), que siempre se muestran igual sea el turno recurrente o no (ver "Turnos recurrentes (series)" en `docs/modules/appointments.md` para el detalle completo, incluido un bug real donde el ícono desplazaba el horario fuera del bloque, ya corregido). "Nuevo turno" y el click en un horario vacío abren una card flotante compacta (no el formulario completo) con soporte de recurrencia semanal, mensual y personalizada (intervalo + unidad + uno o más días de la semana, ver "Recurrencia 'Personalizado...'" en `docs/modules/appointments.md`).
+
+---
+
+## Vistas de calendario: Día / Semana / Mes / Año
+
+**Actualización (implementado)**: además de la vista diaria de siempre (`day-grid`, sin ningún cambio de comportamiento — ver más abajo), Inicio ahora tiene un selector de vista (`<select>` nativo, mismo chevron custom que el resto de la app) junto al header del calendario, con `Día`/`Semana`/`Mes`/`Año`. La vista elegida persiste entre sesiones vía `localStorage` (`kineq-calendar-view`, envuelto en try/catch — nunca bloquea la carga si `localStorage` no está disponible).
+
+**Arquitectura — un solo ancla de fecha, cuatro vistas derivadas**: no hay cuatro calendarios independientes. `selectedDate` (el mismo string `YYYY-MM-DD` que ya usaba la vista diaria) sigue siendo el único estado de "qué fecha está activa"; cada vista deriva su propio rango/grilla a partir de ese ancla con utilidades puras en `frontend/src/utils/calendarRange.ts` (`getWeekDates`, `getMonthGridDates`, `getYearMonths`, `navigateDate` — 13 tests en `calendarRange.test.ts`, siempre aritmética de calendario real, nunca sumas de ~7/~30/~365 días). `WeekView`/`MonthView`/`YearView` (`App.tsx`) son componentes de layout separados que comparten navegación, filtros, el componente de card de turno, y el contexto de creación con la vista Día — no hay lógica duplicada de agrupado por fecha ni de manejo de turnos entre las cuatro.
+
+- **Header adaptable**: el título/subtítulo del calendario cambia de formato según la vista (`formatPeriodLabel`) — Día: "viernes 4 de septiembre de 2026"; Semana: "31 ago – 6 sep 2026"; Mes: "Septiembre 2026"; Año: "2026" — mismo locale español que ya usaba la vista diaria.
+- **Navegación**: las flechas prev/next (`goToPreviousPeriod`/`goToNextPeriod`) respetan la vista activa vía `navigateDate(selectedDate, calendarView, ±1)` — Día ±1 día, Semana ±7 días, Mes ±1 mes calendario (con clamp de fin de mes), Año ±1 año. El botón "Hoy" (`goToToday`) vuelve al período que contiene la fecha actual **sin** resetear la vista activa (si estás en Mes y tocás "Hoy", seguís en Mes).
+- **Sidebar (mini calendario mensual + "Datos del turno")**: no se rediseñó — sigue siendo el mismo componente de siempre. Elegir un día ahí actualiza `selectedDate`: en Semana muestra la semana que contiene ese día, en Mes muestra el mes que lo contiene, en Día lo selecciona directamente. En Año el sidebar queda como está (no oculto, no rediseñado).
+
+### Día (sin cambios de comportamiento)
+
+El bloque `day-grid` existente no se tocó: timeline vertical, turnos como bloques, columnas para superposiciones (`layoutTurnos`), indicador de estado, click en slot vacío → alta rápida, click/click-derecho sobre un turno → detalle/menú contextual, filtros. Se verificó explícitamente que no hay regresión (Playwright: vista por defecto es Día, click derecho abre el menú contextual, click izquierdo abre el detalle, click en un slot vacío abre "Nuevo turno").
+
+### Semana
+
+Grilla de 7 columnas (Lun-Dom) con eje horario vertical — reutiliza el mismo rango operativo de horas que ya usa Día (nunca renderiza 24hs). Cada columna de día muestra header (nombre + fecha corta, resaltado si es "hoy"), y los turnos se posicionan/dimensionan por hora real, reutilizando `layoutTurnos()` (mismo algoritmo de columnas por colisión que Día) para superposiciones dentro de un mismo día. Muestra especialidad (color), paciente, horario (cuando el espacio alcanza) e ícono de recurrencia — igual criterio visual que las cards de Día, sin duplicar el componente. Interacción: click en slot vacío abre alta rápida con esa fecha/hora, click en un turno abre el mismo detalle/menú contextual que Día, navegación prev/next semana y "Hoy". En pantallas chicas, `.week-view` scrollea horizontalmente (`overflow-x: auto`, `min-width: 900px` en la grilla) sin romper el layout general de la página — verificado sin overflow horizontal a nivel `<body>` en 390px.
+
+### Mes
+
+Grilla de 7×4-6 semanas (siempre semanas completas, incluye días de meses adyacentes atenuados). Cada celda muestra el número de día y hasta 3 turnos como chips compactos (color de especialidad + horario si entra); si hay más, se muestra "+N más". Click en un día navega directamente a Día con esa fecha — se prefirió esta opción (en vez de un panel de detalle superpuesto) para no sumar una quinta superficie de interacción, tal como pedía la spec. Click en un slot de un día vacío abre alta rápida con esa fecha; como Mes no tiene una hora asociada a la celda, no se inventó un horario arbitrario — la hora la completa el usuario en el formulario, igual que "Más opciones" ya lo permite hoy.
+
+### Año
+
+12 mini-calendarios (Enero-Diciembre), puramente de navegación — sin datos operativos de turnos (sin fetch de turnos para esta vista, per "no bajar datos clínicos innecesarios" cuando no hay nada que mostrar con ellos). Click en un número de día navega a Día de esa fecha; click en el nombre de un mes navega a Mes de ese mes. Los indicadores de turno (punto) eran explícitamente opcionales en la spec y no se implementaron — prioridad 1 (navegación correcta) y 2 (12 meses) sobre esa mejora cosmética. Responsive: 4 columnas en desktop, 2 en tablet (`≤820px`), 1 en mobile (`≤480px`) — verificado sin overflow horizontal en 390px.
+
+### Carga de datos (evitar N+1)
+
+Semana y Mes comparten un estado de carga por rango separado del de Día (`rangeTurnosState`/`rangeTurnosLoading`, `App.tsx`) — un solo `api.getTurnos({ from, to })` por cambio de rango (calculado con `getWeekDates`/`getMonthGridDates`), nunca un fetch por día ni por celda. El endpoint `GET /api/turnos` ya soportaba `from`/`to` (usado por `TurnosPage.tsx`) — no se tocó el backend ni se agregó ningún endpoint nuevo. La vista Día sigue usando su propio estado de carga de siempre (`turnosState`/`turnosLoading`, solo el día visible) — separado a propósito, para que Semana/Mes no puedan introducir ninguna regresión ahí. Año no dispara ningún fetch de turnos (ver arriba).
 
 ---
 

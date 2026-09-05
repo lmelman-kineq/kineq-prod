@@ -23,10 +23,21 @@ export type EstadoTurno = (typeof EstadoTurno)[keyof typeof EstadoTurno]
 
 export const PatronRecurrenciaSerie = {
   SEMANAL: 'SEMANAL',
-  MENSUAL_ORDINAL: 'MENSUAL_ORDINAL'
+  MENSUAL_ORDINAL: 'MENSUAL_ORDINAL',
+  PERSONALIZADO: 'PERSONALIZADO'
 } as const
 
 export type PatronRecurrenciaSerie = (typeof PatronRecurrenciaSerie)[keyof typeof PatronRecurrenciaSerie]
+
+
+export const UnidadRecurrenciaPersonalizada = {
+  DIA: 'DIA',
+  SEMANA: 'SEMANA',
+  MES: 'MES',
+  ANIO: 'ANIO'
+} as const
+
+export type UnidadRecurrenciaPersonalizada = (typeof UnidadRecurrenciaPersonalizada)[keyof typeof UnidadRecurrenciaPersonalizada]
 
 
 export const RolUsuario = {

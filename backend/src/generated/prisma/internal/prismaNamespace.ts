@@ -2162,6 +2162,9 @@ export const SerieTurnoScalarFieldEnum = {
   consultorioId: 'consultorioId',
   patron: 'patron',
   frecuenciaSemanas: 'frecuenciaSemanas',
+  intervaloPersonalizado: 'intervaloPersonalizado',
+  unidadPersonalizada: 'unidadPersonalizada',
+  diasSemanaPersonalizado: 'diasSemanaPersonalizado',
   cantidadSesiones: 'cantidadSesiones',
   createdAt: 'createdAt'
 } as const
@@ -2485,6 +2488,13 @@ export const TurnoOrderByRelevanceFieldEnum = {
 export type TurnoOrderByRelevanceFieldEnum = (typeof TurnoOrderByRelevanceFieldEnum)[keyof typeof TurnoOrderByRelevanceFieldEnum]
 
 
+export const SerieTurnoOrderByRelevanceFieldEnum = {
+  diasSemanaPersonalizado: 'diasSemanaPersonalizado'
+} as const
+
+export type SerieTurnoOrderByRelevanceFieldEnum = (typeof SerieTurnoOrderByRelevanceFieldEnum)[keyof typeof SerieTurnoOrderByRelevanceFieldEnum]
+
+
 export const EvolucionOrderByRelevanceFieldEnum = {
   contenido: 'contenido',
   contenidoHtml: 'contenidoHtml'
@@ -2660,6 +2670,13 @@ export type EnumEstadoTurnoFieldRefInput<$PrismaModel> = FieldRefInputType<$Pris
  * Reference to a field of type 'PatronRecurrenciaSerie'
  */
 export type EnumPatronRecurrenciaSerieFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PatronRecurrenciaSerie'>
+    
+
+
+/**
+ * Reference to a field of type 'UnidadRecurrenciaPersonalizada'
+ */
+export type EnumUnidadRecurrenciaPersonalizadaFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UnidadRecurrenciaPersonalizada'>
     
 
 

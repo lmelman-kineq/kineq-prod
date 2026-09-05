@@ -1031,6 +1031,14 @@ body,
   width: auto;
 }
 
+/* "Sesión de consulta" en el formulario completo: fila propia con más aire
+   arriba/abajo que el resto (que ya usan el gap:16px de .modal-body) — sin
+   exagerar, un empujón chico para que no se lea "incrustado" entre Especialidad/
+   Diagnóstico arriba y Nro. de sesión/Monto abajo. */
+.checkbox-field--section {
+  margin: 6px 0;
+}
+
 .modal-body input.narrow-input {
   width: auto;
   min-width: 140px;
@@ -1275,6 +1283,151 @@ body,
 
 .confirm-dialog-actions button {
   padding: 11px 18px;
+}
+
+/* "Recurrencia personalizada" — modal/card custom Kineq (nunca un popup
+   nativo), liviana y compacta, referencia conceptual de Google Calendar sin
+   copiarlo literalmente. Mismo `.confirm-dialog-overlay`/`.confirm-dialog-actions`
+   que el resto de los diálogos de 2 acciones de Kineq. */
+.custom-recurrence-modal {
+  width: min(360px, 100%);
+  padding: 24px;
+  border-radius: 20px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-modal);
+}
+
+.custom-recurrence-modal h3 {
+  margin: 0 0 18px;
+  font-size: 18px;
+}
+
+/* Los campos viven dentro de un `.modal-body` real (misma clase que el
+   formulario de turno) para heredar el mismo input/select/label de Kineq
+   — antes vivían sueltos y caían al estilo nativo crudo del navegador. */
+.custom-recurrence-body {
+  margin-bottom: 22px;
+  padding-right: 0;
+}
+
+.custom-recurrence-field {
+  display: grid;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.custom-recurrence-field-label {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.custom-recurrence-interval-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Misma especificidad que `.modal-body input.narrow-input` (0,2,1) para
+   ganarle de forma confiable a `.modal-body input:not([type="checkbox"])`
+   (que fija width:100%) en vez de dejarlo a la suerte del orden. */
+.modal-body input.custom-recurrence-intervalo-input {
+  width: auto;
+  max-width: 72px;
+  flex: 0 0 auto;
+}
+
+/* Reemplaza la flecha nativa del `<select>` por el mismo chevron ya usado
+   en los combobox custom de Kineq (`.dropdown-input-row::after`) — antes
+   quedaba la flecha cruda del navegador, inconsistente con el resto de la
+   UI de Turnos. */
+.select-chevron-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  display: block;
+}
+
+.select-chevron-wrap select {
+  width: 100%;
+  padding-right: 32px;
+  appearance: none;
+}
+
+.select-chevron-wrap::after {
+  content: '▾';
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.custom-recurrence-weekdays {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 2px 0;
+}
+
+.weekday-chip {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.weekday-chip:hover {
+  border-color: var(--color-primary-border);
+}
+
+.weekday-chip--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* Botón "editar" junto al selector de Repetición, solo visible cuando ya hay
+   una recurrencia personalizada configurada (reabre el modal con los
+   valores guardados — ver docs/modules/appointments.md, "Reabrir Personalizado"). */
+.quick-repeat-edit {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-control);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.quick-repeat-edit:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary-border);
+}
+
+.quick-repeat-edit svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* "Editar/Eliminar turno recurrente": Este turno / Este turno y los
@@ -1532,19 +1685,26 @@ body,
   background: var(--color-surface-muted);
 }
 
+/* Acción fija al pie del dropdown (Paciente/Profesional/Especialidad/
+   Diagnóstico, en Nuevo turno y en Editar turno — mismo `.dropdown-list`
+   reusado en los cuatro): antes era un ítem más del grid que scrolleaba
+   con las opciones, así que con una lista larga había que scrollear todo
+   el listado para llegar a "+ Agregar ...". `position: sticky` la fija al
+   borde inferior de `.dropdown-list` (su ancestro con scroll real), con
+   fondo sólido propio para no dejar ver opciones detrás y un margen
+   negativo que cancela el padding del contenedor para que llegue de borde
+   a borde. Solo la lista de opciones arriba sigue scrolleando. */
 .dropdown-footer,
 .dropdown-footer-edit {
+  position: sticky;
+  bottom: -10px;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.dropdown-footer {
-  margin-top: 8px;
-}
-
-.dropdown-footer-edit {
-  padding: 8px;
+  margin: 8px -10px -10px;
+  padding: 10px;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line-soft);
 }
 
 .dropdown-footer input,
@@ -1677,7 +1837,12 @@ body,
   border-color: var(--color-primary);
 }
 
-.dropdown-input-row input {
+/* :not([type="checkbox"]) empata la especificidad con
+   `.modal-body input:not([type="checkbox"])` (ambas (0,2,1)) — sin esto, esa
+   regla más específica ganaba y restauraba borde/fondo/padding en el input
+   de adentro, generando un doble recuadro visible (el de `.dropdown-input-row`
+   y el "resucitado" en el input). */
+.dropdown-input-row input:not([type="checkbox"]) {
   width: 100%;
   min-width: 0;
   flex: 1 1 auto;
@@ -1689,8 +1854,9 @@ body,
   font-family: inherit;
 }
 
-.dropdown-input-row input:focus {
+.dropdown-input-row input:not([type="checkbox"]):focus {
   outline: none;
+  border-color: transparent;
 }
 
 /* Chevron integrado dentro de la misma caja — sin esto, un combobox custom
@@ -1956,6 +2122,331 @@ select:disabled {
   left: 16px;
   color: var(--color-text-muted);
   font-size: 12px;
+}
+
+/* =========================================================
+   6b. NAVEGACIÓN Y SELECTOR DE VISTA DEL CALENDARIO (Día/Semana/Mes/Año)
+   ========================================================= */
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.calendar-nav-today {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+}
+
+.calendar-nav-arrows {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.calendar-nav-arrows .small-button {
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+}
+
+.schedule-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.calendar-view-select select {
+  padding: 10px 32px 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.calendar-view-select select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* =========================================================
+   6c. VISTA SEMANA
+   ========================================================= */
+
+.week-view {
+  overflow-x: auto;
+}
+
+.week-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: 64px repeat(7, minmax(120px, 1fr));
+  min-width: 900px;
+  border-radius: 24px;
+  background: var(--color-calendar-bg);
+  overflow: hidden;
+}
+
+.week-hours-column {
+  border-right: 1px solid var(--color-line);
+  background: var(--color-calendar-hour-bg);
+}
+
+.week-hours-column .hour-label {
+  font-size: 12px;
+}
+
+.week-day-column-wrapper {
+  border-right: 1px solid var(--color-line);
+}
+
+.week-day-column-wrapper:last-child {
+  border-right: none;
+}
+
+.week-day-header {
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-calendar-hour-bg);
+}
+
+.week-day-header--spacer {
+  background: var(--color-calendar-hour-bg);
+}
+
+.week-day-header-name {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.week-day-header-date {
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.week-day-header--today .week-day-header-date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.week-day-column {
+  position: relative;
+  min-height: 780px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* =========================================================
+   6d. VISTA MES
+   ========================================================= */
+
+.month-view-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin-bottom: 8px;
+}
+
+.month-view-weekday {
+  padding: 6px 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.month-view-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: minmax(110px, 1fr);
+  gap: 6px;
+}
+
+.month-view-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.month-view-cell:hover {
+  border-color: var(--color-primary-border);
+}
+
+.month-view-cell--outside {
+  background: var(--color-surface-muted);
+  opacity: 0.6;
+}
+
+.month-view-cell--today .month-view-cell-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.month-view-cell-number {
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.month-view-cell-turnos {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.month-view-turno-chip {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  padding: 2px 6px;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: 6px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-size: 11px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.month-view-turno-chip:hover {
+  background: var(--color-control);
+}
+
+.month-view-turno-chip-time {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.month-view-overflow {
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.month-view-overflow:hover {
+  text-decoration: underline;
+}
+
+/* =========================================================
+   6e. VISTA AÑO
+   ========================================================= */
+
+.year-view {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.year-view-month {
+  padding: 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+}
+
+.year-view-month-header {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.year-view-month-header:hover {
+  color: var(--color-primary);
+}
+
+.year-view-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin-bottom: 4px;
+}
+
+.year-view-weekdays div {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.year-view-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.year-view-day {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.year-view-day:hover:not(:disabled) {
+  background: var(--color-control);
+}
+
+.year-view-day--empty {
+  cursor: default;
+}
+
+.year-view-day--today {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 700;
 }
 
 .turno-card {
@@ -5377,6 +5868,36 @@ select:disabled {
   .details-card,
   .schedule-panel {
     padding: 16px;
+  }
+
+  /* Vistas del calendario (Semana/Mes/Año): la navegación y el selector de
+     vista pasan a apilarse en vez de competir por una sola fila angosta. */
+  .schedule-header {
+    flex-wrap: wrap;
+  }
+
+  .schedule-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .year-view {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .year-view {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .month-view-grid {
+    grid-auto-rows: minmax(72px, 1fr);
+  }
+
+  .month-view-cell {
+    padding: 6px;
   }
 
   /* Encabezados y acciones */

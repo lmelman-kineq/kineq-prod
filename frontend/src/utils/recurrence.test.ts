@@ -4,11 +4,21 @@ import {
   generateRecurrenceDates,
   buildSerieFechasInicio,
   weekdayLabel,
+  weekdayShortLabel,
+  weekdayFullLabel,
   ordinalOfWeekdayInMonth,
   ordinalLabel,
   monthlyRecurrenceLabel,
   generateMonthlyOrdinalDates,
   buildMonthlySerieFechasInicio,
+  generateEveryNDaysDates,
+  generateWeeklyMultiDayDates,
+  generateEveryNMonthsDates,
+  generateEveryNYearsDates,
+  generateCustomRecurrenceDates,
+  buildCustomSerieFechasInicio,
+  customRecurrenceSummary,
+  WEEKDAYS_MONDAY_FIRST,
 } from './recurrence'
 
 describe('weekdayLabel', () => {
@@ -111,5 +121,101 @@ describe('buildMonthlySerieFechasInicio', () => {
       '2026-10-02T13:00:00.000Z',
       '2026-11-06T13:00:00.000Z',
     ])
+  })
+})
+
+describe('weekdayShortLabel / weekdayFullLabel / WEEKDAYS_MONDAY_FIRST', () => {
+  it('los chips se muestran en orden L M X J V S D', () => {
+    expect(WEEKDAYS_MONDAY_FIRST.map(weekdayShortLabel)).toEqual(['L', 'M', 'X', 'J', 'V', 'S', 'D'])
+  })
+
+  it('weekdayFullLabel no depende de una fecha', () => {
+    expect(WEEKDAYS_MONDAY_FIRST.map(weekdayFullLabel)).toEqual(['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'])
+  })
+})
+
+describe('generateEveryNDaysDates (Personalizado, unidad día)', () => {
+  it('cada 3 días, 4 ocurrencias', () => {
+    expect(generateEveryNDaysDates('2026-09-04', 3, 4)).toEqual(['2026-09-04', '2026-09-07', '2026-09-10', '2026-09-13'])
+  })
+})
+
+describe('generateWeeklyMultiDayDates (Personalizado, unidad semana, múltiples días)', () => {
+  it('cada 1 semana, lunes y viernes, desde un viernes — orden estrictamente cronológico', () => {
+    // Ejemplo literal del pedido: fecha inicial viernes 04/09/2026, lunes+viernes, cantidad 5.
+    const fechas = generateWeeklyMultiDayDates('2026-09-04', 1, [1, 5], 5)
+    expect(fechas).toEqual(['2026-09-04', '2026-09-07', '2026-09-11', '2026-09-14', '2026-09-18'])
+  })
+
+  it('nunca genera ocurrencias anteriores a la fecha inicial', () => {
+    // Fecha inicial un miércoles; días elegidos lunes+viernes — el lunes de
+    // esa misma semana ya pasó, así que la primera ocurrencia real es el
+    // viernes de esa semana, no el lunes anterior a la fecha inicial.
+    const fechas = generateWeeklyMultiDayDates('2026-09-09', 1, [1, 5], 3)
+    expect(fechas[0]).toBe('2026-09-11')
+    fechas.forEach((f) => expect(f >= '2026-09-09').toBe(true))
+  })
+
+  it('si la fecha inicial coincide con un día elegido, es la primera ocurrencia', () => {
+    const fechas = generateWeeklyMultiDayDates('2026-09-07', 1, [1, 3, 5], 3)
+    expect(fechas[0]).toBe('2026-09-07')
+  })
+
+  it('cada 2 semanas, dos días seleccionados', () => {
+    const fechas = generateWeeklyMultiDayDates('2026-09-01', 2, [2, 4], 4) // martes y jueves
+    expect(fechas).toEqual(['2026-09-01', '2026-09-03', '2026-09-15', '2026-09-17'])
+  })
+})
+
+describe('generateEveryNMonthsDates / generateEveryNYearsDates (Personalizado)', () => {
+  it('cada mes, mismo día del mes', () => {
+    expect(generateEveryNMonthsDates('2026-01-15', 1, 3)).toEqual(['2026-01-15', '2026-02-15', '2026-03-15'])
+  })
+
+  it('clamp al último día del mes cuando el mes destino es más corto (31 → 28/29)', () => {
+    const fechas = generateEveryNMonthsDates('2026-01-31', 1, 3)
+    expect(fechas).toEqual(['2026-01-31', '2026-02-28', '2026-03-31'])
+  })
+
+  it('cada año, misma fecha', () => {
+    expect(generateEveryNYearsDates('2026-09-04', 1, 3)).toEqual(['2026-09-04', '2027-09-04', '2028-09-04'])
+  })
+})
+
+describe('generateCustomRecurrenceDates (dispatcher)', () => {
+  it('despacha unidad DIA', () => {
+    expect(generateCustomRecurrenceDates('2026-09-04', { intervalo: 2, unidad: 'DIA' }, 3)).toEqual(['2026-09-04', '2026-09-06', '2026-09-08'])
+  })
+
+  it('despacha unidad SEMANA con diasSemana', () => {
+    expect(generateCustomRecurrenceDates('2026-09-04', { intervalo: 1, unidad: 'SEMANA', diasSemana: [1, 5] }, 3)).toEqual(['2026-09-04', '2026-09-07', '2026-09-11'])
+  })
+})
+
+describe('buildCustomSerieFechasInicio', () => {
+  it('convierte cada ocurrencia personalizada a UTC según la zona del consultorio', () => {
+    const fechas = buildCustomSerieFechasInicio('2026-09-04', '10:00', { intervalo: 1, unidad: 'SEMANA', diasSemana: [1, 5] }, 3, 'America/Argentina/Buenos_Aires')
+    expect(fechas).toEqual([
+      '2026-09-04T13:00:00.000Z',
+      '2026-09-07T13:00:00.000Z',
+      '2026-09-11T13:00:00.000Z',
+    ])
+  })
+})
+
+describe('customRecurrenceSummary', () => {
+  it('día', () => {
+    expect(customRecurrenceSummary({ intervalo: 1, unidad: 'DIA' })).toBe('Cada día')
+    expect(customRecurrenceSummary({ intervalo: 3, unidad: 'DIA' })).toBe('Cada 3 días')
+  })
+
+  it('semana con uno o más días, en orden L-D sin importar el orden de entrada', () => {
+    expect(customRecurrenceSummary({ intervalo: 1, unidad: 'SEMANA', diasSemana: [5, 1] })).toBe('Cada semana, lunes y viernes')
+    expect(customRecurrenceSummary({ intervalo: 2, unidad: 'SEMANA', diasSemana: [4, 2] })).toBe('Cada 2 semanas, martes y jueves')
+  })
+
+  it('mes y año', () => {
+    expect(customRecurrenceSummary({ intervalo: 1, unidad: 'MES' })).toBe('Cada mes')
+    expect(customRecurrenceSummary({ intervalo: 1, unidad: 'ANIO' })).toBe('Cada año')
   })
 })

@@ -258,6 +258,9 @@ export const SerieTurnoScalarFieldEnum = {
   consultorioId: 'consultorioId',
   patron: 'patron',
   frecuenciaSemanas: 'frecuenciaSemanas',
+  intervaloPersonalizado: 'intervaloPersonalizado',
+  unidadPersonalizada: 'unidadPersonalizada',
+  diasSemanaPersonalizado: 'diasSemanaPersonalizado',
   cantidadSesiones: 'cantidadSesiones',
   createdAt: 'createdAt'
 } as const
@@ -579,6 +582,13 @@ export const TurnoOrderByRelevanceFieldEnum = {
 } as const
 
 export type TurnoOrderByRelevanceFieldEnum = (typeof TurnoOrderByRelevanceFieldEnum)[keyof typeof TurnoOrderByRelevanceFieldEnum]
+
+
+export const SerieTurnoOrderByRelevanceFieldEnum = {
+  diasSemanaPersonalizado: 'diasSemanaPersonalizado'
+} as const
+
+export type SerieTurnoOrderByRelevanceFieldEnum = (typeof SerieTurnoOrderByRelevanceFieldEnum)[keyof typeof SerieTurnoOrderByRelevanceFieldEnum]
 
 
 export const EvolucionOrderByRelevanceFieldEnum = {

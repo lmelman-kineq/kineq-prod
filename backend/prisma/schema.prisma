@@ -32,6 +32,17 @@ enum EstadoTurno {
 enum PatronRecurrenciaSerie {
   SEMANAL
   MENSUAL_ORDINAL
+  // "Personalizado...": intervalo + unidad (+ días de semana si la unidad es
+  // SEMANA) — ver campos *Personalizado en SerieTurno más abajo.
+  PERSONALIZADO
+}
+
+// Unidad de "Repetir cada N ..." para un patron PERSONALIZADO.
+enum UnidadRecurrenciaPersonalizada {
+  DIA
+  SEMANA
+  MES
+  ANIO
 }
 
 enum RolUsuario {
@@ -392,9 +403,19 @@ model SerieTurno {
   consultorioId Int
   patron        PatronRecurrenciaSerie @default(SEMANAL)
   // Cada cuántas semanas se repite (1 = semanal, 2 = cada 2 semanas, etc).
-  // Solo aplica a patron SEMANAL — null para MENSUAL_ORDINAL (el mes
-  // calendario real reemplaza el concepto de "cada N semanas").
+  // Solo aplica a patron SEMANAL — null para los demás patrones (el mes
+  // calendario real reemplaza el concepto de "cada N semanas" en MENSUAL_ORDINAL).
   frecuenciaSemanas Int?
+  // "Personalizado...": intervalo genérico ("cada N días/semanas/meses/
+  // años") + unidad. diasSemanaPersonalizado solo tiene valor si la unidad
+  // es SEMANA — CSV de enteros 0(domingo)-6(sábado), ej. "1,3,5". Todos
+  // null salvo que patron sea PERSONALIZADO. Metadata informativa: las
+  // fechas de cada turno ya están fijas (calculadas por el frontend, mismo
+  // criterio que el resto de los patrones) — esto solo permite reconstruir
+  // un resumen legible y propagarse correctamente al partir la serie.
+  intervaloPersonalizado  Int?
+  unidadPersonalizada     UnidadRecurrenciaPersonalizada?
+  diasSemanaPersonalizado String?
   // Total de turnos de esta serie (o sub-serie tras un split), snapshot fijo
   // — no se recalcula si se elimina una ocurrencia individual, para que
   // "Sesión X de Y" no cambie de significado por una baja puntual.

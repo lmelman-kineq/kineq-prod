@@ -19,6 +19,7 @@ Login screen, Configuración tables, and the Evoluciones table also got focused 
 - Quick state actions for appointments, quick actions menu in the Turnos table.
 - Custom Kineq confirmation UI replacing native browser confirms.
 - Turno state-transition guard: a `FINALIZADO`/`CANCELADO`/`AUSENTE` turno can no longer be re-opened via `PATCH /api/turnos/:id` (was a real gap, fixed with a regression test).
+- Día/Semana/Mes/Año calendar views on Inicio, custom-recurrence popup restyle + a real "Cantidad de sesiones" visibility bug fixed, sticky "+ Agregar..." footer on the Paciente/Profesional/Especialidad/Diagnóstico dropdowns — see "Vistas de calendario" in `docs/modules/dashboard.md` and the two new entries in `docs/modules/appointments.md`. Verified live with Playwright: all 4 views, dark mode, Día regression (context menu/click/empty-slot), the recurrence-count sync in both directions, the sticky footer with 15 seeded pacientes, and no horizontal page overflow at 390px. No backend changes — `GET /api/turnos` already supported the `from`/`to` range query Semana/Mes needed.
 
 ### Auth / roles
 - Real authentication exists (JWT in httpOnly cookie, `requireAuth`/`requireRole` middleware, `CLINICAL_ROLES` = Administrador + Profesional). Usuario↔Profesional link via `usuario.profesionalId`. This module is no longer "not implemented" — treat it as a real constraint, not a future placeholder.

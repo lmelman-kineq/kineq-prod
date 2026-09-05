@@ -1152,6 +1152,9 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
     monto,
     frecuenciaSemanas,
     patron = 'SEMANAL',
+    intervaloPersonalizado,
+    unidadPersonalizada,
+    diasSemanaPersonalizado,
     fechasInicio,
     numeroSesionInicial,
     confirmarSuperposicion,
@@ -1174,9 +1177,28 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
   if (!Array.isArray(fechasInicio) || fechasInicio.length < SERIE_MIN_OCURRENCIAS || fechasInicio.length > SERIE_MAX_OCURRENCIAS) {
     return res.status(400).json({ error: `fechasInicio debe tener entre ${SERIE_MIN_OCURRENCIAS} y ${SERIE_MAX_OCURRENCIAS} ocurrencias` })
   }
-  if (patron !== 'SEMANAL' && patron !== 'MENSUAL_ORDINAL') return res.status(400).json({ error: 'invalid patron' })
+  if (!['SEMANAL', 'MENSUAL_ORDINAL', 'PERSONALIZADO'].includes(patron)) return res.status(400).json({ error: 'invalid patron' })
   if (patron === 'SEMANAL' && (!Number.isInteger(frecuenciaSemanas) || frecuenciaSemanas < 1)) {
     return res.status(400).json({ error: 'invalid frecuenciaSemanas' })
+  }
+  let diasSemanaPersonalizadoCsv: string | null = null
+  if (patron === 'PERSONALIZADO') {
+    if (!Number.isInteger(intervaloPersonalizado) || intervaloPersonalizado < 1) {
+      return res.status(400).json({ error: 'invalid intervaloPersonalizado' })
+    }
+    if (!['DIA', 'SEMANA', 'MES', 'ANIO'].includes(unidadPersonalizada)) {
+      return res.status(400).json({ error: 'invalid unidadPersonalizada' })
+    }
+    if (unidadPersonalizada === 'SEMANA') {
+      if (
+        !Array.isArray(diasSemanaPersonalizado) ||
+        diasSemanaPersonalizado.length === 0 ||
+        !diasSemanaPersonalizado.every((d: unknown) => Number.isInteger(d) && (d as number) >= 0 && (d as number) <= 6)
+      ) {
+        return res.status(400).json({ error: 'invalid diasSemanaPersonalizado' })
+      }
+      diasSemanaPersonalizadoCsv = [...new Set(diasSemanaPersonalizado)].sort((a: number, b: number) => a - b).join(',')
+    }
   }
   if (!Number.isInteger(duracionMinutos) || duracionMinutos < 15) return res.status(400).json({ error: 'invalid duracionMinutos' })
   if (numeroSesionInicial !== undefined && numeroSesionInicial !== null && Number(numeroSesionInicial) <= 0) {
@@ -1250,6 +1272,9 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
           consultorioId,
           patron,
           frecuenciaSemanas: patron === 'SEMANAL' ? Number(frecuenciaSemanas) : null,
+          intervaloPersonalizado: patron === 'PERSONALIZADO' ? Number(intervaloPersonalizado) : null,
+          unidadPersonalizada: patron === 'PERSONALIZADO' ? unidadPersonalizada : null,
+          diasSemanaPersonalizado: patron === 'PERSONALIZADO' ? diasSemanaPersonalizadoCsv : null,
           cantidadSesiones: inicios.length,
         },
       })
@@ -1423,6 +1448,9 @@ app.patch('/api/turnos/:turnoId/serie', requireRole(...ADMIN_DATA_ROLES), async 
             consultorioId,
             patron: serieOriginal.patron,
             frecuenciaSemanas: serieOriginal.frecuenciaSemanas,
+            intervaloPersonalizado: serieOriginal.intervaloPersonalizado,
+            unidadPersonalizada: serieOriginal.unidadPersonalizada,
+            diasSemanaPersonalizado: serieOriginal.diasSemanaPersonalizado,
             cantidadSesiones: siguientes.length,
           },
         })

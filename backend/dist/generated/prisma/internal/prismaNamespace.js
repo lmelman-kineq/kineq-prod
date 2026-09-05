@@ -49,7 +49,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ObraSocialOrderByRelevanceFieldEnum = exports.EspecialidadOrderByRelevanceFieldEnum = exports.ProfesionalOrderByRelevanceFieldEnum = exports.PacienteOrderByRelevanceFieldEnum = exports.UsuarioOrderByRelevanceFieldEnum = exports.ConsultorioOrderByRelevanceFieldEnum = exports.NullsOrder = exports.SortOrder = exports.FichaSeccionEstadoScalarFieldEnum = exports.FichaEstudioComplementarioScalarFieldEnum = exports.FichaMedicacionScalarFieldEnum = exports.FichaAlergiaScalarFieldEnum = exports.FichaAntecedenteScalarFieldEnum = exports.CatalogoClinicoItemScalarFieldEnum = exports.FichaAlertaCampoScalarFieldEnum = exports.FichaInicialScalarFieldEnum = exports.PlantillaEvolucionScalarFieldEnum = exports.GrupoEvolucionScalarFieldEnum = exports.EvolucionImagenScalarFieldEnum = exports.EvolucionScalarFieldEnum = exports.SerieTurnoScalarFieldEnum = exports.TurnoScalarFieldEnum = exports.ConsultorioObraSocialOcultaScalarFieldEnum = exports.ObraSocialScalarFieldEnum = exports.ProfesionalEspecialidadScalarFieldEnum = exports.ConsultorioEspecialidadOcultaScalarFieldEnum = exports.EspecialidadScalarFieldEnum = exports.ProfesionalScalarFieldEnum = exports.PacienteScalarFieldEnum = exports.UsuarioScalarFieldEnum = exports.ConsultorioScalarFieldEnum = exports.TransactionIsolationLevel = exports.ModelName = exports.AnyNull = exports.JsonNull = exports.DbNull = exports.NullTypes = exports.prismaVersion = exports.getExtensionContext = exports.Decimal = exports.Sql = exports.raw = exports.join = exports.empty = exports.sql = exports.PrismaClientValidationError = exports.PrismaClientInitializationError = exports.PrismaClientRustPanicError = exports.PrismaClientUnknownRequestError = exports.PrismaClientKnownRequestError = void 0;
-exports.defineExtension = exports.FichaEstudioComplementarioOrderByRelevanceFieldEnum = exports.FichaMedicacionOrderByRelevanceFieldEnum = exports.FichaAlergiaOrderByRelevanceFieldEnum = exports.FichaAntecedenteOrderByRelevanceFieldEnum = exports.CatalogoClinicoItemOrderByRelevanceFieldEnum = exports.FichaAlertaCampoOrderByRelevanceFieldEnum = exports.FichaInicialOrderByRelevanceFieldEnum = exports.PlantillaEvolucionOrderByRelevanceFieldEnum = exports.GrupoEvolucionOrderByRelevanceFieldEnum = exports.EvolucionImagenOrderByRelevanceFieldEnum = exports.EvolucionOrderByRelevanceFieldEnum = exports.TurnoOrderByRelevanceFieldEnum = void 0;
+exports.defineExtension = exports.FichaEstudioComplementarioOrderByRelevanceFieldEnum = exports.FichaMedicacionOrderByRelevanceFieldEnum = exports.FichaAlergiaOrderByRelevanceFieldEnum = exports.FichaAntecedenteOrderByRelevanceFieldEnum = exports.CatalogoClinicoItemOrderByRelevanceFieldEnum = exports.FichaAlertaCampoOrderByRelevanceFieldEnum = exports.FichaInicialOrderByRelevanceFieldEnum = exports.PlantillaEvolucionOrderByRelevanceFieldEnum = exports.GrupoEvolucionOrderByRelevanceFieldEnum = exports.EvolucionImagenOrderByRelevanceFieldEnum = exports.EvolucionOrderByRelevanceFieldEnum = exports.SerieTurnoOrderByRelevanceFieldEnum = exports.TurnoOrderByRelevanceFieldEnum = void 0;
 const runtime = __importStar(require("@prisma/client/runtime/client"));
 /**
  * Prisma Errors
@@ -263,6 +263,9 @@ exports.SerieTurnoScalarFieldEnum = {
     consultorioId: 'consultorioId',
     patron: 'patron',
     frecuenciaSemanas: 'frecuenciaSemanas',
+    intervaloPersonalizado: 'intervaloPersonalizado',
+    unidadPersonalizada: 'unidadPersonalizada',
+    diasSemanaPersonalizado: 'diasSemanaPersonalizado',
     cantidadSesiones: 'cantidadSesiones',
     createdAt: 'createdAt'
 };
@@ -497,6 +500,9 @@ exports.ObraSocialOrderByRelevanceFieldEnum = {
 };
 exports.TurnoOrderByRelevanceFieldEnum = {
     notas: 'notas'
+};
+exports.SerieTurnoOrderByRelevanceFieldEnum = {
+    diasSemanaPersonalizado: 'diasSemanaPersonalizado'
 };
 exports.EvolucionOrderByRelevanceFieldEnum = {
     contenido: 'contenido',

@@ -80,6 +80,48 @@ La pantalla de Inicio funciona como una vista rápida del día, mostrando el cal
 
 **Actualización (implementado) — corrección de UX del quick-create + recurrencia mensual**: ronda de corrección sobre la implementación anterior. Ver el resto de esta sección para el detalle completo — resumen ejecutivo: la card compacta pasó de ser un formulario tradicional con tamaños reducidos a una card real con densidad Google-Calendar (íconos en vez de labels, sin `Cancelar` en el footer); se agregó recurrencia mensual por ordinal de día de semana; se corrigió un bug real donde un turno recurrente en el calendario mostraba el ícono de recurrencia pero no el horario; y se corrigió una condición de carrera real donde elegir Repetición justo después de un alta rápida de paciente/profesional/especialidad podía revertirse silenciosamente.
 
+**Actualización (implementado) — ajustes finales de UI + recurrencia "Personalizado..."**: nueva ronda de corrección. Se eliminó un doble recuadro real en Paciente/Profesional/Especialidad/Diagnóstico (bug de especificidad CSS, ver detalle en "Doble borde" más abajo); se corrigió el spacing de "Sesión de consulta"/"Monto" en el formulario completo (`Más opciones`); `Estado` y `Duración` ahora comparten fila en desktop; y se agregó `Personalizado...` al selector de Repetición — intervalo genérico ("cada N días/semanas/meses/años") con selección de **uno o más días de la semana** para la unidad semana (limitación explícita de la ronda anterior, ahora resuelta). `Cantidad de sesiones` sigue siendo el único límite de la recurrencia — nunca "Finaliza: Nunca/El/Después de X" de Google Calendar.
+
+---
+
+### Doble borde (bug corregido)
+
+`.dropdown-input-row input` (reset del input interior de Paciente/Profesional/Especialidad/Diagnóstico — el mismo combobox custom reutilizado por los cuatro) tenía **menor especificidad CSS** ((0,1,1)) que la regla global `.modal-body input:not([type="checkbox"])` ((0,2,1)), así que esta última ganaba y restauraba borde/fondo/padding en el input de adentro — dos bordes visibles superpuestos (el de `.dropdown-input-row` y el "resucitado" en el `<input>`). Arreglado subiendo la especificidad del reset a `.dropdown-input-row input:not([type="checkbox"])` (empata en (0,2,1) y gana por orden de declaración, que ya lo favorecía) — mismo criterio aplicado a la variante `:focus`. Nunca se usó `!important`.
+
+### Spacing del formulario completo (bug corregido)
+
+"Sesión de consulta" y "Nro. de sesión" quedaban envueltos en un mismo `<div>` sin `grid-column`, heredado del diseño de la card compacta — como esa celda del grid de 2 columnas tenía dos líneas apiladas (checkbox + Nro. de sesión) contra una sola en la celda vecina ("Monto"), la fila del grid se estiraba y "Monto" quedaba con un hueco debajo que se leía como "gap label→input" exagerado, cuando en realidad era una altura de fila de grid despareja. Arreglado: en el formulario completo, "Sesión de consulta" pasó a ocupar su propia fila completa (`grid-column: 1/-1`, con un poco de margen extra — `.checkbox-field--section`) y "Nro. de sesión"/"Monto" volvieron a ser celdas normales independientes, igual que antes de la ronda de Turnos recurrentes. `Estado` y `Duración (min)` ahora son celdas normales consecutivas (comparten fila en desktop) — antes `Duración` tenía `.appointment-form-full-row` y quedaba sola en su propia fila.
+
+### Recurrencia "Personalizado..."
+
+Cuarta opción del selector de Repetición (además de `No se repite`/semanal/mensual ordinal). Al elegirla se abre un modal/card custom Kineq (nunca un popup nativo) — `CustomRecurrenceModal.tsx`:
+
+```
+Repetir cada [N] [día(s) / semana(s) / mes(es) / año(s)]
+Repetir el  [L] [M] [X] [J] [V] [S] [D]   ← solo si la unidad es "semana"
+Cantidad de sesiones [N]
+[Cancelar] [Listo]
+```
+
+`Listo` **no crea turnos todavía** — solo valida, cierra el modal y guarda la configuración en el mismo `TurnoFormValue` (`customRecurrence`), mostrando un resumen legible en el propio selector (ej. "Cada semana, lunes y miércoles") en vez de JSON o valores técnicos. La creación real ocurre recién en "Guardar turno". Reabrir `Personalizado...` (ícono de lápiz junto al selector, visible solo mientras está activo) carga la configuración ya elegida — nunca resetea intervalo/unidad/días/cantidad. Cancelar el modal no cambia nada (la Repetición vuelve a lo que estaba antes de abrirlo).
+
+**Generación de fechas** (`frontend/src/utils/recurrence.ts`, siempre calendario real, nunca sumando ~30/~365 días):
+
+- `DIA`: cada N días desde la fecha inicial (`generateEveryNDaysDates`).
+- `SEMANA`: uno o más días de la semana, en **orden estrictamente cronológico** — cada semana de intervalo se recorre día por día en orden L→D, nunca "todos los lunes primero, después todos los viernes" (`generateWeeklyMultiDayDates`). Regla de ancla: nunca se generan ocurrencias anteriores a la fecha inicial; si la fecha inicial coincide con uno de los días elegidos es la primera ocurrencia, si no, la primera ocurrencia real es el próximo día válido posterior. Ejemplo real (ver `recurrence.test.ts`): fecha inicial viernes 04/09/2026, `cada 1 semana, lunes y viernes, cantidad 5` → `04/09, 07/09, 11/09, 14/09, 18/09` (nunca los 5 viernes primero).
+- `MES`: cada N meses, mismo día del mes que la fecha inicial, con clamp al último día real del mes destino si es más corto (ej. 31/01 + 1 mes → 28/02 o 29/02 en bisiesto) — convención estándar y explícita, distinta (y más simple) del patrón `MENSUAL_ORDINAL` ya existente ("todos los meses, el N-ésimo día de semana"), que sigue existiendo sin cambios como opción directa del selector.
+- `ANIO`: cada N años, misma fecha, mismo clamp para 29 de febrero en años no bisiestos.
+
+**Modelo** (migración `20260904200000_serie_turno_patron_personalizado`, aditiva): `SerieTurno.patron` gana el valor `PERSONALIZADO`; nuevos campos `intervaloPersonalizado Int?`, `unidadPersonalizada UnidadRecurrenciaPersonalizada?` (`DIA`/`SEMANA`/`MES`/`ANIO`), `diasSemanaPersonalizado String?` (CSV de enteros 0-6, ej. `"1,5"`, solo con unidad `SEMANA`) — todos `null` salvo que `patron` sea `PERSONALIZADO`. Igual que los demás patrones, son **metadata informativa**: las fechas de cada turno ya vienen calculadas y fijas (`fechasInicio`, calculado por el frontend) — el backend solo valida (intervalo ≥ 1, unidad soportada, semana con al menos un día válido 0-6) y persiste, nunca recalcula ni reinterpreta el patrón. Al partir una serie (`PATCH /api/turnos/:id/serie`, "este turno y los siguientes"), los tres campos se propagan a la sub-serie nueva igual que `patron`/`frecuenciaSemanas` — mismo split ya existente, sin una segunda semántica de series.
+
+**Actualización (implementado) — refinamiento visual del popup + bug real de sincronización de "Cantidad de sesiones"**: `CustomRecurrenceModal.tsx` vivía visualmente fuera de `.modal-body`, así que ninguno de los estilos globales de Kineq (padding/border-radius/foco de inputs y selects) le aplicaba — se veía "nativo". Fix: se envolvió el contenido en `<div className="modal-body custom-recurrence-body">` (hereda inputs/labels/selects de Kineq sin duplicar reglas) y el `<select>` de unidad se envolvió en `<span className="select-chevron-wrap">` — `appearance: none` + un `::after` con el mismo chevron (`▾`) que ya usan los demás `<select>` custom de la app, nunca la flecha nativa del navegador. Los chips de día de semana (círculos `L M X J V S D`) ya tenían la lógica de selección; se ajustó su especificidad para que hereden el acento morado de Kineq en vez de un estado gris genérico, con foco/hover/`aria-pressed` sin cambios de comportamiento. Sin cambios de props ni de lógica — `onCancel`/`onConfirm`/`initialConfig`/`initialCount` intactos.
+
+**El bug real** no era de arquitectura de estado (`recurrenceCount` ya era la única fuente de verdad — `CustomRecurrenceModal` recibía `initialCount={value.recurrenceCount}` y su `onConfirm` escribía de vuelta al mismo campo): era una condición de visibilidad introducida en una ronda anterior. `FormFields.tsx` ocultaba el input externo "Cantidad de sesiones" (`.quick-repeat-count`) cuando `recurrenceFrequency === 'custom'` (`!== 'none' && !== 'custom'`), como si ese modo tuviera su propio control independiente — pero el modal solo permite *fijar* el valor al confirmar, no lo sigue mostrando después. Con el input externo oculto, cambiar `Personalizado` a 8 sesiones hacía que el campo pareciera "desaparecer" en vez de seguir mostrando 8. Fix de una línea: la condición pasó a `!== 'none'` (se muestra para cualquier recurrencia, incluida `custom`). Verificado en vivo (Playwright): confirmar `Personalizado` con 8 → el campo externo muestra 8; editarlo a 12 desde afuera y reabrir `Personalizado` → el modal muestra 12 (misma fuente de verdad en ambas direcciones, sin doble estado).
+
+### Pie fijo "+ Agregar..." en los dropdowns de Paciente/Profesional/Especialidad/Diagnóstico
+
+Los cuatro combobox custom (Paciente, Profesional, Especialidad, Diagnóstico) comparten las mismas clases (`.dropdown-list`/`.dropdown-footer`/`.dropdown-footer-edit`), tanto en `Nuevo turno` como en `Editar turno` — un solo fix de CSS cubre los cuatro campos y ambos flujos, sin lógica nueva por componente. `.dropdown-footer`/`.dropdown-footer-edit` ganaron `position: sticky; bottom: -10px` (con `margin`/`padding` ajustados para tapar el borde del contenedor scrolleable) + `background: var(--color-surface)` + `border-top: 1px solid var(--color-line-soft)` — el botón "+ Agregar paciente"/"+ Agregar profesional"/etc. queda fijo al fondo del dropdown mientras solo la lista de opciones (`.dropdown-list`, que ya tenía `overflow: auto` con un `max-height` existente de ~260-320px) scrollea por encima. Verificado con 15 pacientes cargados (más de los que entran en el `max-height`): el pie sigue visible sin scrollear hasta el final de la lista, con fondo sólido (no se transparenta contra las opciones), funciona en modo oscuro, y no rompe el flujo de alta rápida existente (foco, refresco del listado, selección).
+
 ---
 
 ## Turnos recurrentes (series)
@@ -100,10 +142,11 @@ SerieTurno (id, consultorioId, patron, frecuenciaSemanas, cantidadSesiones, crea
 
 `ordenEnSerie` es la posición estructural (1-based) del turno dentro de su serie actual — **nunca se confunde con `numeroSesion`** (el número clínico, editable a mano, que puede divergir). Un turno perteneciente a una serie nunca se identifica por heurística (mismo paciente+profesional+hora): la relación siempre pasa por `Turno.serieId`.
 
-`patron` (`PatronRecurrenciaSerie`, migración `20260904150000_serie_turno_patron_mensual`) distingue dos formas de generar las fechas, ambas calculadas por el frontend (el backend nunca hace aritmética de fechas/zona horaria):
+`patron` (`PatronRecurrenciaSerie`) distingue tres formas de generar las fechas, todas calculadas por el frontend (el backend nunca hace aritmética de fechas/zona horaria):
 
-- `SEMANAL`: usa `frecuenciaSemanas` (cada cuántas semanas — 1 o 2 hoy), siempre el día de semana de la fecha inicial.
+- `SEMANAL` (migración `20260904150000_serie_turno_patron_mensual`): usa `frecuenciaSemanas` (cada cuántas semanas — 1 o 2 hoy), siempre el día de semana de la fecha inicial.
 - `MENSUAL_ORDINAL`: repite todos los meses en el mismo N-ésimo día de semana que la fecha inicial (ej. el 04/09/2026 es el primer viernes de septiembre → "todos los meses, el primer viernes"). `frecuenciaSemanas` queda `null` para este patrón — no aplica.
+- `PERSONALIZADO` (migración `20260904200000_serie_turno_patron_personalizado`): intervalo genérico + unidad (día/semana/mes/año), con selección de uno o más días de la semana cuando la unidad es semana — ver "Recurrencia 'Personalizado...'" más abajo para el detalle completo.
 
 ### Recurrencia mensual por ordinal de día de semana
 
@@ -125,7 +168,7 @@ En el frontend, tanto editar como eliminar un turno de una serie muestran primer
 `TurnoFormFields` (`frontend/src/components/FormFields.tsx`) tiene un modo `compact` (más `allowRecurrence` para el selector de Repetición) en vez de un formulario paralelo — comparte estado, dropdowns, validaciones y guardado con el formulario completo de siempre; lo que cambia es la composición visual, no la lógica. En modo compacto:
 
 - Fecha + Hora inicio + Hora fin en una sola fila con ícono de reloj (la duración se deriva de esas dos horas, `duracionMinutos` sigue siendo la única fuente de verdad persistida — nunca se guarda un "fin" separado).
-- Repetición en su propia fila (ícono, sin label visible) con `No se repite` / `Cada semana` / `Cada 2 semanas` / `Todos los meses, el N-ésimo díaDeSemana` (calculado según la fecha elegida — ver "Recurrencia mensual" arriba); `Cantidad de sesiones` aparece al lado, solo si hay recurrencia elegida.
+- Repetición en su propia fila (ícono, sin label visible) con `No se repite` / `Cada semana` / `Cada 2 semanas` / `Todos los meses, el N-ésimo díaDeSemana` / `Personalizado...` (ver "Recurrencia 'Personalizado...'" más abajo); `Cantidad de sesiones` aparece al lado, solo si hay recurrencia elegida y no es `Personalizado...` (ese caso la gestiona el propio modal).
 - Paciente, Profesional y Especialidad: ícono + control (buscador/selector), **sin** el label grande tradicional arriba de cada campo — el nombre del campo sigue siendo accesible vía un `<label class="sr-only">` asociado por `id`/`htmlFor` (visible para lectores de pantalla, nunca solo un placeholder).
 - "Sesión de consulta" y "Nro. de sesión" comparten una misma fila.
 - Diagnóstico, Monto, Estado y Duración (min) **nunca** se muestran en este modo — son datos avanzados, solo están en "Más opciones".
@@ -138,10 +181,10 @@ Un turno de una serie muestra un ícono chico de recurrencia en la esquina super
 
 ### Qué no se implementó (limitaciones intencionales)
 
-- **Múltiples días por semana** (ej. "lunes y jueves"): el selector de Repetición no lo ofrece — el modelo (`SerieTurno.patron`/`frecuenciaSemanas`) puede evolucionar para soportarlo más adelante, pero agregarlo ahora era desproporcionado para esta ronda.
 - **Reasignar el paciente** en un "editar este turno y los siguientes": el paciente de toda una serie/sub-serie se asume constante en esta implementación — no está en el whitelist de campos editables de `PATCH /api/turnos/:id/serie`.
-- **Cambiar el patrón de recurrencia o la cantidad restante** desde una edición "este turno y los siguientes": esa operación cambia solo hora/duración/profesional/especialidad/diagnóstico/monto/sesión de consulta de las ocurrencias ya generadas, nunca regenera fechas nuevas ni agrega/quita ocurrencias, ni cambia semanal↔mensual de una serie ya creada.
+- **Cambiar el patrón de recurrencia o la cantidad restante** desde una edición "este turno y los siguientes": esa operación cambia solo hora/duración/profesional/especialidad/diagnóstico/monto/sesión de consulta de las ocurrencias ya generadas, nunca regenera fechas nuevas ni agrega/quita ocurrencias, ni cambia el patrón (semanal/mensual/personalizado) de una serie ya creada.
 - Migrar toda la edición de turnos al patrón de card compacta: se mantuvo el editor completo existente (`TurnoFormFields` sin `compact`) para editar, con el diálogo de alcance de serie delante — migrar edición completa a la card compacta hubiera excedido el alcance de esta ronda (permitido explícitamente, ver criterio de la ronda).
+- **Personalizado + mensual por N-ésimo día de semana combinados**: la unidad `MES` de "Personalizado..." siempre repite por el mismo día del mes (con clamp) — para "el N-ésimo día de semana de cada mes" sigue existiendo la opción directa `MENSUAL_ORDINAL` del selector, deliberadamente no duplicada dentro de "Personalizado" (mínima solución mantenible, ver diagnóstico de esta ronda).
 
 ---
 

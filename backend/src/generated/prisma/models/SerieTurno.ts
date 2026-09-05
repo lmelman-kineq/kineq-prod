@@ -30,6 +30,7 @@ export type SerieTurnoAvgAggregateOutputType = {
   id: number | null
   consultorioId: number | null
   frecuenciaSemanas: number | null
+  intervaloPersonalizado: number | null
   cantidadSesiones: number | null
 }
 
@@ -37,6 +38,7 @@ export type SerieTurnoSumAggregateOutputType = {
   id: number | null
   consultorioId: number | null
   frecuenciaSemanas: number | null
+  intervaloPersonalizado: number | null
   cantidadSesiones: number | null
 }
 
@@ -45,6 +47,9 @@ export type SerieTurnoMinAggregateOutputType = {
   consultorioId: number | null
   patron: $Enums.PatronRecurrenciaSerie | null
   frecuenciaSemanas: number | null
+  intervaloPersonalizado: number | null
+  unidadPersonalizada: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado: string | null
   cantidadSesiones: number | null
   createdAt: Date | null
 }
@@ -54,6 +59,9 @@ export type SerieTurnoMaxAggregateOutputType = {
   consultorioId: number | null
   patron: $Enums.PatronRecurrenciaSerie | null
   frecuenciaSemanas: number | null
+  intervaloPersonalizado: number | null
+  unidadPersonalizada: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado: string | null
   cantidadSesiones: number | null
   createdAt: Date | null
 }
@@ -63,6 +71,9 @@ export type SerieTurnoCountAggregateOutputType = {
   consultorioId: number
   patron: number
   frecuenciaSemanas: number
+  intervaloPersonalizado: number
+  unidadPersonalizada: number
+  diasSemanaPersonalizado: number
   cantidadSesiones: number
   createdAt: number
   _all: number
@@ -73,6 +84,7 @@ export type SerieTurnoAvgAggregateInputType = {
   id?: true
   consultorioId?: true
   frecuenciaSemanas?: true
+  intervaloPersonalizado?: true
   cantidadSesiones?: true
 }
 
@@ -80,6 +92,7 @@ export type SerieTurnoSumAggregateInputType = {
   id?: true
   consultorioId?: true
   frecuenciaSemanas?: true
+  intervaloPersonalizado?: true
   cantidadSesiones?: true
 }
 
@@ -88,6 +101,9 @@ export type SerieTurnoMinAggregateInputType = {
   consultorioId?: true
   patron?: true
   frecuenciaSemanas?: true
+  intervaloPersonalizado?: true
+  unidadPersonalizada?: true
+  diasSemanaPersonalizado?: true
   cantidadSesiones?: true
   createdAt?: true
 }
@@ -97,6 +113,9 @@ export type SerieTurnoMaxAggregateInputType = {
   consultorioId?: true
   patron?: true
   frecuenciaSemanas?: true
+  intervaloPersonalizado?: true
+  unidadPersonalizada?: true
+  diasSemanaPersonalizado?: true
   cantidadSesiones?: true
   createdAt?: true
 }
@@ -106,6 +125,9 @@ export type SerieTurnoCountAggregateInputType = {
   consultorioId?: true
   patron?: true
   frecuenciaSemanas?: true
+  intervaloPersonalizado?: true
+  unidadPersonalizada?: true
+  diasSemanaPersonalizado?: true
   cantidadSesiones?: true
   createdAt?: true
   _all?: true
@@ -202,6 +224,9 @@ export type SerieTurnoGroupByOutputType = {
   consultorioId: number
   patron: $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas: number | null
+  intervaloPersonalizado: number | null
+  unidadPersonalizada: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado: string | null
   cantidadSesiones: number
   createdAt: Date
   _count: SerieTurnoCountAggregateOutputType | null
@@ -234,6 +259,9 @@ export type SerieTurnoWhereInput = {
   consultorioId?: Prisma.IntFilter<"SerieTurno"> | number
   patron?: Prisma.EnumPatronRecurrenciaSerieFilter<"SerieTurno"> | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.IntNullableFilter<"SerieTurno"> | number | null
+  intervaloPersonalizado?: Prisma.IntNullableFilter<"SerieTurno"> | number | null
+  unidadPersonalizada?: Prisma.EnumUnidadRecurrenciaPersonalizadaNullableFilter<"SerieTurno"> | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.StringNullableFilter<"SerieTurno"> | string | null
   cantidadSesiones?: Prisma.IntFilter<"SerieTurno"> | number
   createdAt?: Prisma.DateTimeFilter<"SerieTurno"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
@@ -245,10 +273,14 @@ export type SerieTurnoOrderByWithRelationInput = {
   consultorioId?: Prisma.SortOrder
   patron?: Prisma.SortOrder
   frecuenciaSemanas?: Prisma.SortOrderInput | Prisma.SortOrder
+  intervaloPersonalizado?: Prisma.SortOrderInput | Prisma.SortOrder
+  unidadPersonalizada?: Prisma.SortOrderInput | Prisma.SortOrder
+  diasSemanaPersonalizado?: Prisma.SortOrderInput | Prisma.SortOrder
   cantidadSesiones?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   consultorio?: Prisma.ConsultorioOrderByWithRelationInput
   turnos?: Prisma.TurnoOrderByRelationAggregateInput
+  _relevance?: Prisma.SerieTurnoOrderByRelevanceInput
 }
 
 export type SerieTurnoWhereUniqueInput = Prisma.AtLeast<{
@@ -259,6 +291,9 @@ export type SerieTurnoWhereUniqueInput = Prisma.AtLeast<{
   consultorioId?: Prisma.IntFilter<"SerieTurno"> | number
   patron?: Prisma.EnumPatronRecurrenciaSerieFilter<"SerieTurno"> | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.IntNullableFilter<"SerieTurno"> | number | null
+  intervaloPersonalizado?: Prisma.IntNullableFilter<"SerieTurno"> | number | null
+  unidadPersonalizada?: Prisma.EnumUnidadRecurrenciaPersonalizadaNullableFilter<"SerieTurno"> | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.StringNullableFilter<"SerieTurno"> | string | null
   cantidadSesiones?: Prisma.IntFilter<"SerieTurno"> | number
   createdAt?: Prisma.DateTimeFilter<"SerieTurno"> | Date | string
   consultorio?: Prisma.XOR<Prisma.ConsultorioScalarRelationFilter, Prisma.ConsultorioWhereInput>
@@ -270,6 +305,9 @@ export type SerieTurnoOrderByWithAggregationInput = {
   consultorioId?: Prisma.SortOrder
   patron?: Prisma.SortOrder
   frecuenciaSemanas?: Prisma.SortOrderInput | Prisma.SortOrder
+  intervaloPersonalizado?: Prisma.SortOrderInput | Prisma.SortOrder
+  unidadPersonalizada?: Prisma.SortOrderInput | Prisma.SortOrder
+  diasSemanaPersonalizado?: Prisma.SortOrderInput | Prisma.SortOrder
   cantidadSesiones?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.SerieTurnoCountOrderByAggregateInput
@@ -287,6 +325,9 @@ export type SerieTurnoScalarWhereWithAggregatesInput = {
   consultorioId?: Prisma.IntWithAggregatesFilter<"SerieTurno"> | number
   patron?: Prisma.EnumPatronRecurrenciaSerieWithAggregatesFilter<"SerieTurno"> | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.IntNullableWithAggregatesFilter<"SerieTurno"> | number | null
+  intervaloPersonalizado?: Prisma.IntNullableWithAggregatesFilter<"SerieTurno"> | number | null
+  unidadPersonalizada?: Prisma.EnumUnidadRecurrenciaPersonalizadaNullableWithAggregatesFilter<"SerieTurno"> | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.StringNullableWithAggregatesFilter<"SerieTurno"> | string | null
   cantidadSesiones?: Prisma.IntWithAggregatesFilter<"SerieTurno"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SerieTurno"> | Date | string
 }
@@ -294,6 +335,9 @@ export type SerieTurnoScalarWhereWithAggregatesInput = {
 export type SerieTurnoCreateInput = {
   patron?: $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: number | null
+  intervaloPersonalizado?: number | null
+  unidadPersonalizada?: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: string | null
   cantidadSesiones: number
   createdAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutSeriesTurnoInput
@@ -305,6 +349,9 @@ export type SerieTurnoUncheckedCreateInput = {
   consultorioId: number
   patron?: $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: number | null
+  intervaloPersonalizado?: number | null
+  unidadPersonalizada?: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: string | null
   cantidadSesiones: number
   createdAt?: Date | string
   turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutSerieInput
@@ -313,6 +360,9 @@ export type SerieTurnoUncheckedCreateInput = {
 export type SerieTurnoUpdateInput = {
   patron?: Prisma.EnumPatronRecurrenciaSerieFieldUpdateOperationsInput | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervaloPersonalizado?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unidadPersonalizada?: Prisma.NullableEnumUnidadRecurrenciaPersonalizadaFieldUpdateOperationsInput | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cantidadSesiones?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutSeriesTurnoNestedInput
@@ -324,6 +374,9 @@ export type SerieTurnoUncheckedUpdateInput = {
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   patron?: Prisma.EnumPatronRecurrenciaSerieFieldUpdateOperationsInput | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervaloPersonalizado?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unidadPersonalizada?: Prisma.NullableEnumUnidadRecurrenciaPersonalizadaFieldUpdateOperationsInput | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cantidadSesiones?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   turnos?: Prisma.TurnoUncheckedUpdateManyWithoutSerieNestedInput
@@ -334,6 +387,9 @@ export type SerieTurnoCreateManyInput = {
   consultorioId: number
   patron?: $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: number | null
+  intervaloPersonalizado?: number | null
+  unidadPersonalizada?: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: string | null
   cantidadSesiones: number
   createdAt?: Date | string
 }
@@ -341,6 +397,9 @@ export type SerieTurnoCreateManyInput = {
 export type SerieTurnoUpdateManyMutationInput = {
   patron?: Prisma.EnumPatronRecurrenciaSerieFieldUpdateOperationsInput | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervaloPersonalizado?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unidadPersonalizada?: Prisma.NullableEnumUnidadRecurrenciaPersonalizadaFieldUpdateOperationsInput | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cantidadSesiones?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -350,6 +409,9 @@ export type SerieTurnoUncheckedUpdateManyInput = {
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   patron?: Prisma.EnumPatronRecurrenciaSerieFieldUpdateOperationsInput | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervaloPersonalizado?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unidadPersonalizada?: Prisma.NullableEnumUnidadRecurrenciaPersonalizadaFieldUpdateOperationsInput | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cantidadSesiones?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -369,11 +431,20 @@ export type SerieTurnoNullableScalarRelationFilter = {
   isNot?: Prisma.SerieTurnoWhereInput | null
 }
 
+export type SerieTurnoOrderByRelevanceInput = {
+  fields: Prisma.SerieTurnoOrderByRelevanceFieldEnum | Prisma.SerieTurnoOrderByRelevanceFieldEnum[]
+  sort: Prisma.SortOrder
+  search: string
+}
+
 export type SerieTurnoCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   consultorioId?: Prisma.SortOrder
   patron?: Prisma.SortOrder
   frecuenciaSemanas?: Prisma.SortOrder
+  intervaloPersonalizado?: Prisma.SortOrder
+  unidadPersonalizada?: Prisma.SortOrder
+  diasSemanaPersonalizado?: Prisma.SortOrder
   cantidadSesiones?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -382,6 +453,7 @@ export type SerieTurnoAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   consultorioId?: Prisma.SortOrder
   frecuenciaSemanas?: Prisma.SortOrder
+  intervaloPersonalizado?: Prisma.SortOrder
   cantidadSesiones?: Prisma.SortOrder
 }
 
@@ -390,6 +462,9 @@ export type SerieTurnoMaxOrderByAggregateInput = {
   consultorioId?: Prisma.SortOrder
   patron?: Prisma.SortOrder
   frecuenciaSemanas?: Prisma.SortOrder
+  intervaloPersonalizado?: Prisma.SortOrder
+  unidadPersonalizada?: Prisma.SortOrder
+  diasSemanaPersonalizado?: Prisma.SortOrder
   cantidadSesiones?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -399,6 +474,9 @@ export type SerieTurnoMinOrderByAggregateInput = {
   consultorioId?: Prisma.SortOrder
   patron?: Prisma.SortOrder
   frecuenciaSemanas?: Prisma.SortOrder
+  intervaloPersonalizado?: Prisma.SortOrder
+  unidadPersonalizada?: Prisma.SortOrder
+  diasSemanaPersonalizado?: Prisma.SortOrder
   cantidadSesiones?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -407,6 +485,7 @@ export type SerieTurnoSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   consultorioId?: Prisma.SortOrder
   frecuenciaSemanas?: Prisma.SortOrder
+  intervaloPersonalizado?: Prisma.SortOrder
   cantidadSesiones?: Prisma.SortOrder
 }
 
@@ -472,9 +551,16 @@ export type EnumPatronRecurrenciaSerieFieldUpdateOperationsInput = {
   set?: $Enums.PatronRecurrenciaSerie
 }
 
+export type NullableEnumUnidadRecurrenciaPersonalizadaFieldUpdateOperationsInput = {
+  set?: $Enums.UnidadRecurrenciaPersonalizada | null
+}
+
 export type SerieTurnoCreateWithoutConsultorioInput = {
   patron?: $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: number | null
+  intervaloPersonalizado?: number | null
+  unidadPersonalizada?: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: string | null
   cantidadSesiones: number
   createdAt?: Date | string
   turnos?: Prisma.TurnoCreateNestedManyWithoutSerieInput
@@ -484,6 +570,9 @@ export type SerieTurnoUncheckedCreateWithoutConsultorioInput = {
   id?: number
   patron?: $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: number | null
+  intervaloPersonalizado?: number | null
+  unidadPersonalizada?: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: string | null
   cantidadSesiones: number
   createdAt?: Date | string
   turnos?: Prisma.TurnoUncheckedCreateNestedManyWithoutSerieInput
@@ -523,6 +612,9 @@ export type SerieTurnoScalarWhereInput = {
   consultorioId?: Prisma.IntFilter<"SerieTurno"> | number
   patron?: Prisma.EnumPatronRecurrenciaSerieFilter<"SerieTurno"> | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.IntNullableFilter<"SerieTurno"> | number | null
+  intervaloPersonalizado?: Prisma.IntNullableFilter<"SerieTurno"> | number | null
+  unidadPersonalizada?: Prisma.EnumUnidadRecurrenciaPersonalizadaNullableFilter<"SerieTurno"> | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.StringNullableFilter<"SerieTurno"> | string | null
   cantidadSesiones?: Prisma.IntFilter<"SerieTurno"> | number
   createdAt?: Prisma.DateTimeFilter<"SerieTurno"> | Date | string
 }
@@ -530,6 +622,9 @@ export type SerieTurnoScalarWhereInput = {
 export type SerieTurnoCreateWithoutTurnosInput = {
   patron?: $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: number | null
+  intervaloPersonalizado?: number | null
+  unidadPersonalizada?: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: string | null
   cantidadSesiones: number
   createdAt?: Date | string
   consultorio: Prisma.ConsultorioCreateNestedOneWithoutSeriesTurnoInput
@@ -540,6 +635,9 @@ export type SerieTurnoUncheckedCreateWithoutTurnosInput = {
   consultorioId: number
   patron?: $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: number | null
+  intervaloPersonalizado?: number | null
+  unidadPersonalizada?: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: string | null
   cantidadSesiones: number
   createdAt?: Date | string
 }
@@ -563,6 +661,9 @@ export type SerieTurnoUpdateToOneWithWhereWithoutTurnosInput = {
 export type SerieTurnoUpdateWithoutTurnosInput = {
   patron?: Prisma.EnumPatronRecurrenciaSerieFieldUpdateOperationsInput | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervaloPersonalizado?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unidadPersonalizada?: Prisma.NullableEnumUnidadRecurrenciaPersonalizadaFieldUpdateOperationsInput | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cantidadSesiones?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   consultorio?: Prisma.ConsultorioUpdateOneRequiredWithoutSeriesTurnoNestedInput
@@ -573,6 +674,9 @@ export type SerieTurnoUncheckedUpdateWithoutTurnosInput = {
   consultorioId?: Prisma.IntFieldUpdateOperationsInput | number
   patron?: Prisma.EnumPatronRecurrenciaSerieFieldUpdateOperationsInput | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervaloPersonalizado?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unidadPersonalizada?: Prisma.NullableEnumUnidadRecurrenciaPersonalizadaFieldUpdateOperationsInput | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cantidadSesiones?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -581,6 +685,9 @@ export type SerieTurnoCreateManyConsultorioInput = {
   id?: number
   patron?: $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: number | null
+  intervaloPersonalizado?: number | null
+  unidadPersonalizada?: $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: string | null
   cantidadSesiones: number
   createdAt?: Date | string
 }
@@ -588,6 +695,9 @@ export type SerieTurnoCreateManyConsultorioInput = {
 export type SerieTurnoUpdateWithoutConsultorioInput = {
   patron?: Prisma.EnumPatronRecurrenciaSerieFieldUpdateOperationsInput | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervaloPersonalizado?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unidadPersonalizada?: Prisma.NullableEnumUnidadRecurrenciaPersonalizadaFieldUpdateOperationsInput | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cantidadSesiones?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   turnos?: Prisma.TurnoUpdateManyWithoutSerieNestedInput
@@ -597,6 +707,9 @@ export type SerieTurnoUncheckedUpdateWithoutConsultorioInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   patron?: Prisma.EnumPatronRecurrenciaSerieFieldUpdateOperationsInput | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervaloPersonalizado?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unidadPersonalizada?: Prisma.NullableEnumUnidadRecurrenciaPersonalizadaFieldUpdateOperationsInput | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cantidadSesiones?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   turnos?: Prisma.TurnoUncheckedUpdateManyWithoutSerieNestedInput
@@ -606,6 +719,9 @@ export type SerieTurnoUncheckedUpdateManyWithoutConsultorioInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   patron?: Prisma.EnumPatronRecurrenciaSerieFieldUpdateOperationsInput | $Enums.PatronRecurrenciaSerie
   frecuenciaSemanas?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervaloPersonalizado?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  unidadPersonalizada?: Prisma.NullableEnumUnidadRecurrenciaPersonalizadaFieldUpdateOperationsInput | $Enums.UnidadRecurrenciaPersonalizada | null
+  diasSemanaPersonalizado?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cantidadSesiones?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -646,6 +762,9 @@ export type SerieTurnoSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   consultorioId?: boolean
   patron?: boolean
   frecuenciaSemanas?: boolean
+  intervaloPersonalizado?: boolean
+  unidadPersonalizada?: boolean
+  diasSemanaPersonalizado?: boolean
   cantidadSesiones?: boolean
   createdAt?: boolean
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
@@ -660,11 +779,14 @@ export type SerieTurnoSelectScalar = {
   consultorioId?: boolean
   patron?: boolean
   frecuenciaSemanas?: boolean
+  intervaloPersonalizado?: boolean
+  unidadPersonalizada?: boolean
+  diasSemanaPersonalizado?: boolean
   cantidadSesiones?: boolean
   createdAt?: boolean
 }
 
-export type SerieTurnoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "patron" | "frecuenciaSemanas" | "cantidadSesiones" | "createdAt", ExtArgs["result"]["serieTurno"]>
+export type SerieTurnoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "patron" | "frecuenciaSemanas" | "intervaloPersonalizado" | "unidadPersonalizada" | "diasSemanaPersonalizado" | "cantidadSesiones" | "createdAt", ExtArgs["result"]["serieTurno"]>
 export type SerieTurnoInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
   turnos?: boolean | Prisma.SerieTurno$turnosArgs<ExtArgs>
@@ -682,6 +804,9 @@ export type $SerieTurnoPayload<ExtArgs extends runtime.Types.Extensions.Internal
     consultorioId: number
     patron: $Enums.PatronRecurrenciaSerie
     frecuenciaSemanas: number | null
+    intervaloPersonalizado: number | null
+    unidadPersonalizada: $Enums.UnidadRecurrenciaPersonalizada | null
+    diasSemanaPersonalizado: string | null
     cantidadSesiones: number
     createdAt: Date
   }, ExtArgs["result"]["serieTurno"]>
@@ -1059,6 +1184,9 @@ export interface SerieTurnoFieldRefs {
   readonly consultorioId: Prisma.FieldRef<"SerieTurno", 'Int'>
   readonly patron: Prisma.FieldRef<"SerieTurno", 'PatronRecurrenciaSerie'>
   readonly frecuenciaSemanas: Prisma.FieldRef<"SerieTurno", 'Int'>
+  readonly intervaloPersonalizado: Prisma.FieldRef<"SerieTurno", 'Int'>
+  readonly unidadPersonalizada: Prisma.FieldRef<"SerieTurno", 'UnidadRecurrenciaPersonalizada'>
+  readonly diasSemanaPersonalizado: Prisma.FieldRef<"SerieTurno", 'String'>
   readonly cantidadSesiones: Prisma.FieldRef<"SerieTurno", 'Int'>
   readonly createdAt: Prisma.FieldRef<"SerieTurno", 'DateTime'>
 }

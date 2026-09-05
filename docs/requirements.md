@@ -40,7 +40,7 @@ Can request or reserve appointments, receive reminders, cancel or reschedule dep
 - Cancel appointment
 - Reschedule appointment
 - Confirm appointment
-- View daily, weekly, and monthly calendar
+- View daily, weekly, monthly, and yearly calendar — **implemented**: a Día/Semana/Mes/Año view selector on the Inicio calendar header, see "Vistas de calendario" in `docs/modules/dashboard.md`. Año is navigation-only (12 mini-calendars, no per-day appointment indicators).
 - Filter by professional, location, specialty, or status
 
 ### Patients

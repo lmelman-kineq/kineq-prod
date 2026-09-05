@@ -35,7 +35,16 @@ import { layoutTurnos } from './utils/turnoLayout'
 import { patientFullName } from './utils/patient'
 import { professionalName } from './utils/professional'
 import { utcIsoToZonedParts, zonedTimeToUtcIso, todayInTimeZone, todayDateInTimeZone } from './utils/timezone'
-import { buildSerieFechasInicio, buildMonthlySerieFechasInicio } from './utils/recurrence'
+import { buildSerieFechasInicio, buildMonthlySerieFechasInicio, buildCustomSerieFechasInicio, type CustomRecurrenceUnit } from './utils/recurrence'
+import { getWeekDates, getMonthGridDates, getYearMonths, navigateDate, type CalendarView } from './utils/calendarRange'
+
+const CALENDAR_VIEW_STORAGE_KEY = 'kineq-calendar-view'
+const CALENDAR_VIEW_TITLES: Record<CalendarView, string> = {
+  day: 'Calendario del día',
+  week: 'Calendario semanal',
+  month: 'Calendario mensual',
+  year: 'Calendario anual',
+}
 
 export type Turno = TurnosPageItem & {
   socialWorkId?: number | null
@@ -240,12 +249,31 @@ function TurnoCardTimer({ turno, now }: { turno: Turno; now: number }) {
   return null
 }
 
+const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+const MONTH_NAMES_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+
 function formatDateLabel(value: string) {
   const [year, month, day] = value.split('-').map(Number)
   const date = new Date(year, month - 1, day)
   const weekdayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
-  const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-  return `${weekdayNames[date.getDay()]} ${day} de ${monthNames[month - 1]} de ${year}`
+  return `${weekdayNames[date.getDay()]} ${day} de ${MONTH_NAMES[month - 1]} de ${year}`
+}
+
+function formatShortDate(value: string): string {
+  const [, month, day] = value.split('-').map(Number)
+  return `${Number(day)} ${MONTH_NAMES_SHORT[month - 1]}`
+}
+
+/** Título del período según la vista activa — ver "Header según vista" en docs/modules/dashboard.md. */
+function formatPeriodLabel(dateStr: string, view: CalendarView): string {
+  if (view === 'day') return formatDateLabel(dateStr)
+  if (view === 'week') {
+    const dates = getWeekDates(dateStr)
+    return `${formatShortDate(dates[0])} – ${formatShortDate(dates[6])} ${dates[6].split('-')[0]}`
+  }
+  const [year, month] = dateStr.split('-').map(Number)
+  if (view === 'month') return `${MONTH_NAMES[month - 1][0].toUpperCase()}${MONTH_NAMES[month - 1].slice(1)} ${year}`
+  return String(year)
 }
 
 const CALENDAR_START_HOUR = 8
@@ -277,6 +305,267 @@ function getMonthDays(date: Date) {
   }
 
   return days
+}
+
+// ---------------------------------------------------------------------------
+// Vistas Semana / Mes / Año del calendario de Home — ver docs/modules/
+// dashboard.md, "Vistas Día/Semana/Mes/Año". Día no se tocó (sigue inline
+// en App): estas tres son componentes de módulo nuevos, sin estado propio
+// de turnos (reciben `turnos` ya cargados por rango desde App), para no
+// arriesgar ninguna regresión sobre Día. Comparten con Día el mismo
+// `.turno-card`/`RecurrenceIcon`/`layoutTurnos`/rango horario
+// (CALENDAR_START_HOUR/CALENDAR_END_HOUR) — nunca reimplementan esa lógica.
+// ---------------------------------------------------------------------------
+
+const WEEKDAY_HEADER_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+
+type WeekViewProps = {
+  selectedDate: string
+  todayEnZonaConsultorio: string
+  turnos: Turno[]
+  loading: boolean
+  specialtiesState: SpecialtyOption[]
+  selectedTurnoId: number
+  onSelectTurno: (turno: Turno) => void
+  onContextMenuTurno: (turno: Turno, x: number, y: number) => void
+  onCreateSlot: (date: string, time: string) => void
+  canCreate: boolean
+}
+
+function WeekView({
+  selectedDate, todayEnZonaConsultorio, turnos, loading, specialtiesState, selectedTurnoId,
+  onSelectTurno, onContextMenuTurno, onCreateSlot, canCreate,
+}: WeekViewProps) {
+  const weekDates = getWeekDates(selectedDate)
+
+  const handleColumnClick = (date: string) => (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!canCreate) return
+    const target = event.target as HTMLElement
+    if (target.closest('.turno-card')) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const offsetY = Math.max(0, Math.min(CALENDAR_TOTAL_MINUTES, event.clientY - rect.top))
+    const snappedMinutes = Math.round(offsetY / CALENDAR_SLOT_SNAP_MINUTES) * CALENDAR_SLOT_SNAP_MINUTES
+    const hour = CALENDAR_START_HOUR + Math.floor(snappedMinutes / 60)
+    const minute = snappedMinutes % 60
+    onCreateSlot(date, `${pad(hour)}:${pad(minute)}`)
+  }
+
+  return (
+    <div className="week-view">
+      {loading ? <p>Cargando turnos...</p> : null}
+      <div className="week-grid">
+        <div className="hours-column week-hours-column">
+          <div className="week-day-header week-day-header--spacer" aria-hidden="true" />
+          {hourLabels.map((hour) => (
+            <div key={hour} className="hour-label">{hour}:00</div>
+          ))}
+        </div>
+        {weekDates.map((date) => {
+          const dayTurnos = turnos.filter((t) => t.date === date)
+          const isToday = date === todayEnZonaConsultorio
+          const dayLabel = formatShortDate(date)
+          const columnLayout = layoutTurnos(
+            dayTurnos.map((t) => {
+              const [h, m] = t.time.split(':').map(Number)
+              const startMinutes = h * 60 + m
+              return { id: t.id, startMinutes, endMinutes: startMinutes + t.duration }
+            }),
+          )
+
+          return (
+            <div key={date} className="week-day-column-wrapper">
+              <div className={`week-day-header ${isToday ? 'week-day-header--today' : ''}`}>
+                <span className="week-day-header-name">{WEEKDAY_HEADER_LABELS[new Date(`${date}T00:00:00Z`).getUTCDay() === 0 ? 6 : new Date(`${date}T00:00:00Z`).getUTCDay() - 1]}</span>
+                <span className="week-day-header-date">{dayLabel}</span>
+              </div>
+              <div className="calendar-column week-day-column" onClick={handleColumnClick(date)}>
+                <div className="timeline-lines">
+                  {hourLabels.map((hour) => <div key={hour} className="timeline-row" />)}
+                </div>
+                {dayTurnos.map((turno) => {
+                  const [hourString, minuteString] = turno.time.split(':')
+                  const top = (Number(hourString) + Number(minuteString) / 60 - CALENDAR_START_HOUR) * 60
+                  if (top < 0 || top > CALENDAR_TOTAL_MINUTES) return null
+                  const specialty = specialtiesState.find((s) => s.id === turno.specialtyId)
+                  const bgColor = specialty?.color ?? turno.color
+                  const endTime = addMinutesToTime(turno.time, turno.duration)
+                  const layout = columnLayout.get(turno.id)
+                  const columns = layout?.columns ?? 1
+                  const column = layout?.column ?? 0
+                  const columnGapPx = 4
+                  const left = `calc(4px + (100% - 8px) * ${column / columns})`
+                  const width = columns > 1 ? `calc((100% - 8px) * ${1 / columns} - ${columnGapPx}px)` : 'calc(100% - 8px)'
+                  const renderedHeight = Math.max(turno.duration - 2, 12)
+
+                  return (
+                    <button
+                      key={turno.id}
+                      type="button"
+                      className={`turno-card turno-card--narrow ${turno.id === selectedTurnoId ? 'selected' : ''} short-turno`}
+                      style={{ top: `${top}px`, height: `${renderedHeight}px`, left, width, backgroundColor: bgColor }}
+                      onClick={(event) => { event.stopPropagation(); onSelectTurno(turno) }}
+                      onContextMenu={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        onContextMenuTurno(turno, event.clientX, event.clientY)
+                      }}
+                      title={`${turno.patientDisplay} — ${turno.time} a ${endTime}`}
+                    >
+                      <span className={`turno-card-status-dot turno-card-status-dot--${statusClass(turno.status)}`} aria-hidden="true" />
+                      {turno.serieId ? (
+                        <span className="turno-card-recurrence-badge" aria-hidden="true">
+                          <RecurrenceIcon className="turno-card-recurrence-icon" />
+                        </span>
+                      ) : null}
+                      <strong>{turno.patientDisplay}</strong>
+                      <span>{turno.time}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+type MonthViewProps = {
+  selectedDate: string
+  turnos: Turno[]
+  loading: boolean
+  todayEnZonaConsultorio: string
+  onSelectDay: (date: string) => void
+  onCreateSlot: (date: string) => void
+  canCreate: boolean
+}
+
+const MONTH_VIEW_MAX_VISIBLE_PER_DAY = 3
+
+function MonthView({ selectedDate, turnos, loading, todayEnZonaConsultorio, onSelectDay, onCreateSlot, canCreate }: MonthViewProps) {
+  const gridDates = getMonthGridDates(selectedDate)
+  const activeMonth = Number(selectedDate.split('-')[1])
+  const turnosByDate = useMemo(() => {
+    const map = new Map<string, Turno[]>()
+    for (const turno of turnos) {
+      const list = map.get(turno.date)
+      if (list) list.push(turno)
+      else map.set(turno.date, [turno])
+    }
+    for (const list of map.values()) list.sort((a, b) => a.time.localeCompare(b.time))
+    return map
+  }, [turnos])
+
+  return (
+    <div className="month-view">
+      {loading ? <p>Cargando turnos...</p> : null}
+      <div className="month-view-weekdays">
+        {WEEKDAY_HEADER_LABELS.map((label) => <div key={label} className="month-view-weekday">{label}</div>)}
+      </div>
+      <div className="month-view-grid">
+        {gridDates.map((date) => {
+          const dayTurnos = turnosByDate.get(date) ?? []
+          const visible = dayTurnos.slice(0, MONTH_VIEW_MAX_VISIBLE_PER_DAY)
+          const overflowCount = dayTurnos.length - visible.length
+          const dayNumber = Number(date.split('-')[2])
+          const inCurrentMonth = Number(date.split('-')[1]) === activeMonth
+          const isToday = date === todayEnZonaConsultorio
+
+          return (
+            <div
+              key={date}
+              className={`month-view-cell ${inCurrentMonth ? '' : 'month-view-cell--outside'} ${isToday ? 'month-view-cell--today' : ''}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => (canCreate ? onCreateSlot(date) : onSelectDay(date))}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  if (canCreate) onCreateSlot(date)
+                  else onSelectDay(date)
+                }
+              }}
+            >
+              <span className="month-view-cell-number">{dayNumber}</span>
+              <div className="month-view-cell-turnos">
+                {visible.map((turno) => (
+                  <button
+                    key={turno.id}
+                    type="button"
+                    className="month-view-turno-chip"
+                    style={{ borderLeftColor: turno.color }}
+                    onClick={(event) => { event.stopPropagation(); onSelectDay(date) }}
+                    title={`${turno.time} — ${turno.patientDisplay}`}
+                  >
+                    <span className="month-view-turno-chip-time">{turno.time}</span> {turno.patientDisplay}
+                  </button>
+                ))}
+                {overflowCount > 0 ? (
+                  <button
+                    type="button"
+                    className="month-view-overflow"
+                    onClick={(event) => { event.stopPropagation(); onSelectDay(date) }}
+                  >
+                    + {overflowCount} más
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+type YearViewProps = {
+  selectedDate: string
+  todayEnZonaConsultorio: string
+  onSelectDay: (date: string) => void
+  onSelectMonth: (date: string) => void
+}
+
+function YearView({ selectedDate, todayEnZonaConsultorio, onSelectDay, onSelectMonth }: YearViewProps) {
+  const months = getYearMonths(selectedDate)
+
+  return (
+    <div className="year-view">
+      {months.map(({ year, month }) => {
+        const monthDate = new Date(year, month - 1, 1)
+        const days = getMonthDays(monthDate)
+        const monthAnchor = `${year}-${pad(month)}-01`
+
+        return (
+          <div key={month} className="year-view-month">
+            <button type="button" className="year-view-month-header" onClick={() => onSelectMonth(monthAnchor)}>
+              {MONTH_NAMES[month - 1][0].toUpperCase()}{MONTH_NAMES[month - 1].slice(1)}
+            </button>
+            <div className="year-view-weekdays">
+              {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((label, index) => <div key={index}>{label}</div>)}
+            </div>
+            <div className="year-view-days">
+              {days.map((day, index) => {
+                const dayStr = day ? `${year}-${pad(month)}-${pad(day)}` : null
+                const isToday = dayStr !== null && dayStr === todayEnZonaConsultorio
+                return (
+                  <button
+                    key={`${day ?? 'empty'}-${index}`}
+                    type="button"
+                    className={`year-view-day ${day ? '' : 'year-view-day--empty'} ${isToday ? 'year-view-day--today' : ''}`}
+                    disabled={!day}
+                    onClick={() => dayStr && onSelectDay(dayStr)}
+                  >
+                    {day ?? ''}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -361,6 +650,32 @@ function Dashboard() {
   // de que cargue el consultorio real, api.getConsultorioTimeZone() ya
   // devuelve el default (Buenos Aires), razonable para el primer render.
   const [selectedDate, setSelectedDate] = useState<string>(() => todayInTimeZone(api.getConsultorioTimeZone()))
+  // Vista del calendario de Home (Día/Semana/Mes/Año) — persistida en
+  // localStorage (conveniencia por dispositivo, nunca server-side) para que
+  // no vuelva a "Día" al navegar dentro de la sesión. `selectedDate` es el
+  // ancla única para las 4 vistas (no un estado de mes/año separado) — ver
+  // docs/modules/dashboard.md, "Vistas Día/Semana/Mes/Año".
+  const [calendarView, setCalendarView] = useState<CalendarView>(() => {
+    try {
+      const stored = localStorage.getItem(CALENDAR_VIEW_STORAGE_KEY)
+      if (stored === 'day' || stored === 'week' || stored === 'month' || stored === 'year') return stored
+    } catch {
+      // localStorage puede no estar disponible (modo privado, etc.) — "day" por default.
+    }
+    return 'day'
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, calendarView)
+    } catch {
+      // Sin persistencia si localStorage falla — no rompe la vista actual.
+    }
+  }, [calendarView])
+  // Turnos de la vista Semana/Mes (rango, no un solo día) — separado de
+  // `turnosState` a propósito: Día sigue usando exactamente el mismo
+  // estado/efecto de siempre, sin ningún riesgo de regresión.
+  const [rangeTurnosState, setRangeTurnosState] = useState<Turno[]>([])
+  const [rangeTurnosLoading, setRangeTurnosLoading] = useState(false)
   const [turnosState, setTurnosState] = useState<Turno[]>([])
   const [pacientesState, setPacientesState] = useState<{id:number;displayName:string}[]>([])
   const [profesionalesState, setProfesionalesState] = useState<{id:number;displayName:string}[]>([])
@@ -418,6 +733,7 @@ function Dashboard() {
     duration: 60,
     recurrenceFrequency: 'none',
     recurrenceCount: 2,
+    customRecurrence: null,
   })
   // Card compacta (quick-create) por default al abrir "Nuevo turno" / click en
   // un slot vacío; "Más opciones" pasa al formulario completo existente sin
@@ -522,6 +838,7 @@ function Dashboard() {
       // estos dos campos son irrelevantes acá, quedan en su default neutro.
       recurrenceFrequency: 'none',
       recurrenceCount: 2,
+      customRecurrence: null,
     }
   }
 
@@ -635,6 +952,37 @@ function Dashboard() {
       cancelled = true
     }
   }, [mapApiTurnoToUi, selectedDate, reloadKey])
+
+  // Turnos para las vistas Semana/Mes: una sola consulta por rango (nunca
+  // una request por día) — el backend ya soporta from/to genérico, sin
+  // cambios. Año no carga turnos (sin indicadores, ver docs/modules/
+  // dashboard.md) — solo necesita navegación, no datos operativos.
+  useEffect(() => {
+    if (calendarView !== 'week' && calendarView !== 'month') return undefined
+    let cancelled = false
+
+    async function loadRangeTurnos() {
+      setRangeTurnosLoading(true)
+      try {
+        const dates = calendarView === 'week' ? getWeekDates(selectedDate) : getMonthGridDates(selectedDate)
+        const turnos = await api.getTurnos({ from: dates[0], to: dates[dates.length - 1] })
+        if (cancelled) return
+        setRangeTurnosState(turnos.map(mapApiTurnoToUi))
+      } catch (error) {
+        if (!cancelled) {
+          setRangeTurnosState([])
+          setLoadError(getErrorMessage(error, 'No se pudieron cargar los turnos.'))
+        }
+      } finally {
+        if (!cancelled) setRangeTurnosLoading(false)
+      }
+    }
+
+    void loadRangeTurnos()
+    return () => {
+      cancelled = true
+    }
+  }, [calendarView, selectedDate, mapApiTurnoToUi, reloadKey])
 
   const toggleTheme = () => {
     setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))
@@ -860,6 +1208,7 @@ function Dashboard() {
       duration: 60,
       recurrenceFrequency: 'none',
       recurrenceCount: 2,
+      customRecurrence: null,
     })
   }
 
@@ -997,10 +1346,28 @@ function Dashboard() {
     const timeZone = api.getConsultorioTimeZone()
     const { recurrenceFrequency } = newTurnoForm
 
-    const [fechasInicio, patron, frecuenciaSemanas]: [string[], 'SEMANAL' | 'MENSUAL_ORDINAL', number | undefined] =
-      recurrenceFrequency === 'monthly'
-        ? [buildMonthlySerieFechasInicio(newTurnoForm.date, newTurnoForm.time, newTurnoForm.recurrenceCount, timeZone), 'MENSUAL_ORDINAL', undefined]
-        : [buildSerieFechasInicio(newTurnoForm.date, newTurnoForm.time, recurrenceFrequency, newTurnoForm.recurrenceCount, timeZone), 'SEMANAL', recurrenceFrequency]
+    let fechasInicio: string[]
+    let patron: 'SEMANAL' | 'MENSUAL_ORDINAL' | 'PERSONALIZADO'
+    let frecuenciaSemanas: number | undefined
+    let intervaloPersonalizado: number | undefined
+    let unidadPersonalizada: CustomRecurrenceUnit | undefined
+    let diasSemanaPersonalizado: number[] | undefined
+
+    if (recurrenceFrequency === 'monthly') {
+      fechasInicio = buildMonthlySerieFechasInicio(newTurnoForm.date, newTurnoForm.time, newTurnoForm.recurrenceCount, timeZone)
+      patron = 'MENSUAL_ORDINAL'
+    } else if (recurrenceFrequency === 'custom') {
+      if (!newTurnoForm.customRecurrence) return
+      fechasInicio = buildCustomSerieFechasInicio(newTurnoForm.date, newTurnoForm.time, newTurnoForm.customRecurrence, newTurnoForm.recurrenceCount, timeZone)
+      patron = 'PERSONALIZADO'
+      intervaloPersonalizado = newTurnoForm.customRecurrence.intervalo
+      unidadPersonalizada = newTurnoForm.customRecurrence.unidad
+      diasSemanaPersonalizado = newTurnoForm.customRecurrence.diasSemana
+    } else {
+      fechasInicio = buildSerieFechasInicio(newTurnoForm.date, newTurnoForm.time, recurrenceFrequency, newTurnoForm.recurrenceCount, timeZone)
+      patron = 'SEMANAL'
+      frecuenciaSemanas = recurrenceFrequency
+    }
 
     try {
       const { turnos } = await api.createSerieTurno({
@@ -1010,6 +1377,9 @@ function Dashboard() {
         duracionMinutos: newTurnoForm.duration,
         patron,
         frecuenciaSemanas,
+        intervaloPersonalizado,
+        unidadPersonalizada,
+        diasSemanaPersonalizado,
         fechasInicio,
         numeroSesionInicial: newTurnoForm.sessionNumber,
         esSesionConsulta: newTurnoForm.esSesionConsulta,
@@ -1535,6 +1905,13 @@ function Dashboard() {
   const prevMonth = () => setCurrentMonthDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
   const nextMonth = () => setCurrentMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
 
+  // Navegación del calendario principal — respeta la vista activa (Día:
+  // ±1 día, Semana: ±7 días, Mes: ±1 mes calendario, Año: ±1 año). "Hoy"
+  // vuelve al período que contiene la fecha actual sin cambiar de vista.
+  const goToPreviousPeriod = () => setSelectedDate((current) => navigateDate(current, calendarView, -1))
+  const goToNextPeriod = () => setSelectedDate((current) => navigateDate(current, calendarView, 1))
+  const goToToday = () => setSelectedDate(todayInTimeZone(api.getConsultorioTimeZone()))
+
   // Redimensiona visualmente durante el movimiento y persiste una sola vez al soltar.
   const onResizeStart = (event: React.MouseEvent, turnoId: number) => {
     if (event.button !== 0) return
@@ -1962,10 +2339,29 @@ function Dashboard() {
 
         <section className="schedule-panel">
             <div className="schedule-header">
-              <div>
-                <h2>Calendario del día</h2>
-                <p>{formatDateLabel(selectedDate)}</p>
+              <div className="calendar-nav">
+                <button type="button" className="secondary-button calendar-nav-today" onClick={goToToday}>
+                  Hoy
+                </button>
+                <div className="calendar-nav-arrows">
+                  <button type="button" className="small-button" aria-label="Período anterior" onClick={goToPreviousPeriod}>&#9664;</button>
+                  <button type="button" className="small-button" aria-label="Período siguiente" onClick={goToNextPeriod}>&#9654;</button>
+                </div>
+                <div>
+                  <h2>{CALENDAR_VIEW_TITLES[calendarView]}</h2>
+                  <p>{formatPeriodLabel(selectedDate, calendarView)}</p>
+                </div>
               </div>
+              <div className="schedule-header-actions">
+                <label className="calendar-view-select">
+                  <span className="sr-only">Vista del calendario</span>
+                  <select value={calendarView} onChange={(event) => setCalendarView(event.target.value as CalendarView)}>
+                    <option value="day">Día</option>
+                    <option value="week">Semana</option>
+                    <option value="month">Mes</option>
+                    <option value="year">Año</option>
+                  </select>
+                </label>
               <div className="schedule-filters-wrapper" ref={filtersRef}>
                 <button className="filter-button" type="button" onClick={() => setFiltersOpen(!filtersOpen)}>
                   <span>Filtro</span>
@@ -2052,22 +2448,24 @@ function Dashboard() {
                   </div>
                 ) : null}
               </div>
+              </div>
             </div>
 
-          {turnosLoading ? (
+          {calendarView === 'day' && (turnosLoading ? (
             <p>Cargando turnos...</p>
           ) : dayTurnos.length === 0 ? (
             <p className="empty-day-message">
               No hay turnos para este día.
             </p>
-          ) : null}
+          ) : null)}
 
-          {hiddenDayTurnosCount > 0 ? (
+          {calendarView === 'day' && hiddenDayTurnosCount > 0 ? (
             <p className="calendar-range-warning">
               {hiddenDayTurnosCount === 1 ? 'Hay 1 turno' : `Hay ${hiddenDayTurnosCount} turnos`} fuera del horario visible ({CALENDAR_START_HOUR}:00 a {CALENDAR_END_HOUR}:00).
             </p>
           ) : null}
 
+          {calendarView === 'day' ? (
           <div className="day-grid">
             <div className="hours-column">
               {hourLabels.map((hour) => (
@@ -2195,6 +2593,46 @@ function Dashboard() {
               })() : null}
             </div>
           </div>
+          ) : calendarView === 'week' ? (
+            <WeekView
+              selectedDate={selectedDate}
+              todayEnZonaConsultorio={todayEnZonaConsultorio}
+              turnos={rangeTurnosState}
+              loading={rangeTurnosLoading}
+              specialtiesState={specialtiesState}
+              selectedTurnoId={selectedTurnoId}
+              onSelectTurno={(turno) => { setSelectedTurnoId(turno.id); openTurnoDetails(turno) }}
+              onContextMenuTurno={(turno, x, y) => {
+                const actions = getTurnoQuickActions(turno)
+                const menuWidth = 190
+                const menuHeight = (actions.length + 2) * 40 + 12
+                setContextMenu({
+                  turnoId: turno.id,
+                  x: Math.max(8, Math.min(x, window.innerWidth - menuWidth - 8)),
+                  y: Math.max(8, Math.min(y, window.innerHeight - menuHeight - 8)),
+                })
+              }}
+              onCreateSlot={(date, time) => openNewTurnoModal(date, time)}
+              canCreate={puedeCrearTurnos}
+            />
+          ) : calendarView === 'month' ? (
+            <MonthView
+              selectedDate={selectedDate}
+              turnos={rangeTurnosState}
+              loading={rangeTurnosLoading}
+              todayEnZonaConsultorio={todayEnZonaConsultorio}
+              onSelectDay={(date) => { setSelectedDate(date); setCalendarView('day') }}
+              onCreateSlot={(date) => openNewTurnoModal(date)}
+              canCreate={puedeCrearTurnos}
+            />
+          ) : (
+            <YearView
+              selectedDate={selectedDate}
+              todayEnZonaConsultorio={todayEnZonaConsultorio}
+              onSelectDay={(date) => { setSelectedDate(date); setCalendarView('day') }}
+              onSelectMonth={(date) => { setSelectedDate(date); setCalendarView('month') }}
+            />
+          )}
         </section>
           </>
         ) : activePage === 'turnos' ? (
