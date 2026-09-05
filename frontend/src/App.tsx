@@ -2390,7 +2390,7 @@ function Dashboard() {
         ) : null}
 
         <section className="schedule-panel">
-            <div className="schedule-header">
+            <div className={`schedule-header schedule-header--${calendarView}`}>
               <div className="calendar-nav">
                 <button type="button" className="secondary-button calendar-nav-today" onClick={goToToday}>
                   Hoy
@@ -2399,7 +2399,7 @@ function Dashboard() {
                   <button type="button" className="small-button" aria-label="Período anterior" onClick={goToPreviousPeriod}>&#9664;</button>
                   <button type="button" className="small-button" aria-label="Período siguiente" onClick={goToNextPeriod}>&#9654;</button>
                 </div>
-                <div>
+                <div className="calendar-nav-title">
                   <h2>{CALENDAR_VIEW_TITLES[calendarView]}</h2>
                   <p>{formatPeriodLabel(selectedDate, calendarView)}</p>
                 </div>
@@ -2503,18 +2503,31 @@ function Dashboard() {
               </div>
             </div>
 
-          {calendarView === 'day' && (turnosLoading ? (
+          {calendarView === 'day' && turnosLoading ? (
             <p>Cargando turnos...</p>
-          ) : dayTurnos.length === 0 ? (
-            <p className="empty-day-message">
-              No hay turnos para este día.
-            </p>
-          ) : null)}
+          ) : null}
 
           {calendarView === 'day' && hiddenDayTurnosCount > 0 ? (
             <p className="calendar-range-warning">
               {hiddenDayTurnosCount === 1 ? 'Hay 1 turno' : `Hay ${hiddenDayTurnosCount} turnos`} fuera del horario visible ({CALENDAR_START_HOUR}:00 a {CALENDAR_END_HOUR}:00).
             </p>
+          ) : null}
+
+          {calendarView === 'day' ? (
+            // Mobile únicamente (ver .day-grid-mobile-header en App.css) —
+            // mismo bloque "VIE / 4 sep" que ya usa el header de columna de
+            // Semana (`.week-day-header`), reemplazando el título "Calendario
+            // del día" + la fecha larga que se ocultan en mobile (ver
+            // .schedule-header--day).
+            <div className="day-grid-mobile-header" aria-hidden="true">
+              <span className="day-grid-mobile-header-spacer" />
+              <div className="week-day-header week-day-header--active">
+                <span className="week-day-header-name">
+                  {WEEKDAY_HEADER_LABELS[new Date(`${selectedDate}T00:00:00Z`).getUTCDay() === 0 ? 6 : new Date(`${selectedDate}T00:00:00Z`).getUTCDay() - 1]}
+                </span>
+                <span className="week-day-header-date">{formatShortDate(selectedDate)}</span>
+              </div>
+            </div>
           ) : null}
 
           {calendarView === 'day' ? (

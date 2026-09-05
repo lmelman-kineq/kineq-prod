@@ -803,11 +803,6 @@ body,
   transform: translateY(0);
 }
 
-.empty-day-message {
-  margin: 0 0 18px;
-  color: var(--color-text);
-}
-
 /* =========================================================
    6. TARJETAS Y PANELES COMPARTIDOS
    ========================================================= */
@@ -2240,7 +2235,8 @@ select:disabled {
   font-weight: 600;
 }
 
-.week-day-header--today .week-day-header-date {
+.week-day-header--today .week-day-header-date,
+.week-day-header--active .week-day-header-date {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -6502,7 +6498,8 @@ select:disabled {
 .fab-new-turno,
 .modal-header-save-mobile,
 .sheet-drag-handle,
-.week-day-strip {
+.week-day-strip,
+.day-grid-mobile-header {
   display: none;
 }
 
@@ -6517,9 +6514,15 @@ select:disabled {
     display: none;
   }
 
+  /* El gap real entre el título y los controles de abajo lo pone el
+     flex `gap` de `.main-area` (24px), no el margin de `.main-header` —
+     angostarlo acá. */
+  .main-area {
+    gap: 8px;
+  }
+
   .main-header {
     align-items: center;
-    margin-bottom: 8px;
   }
 
   .main-header .breadcrumb {
@@ -6568,7 +6571,14 @@ select:disabled {
     transform: scale(0.94);
   }
 
-  /* --- Navegación temporal compacta --- */
+  /* --- Navegación temporal compacta ---
+     "Calendario del día"/"Calendario semanal"/etc. (el `<h2>`) es
+     redundante con el selector de vista, que ya dice qué vista es —
+     se oculta siempre. La fecha larga (`<p>`, ej. "viernes 4 de
+     septiembre de 2026") se oculta en Día/Semana (Día pasa a mostrar
+     el pill "VIE · 4 sep" de abajo; Semana ya tiene el equivalente en
+     su franja de 7 días) pero se mantiene en Mes/Año, que no tienen
+     otro indicador de qué mes/año se está viendo. */
   .schedule-header {
     gap: 10px;
     margin-bottom: 12px;
@@ -6578,12 +6588,27 @@ select:disabled {
     gap: 8px;
   }
 
-  .calendar-nav > div h2 {
-    font-size: 15px;
+  .calendar-nav-title h2 {
+    display: none;
   }
 
-  .calendar-nav > div p {
+  .calendar-nav-title p {
     font-size: 12px;
+  }
+
+  .schedule-header--day .calendar-nav-title,
+  .schedule-header--week .calendar-nav-title {
+    display: none;
+  }
+
+  /* Header "VIE / 4 sep" arriba del timeline de Día — mismo bloque que ya
+     usa el header de columna de Semana (`.week-day-header`), en la misma
+     grilla de 2 columnas (gutter de horas + día) que `.day-grid`, para que
+     quede alineado con el eje horario de abajo. */
+  .day-grid-mobile-header {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    margin-bottom: 4px;
   }
 
   /* --- Bottom sheets: Nuevo turno / Editar turno / Recurrencia --- */
