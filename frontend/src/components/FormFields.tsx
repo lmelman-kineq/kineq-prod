@@ -534,10 +534,10 @@ export function TurnoFormFields({
         </>
       )}
 
-      {compact && allowRecurrence && !value.esSesionConsulta ? (
-        <div className="quick-recurrence-row">
-          <RepeatFieldIcon className="quick-field-icon" aria-hidden="true" />
-          <label className="sr-only" htmlFor={repeatSelectId}>Repetición</label>
+      {allowRecurrence && !value.esSesionConsulta ? (
+        <div className={`quick-recurrence-row ${compact ? '' : 'quick-recurrence-row--full'}`}>
+          {compact ? <RepeatFieldIcon className="quick-field-icon" aria-hidden="true" /> : null}
+          <label className={compact ? 'sr-only' : undefined} htmlFor={repeatSelectId}>Repetición</label>
           <select
             id={repeatSelectId}
             className="quick-repeat-select"

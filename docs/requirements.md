@@ -83,7 +83,7 @@ Can request or reserve appointments, receive reminders, cancel or reschedule dep
 
 ## 5. Non-Functional Requirements
 
-- Responsive web app
+- Responsive web app — the Inicio calendar (Día/Semana/Mes/Año, quick-create, edit, custom recurrence) got a dedicated mobile-first pass: see "Rediseño mobile-first (Home)" in `docs/modules/dashboard.md`. Desktop (≥821px) unaffected.
 - Secure authentication
 - Role-based access control
 - Audit logs for sensitive changes

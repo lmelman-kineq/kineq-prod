@@ -5938,15 +5938,18 @@ select:disabled {
     margin-top: 8px;
   }
 
-  /* Calendario diario móvil */
+  /* Calendario diario móvil — el eje horario se mantenía oculto por completo
+     acá (bug real: "no bajo espacio, lo saco"), dejando el timeline sin
+     ninguna referencia de hora. Se angosta en vez de ocultarse. */
   .day-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 44px minmax(0, 1fr);
     min-height: 780px;
     overflow: hidden;
   }
 
-  .hours-column {
-    display: none;
+  .hours-column .hour-label {
+    padding: 0 2px;
+    font-size: 11px;
   }
 
   .calendar-column {
@@ -6486,4 +6489,267 @@ select:disabled {
   .stats-charts-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* =========================================================
+   17. MOBILE-FIRST — CALENDARIO DE HOME (rediseño ≤820px)
+   Reusa el breakpoint "CELULARES" (820px, sección 16) — no se
+   suma un segundo breakpoint mobile. Todo lo de acá es aditivo:
+   en ≥821px, ningún elemento nuevo (FAB, drag handle, botón
+   "Guardar" del header, franja de días de Semana) se muestra.
+   ========================================================= */
+
+.fab-new-turno,
+.modal-header-save-mobile,
+.sheet-drag-handle,
+.week-day-strip {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  /* --- Home: el calendario pasa a ser el protagonista --- */
+
+  /* Mini calendario mensual + "Datos del turno": útiles en desktop, pero
+     el detalle de un turno ya se resuelve tocándolo (abre "Editar turno",
+     que en mobile se muestra como bottom sheet — ver más abajo) y la
+     navegación de fecha ya la resuelve el header del calendario. */
+  .side-panel {
+    display: none;
+  }
+
+  .main-header {
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .main-header .breadcrumb {
+    display: none;
+  }
+
+  .main-header h1 {
+    font-size: 18px;
+  }
+
+  /* El botón grande del header se reemplaza por el FAB (más abajo) — dos
+     acciones "Nuevo turno" en pantalla compiten por atención sin aportar nada. */
+  .main-header .header-actions {
+    display: none;
+  }
+
+  .fab-new-turno {
+    position: fixed;
+    right: 20px;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    /* Por debajo de .modal-overlay (z-index: 20) a propósito — si no, queda
+       clickeable por encima del bottom sheet cuando un modal está abierto. */
+    z-index: 15;
+    width: 56px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    box-shadow: var(--shadow-turno);
+  }
+
+  .fab-new-turno svg {
+    width: 26px;
+    height: 26px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+  }
+
+  .fab-new-turno:active {
+    transform: scale(0.94);
+  }
+
+  /* --- Navegación temporal compacta --- */
+  .schedule-header {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .calendar-nav {
+    gap: 8px;
+  }
+
+  .calendar-nav > div h2 {
+    font-size: 15px;
+  }
+
+  .calendar-nav > div p {
+    font-size: 12px;
+  }
+
+  /* --- Bottom sheets: Nuevo turno / Editar turno / Recurrencia --- */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-overlay,
+  .confirm-dialog-overlay {
+    animation: sheet-overlay-fade-in 0.2s ease;
+  }
+
+  .modal-card,
+  .confirm-dialog,
+  .custom-recurrence-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-radius: 20px 20px 0 0;
+    animation: sheet-slide-up 0.25s ease;
+  }
+
+  .sheet-drag-handle {
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto 12px;
+    border-radius: 999px;
+    background: var(--color-line);
+    flex: 0 0 auto;
+  }
+
+  .modal-header {
+    position: sticky;
+    top: 0;
+    padding-top: 2px;
+    background: var(--color-surface);
+  }
+
+  .modal-header-save-mobile {
+    display: inline-flex;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  /* "Guardar"/"X" ya viven en el header — el pie de "Nuevo turno" (Más
+     opciones / Guardar turno) queda redundante, nunca existió "Cancelar"
+     ahí (la X ya cierra). */
+  .modal-actions--new {
+    display: none;
+  }
+
+  /* En "Editar turno", "Eliminar turno" sigue siendo una acción del pie
+     (no tiene otro lugar) — solo "Cancelar"/"Guardar cambios" quedan
+     redundantes con X/el "Guardar" del header. */
+  .modal-actions-cancel-desktop,
+  .modal-actions-save-desktop {
+    display: none;
+  }
+
+  /* --- Evitar zoom de iOS al enfocar inputs (font-size < 16px dispara zoom) ---
+     El buscador de Paciente/Profesional/Especialidad/Diagnóstico tiene su
+     propio 15px con especificidad (0,2,1) (`.dropdown-input-row
+     input:not([type="checkbox"])`) — hay que igualarla o perderla, nunca
+     con !important. */
+  .modal-card input,
+  .modal-card select,
+  .modal-card textarea,
+  .custom-recurrence-modal input,
+  .custom-recurrence-modal select {
+    font-size: 16px;
+  }
+
+  .modal-card .dropdown-input-row input:not([type="checkbox"]) {
+    font-size: 16px;
+  }
+
+  /* --- Fecha/hora: fila propia en vez de forzar todo en una línea --- */
+  .quick-datetime-row {
+    flex-wrap: wrap;
+  }
+
+  .quick-datetime-row .date-input {
+    flex: 1 1 100%;
+  }
+
+  /* --- Vista Semana: franja de 7 días + un solo día (ver WeekView en App.tsx) --- */
+  .week-day-strip {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+    overflow-x: auto;
+  }
+
+  .week-day-strip-item {
+    flex: 1 1 0;
+    min-width: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 4px;
+    border: none;
+    border-radius: 12px;
+    background: var(--color-control);
+    color: var(--color-text);
+  }
+
+  .week-day-strip-name {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .week-day-strip-date {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .week-day-strip-item--today .week-day-strip-date {
+    color: var(--color-primary);
+  }
+
+  .week-day-strip-item--selected {
+    background: var(--color-primary);
+  }
+
+  .week-day-strip-item--selected .week-day-strip-name,
+  .week-day-strip-item--selected .week-day-strip-date {
+    color: var(--color-on-primary);
+  }
+
+  .week-grid--single-day {
+    grid-template-columns: 44px minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .week-view {
+    overflow-x: visible;
+  }
+
+  /* --- Mes: grilla continua, sin la "card dentro de card" de desktop --- */
+  .month-view-cell {
+    padding: 4px;
+    border-radius: 6px;
+  }
+
+  .month-view-grid {
+    gap: 2px;
+  }
+}
+
+@keyframes sheet-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes sheet-overlay-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

@@ -37,6 +37,7 @@ import { professionalName } from './utils/professional'
 import { utcIsoToZonedParts, zonedTimeToUtcIso, todayInTimeZone, todayDateInTimeZone } from './utils/timezone'
 import { buildSerieFechasInicio, buildMonthlySerieFechasInicio, buildCustomSerieFechasInicio, type CustomRecurrenceUnit } from './utils/recurrence'
 import { getWeekDates, getMonthGridDates, getYearMonths, navigateDate, type CalendarView } from './utils/calendarRange'
+import { useIsMobile } from './hooks/useIsMobile'
 
 const CALENDAR_VIEW_STORAGE_KEY = 'kineq-calendar-view'
 const CALENDAR_VIEW_TITLES: Record<CalendarView, string> = {
@@ -329,14 +330,20 @@ type WeekViewProps = {
   onSelectTurno: (turno: Turno) => void
   onContextMenuTurno: (turno: Turno, x: number, y: number) => void
   onCreateSlot: (date: string, time: string) => void
+  onSelectDate: (date: string) => void
   canCreate: boolean
+  isMobile: boolean
 }
 
 function WeekView({
   selectedDate, todayEnZonaConsultorio, turnos, loading, specialtiesState, selectedTurnoId,
-  onSelectTurno, onContextMenuTurno, onCreateSlot, canCreate,
+  onSelectTurno, onContextMenuTurno, onCreateSlot, onSelectDate, canCreate, isMobile,
 }: WeekViewProps) {
   const weekDates = getWeekDates(selectedDate)
+  // Mobile (ver "Vista Semana mobile" en docs/modules/dashboard.md): 7
+  // columnas angostas son ilegibles en ~390px — se reusa el mismo timeline
+  // de Día para un solo día, con una franja de 7 días arriba para cambiarlo.
+  const visibleDates = isMobile ? [selectedDate] : weekDates
 
   const handleColumnClick = (date: string) => (event: React.MouseEvent<HTMLDivElement>) => {
     if (!canCreate) return
@@ -350,82 +357,106 @@ function WeekView({
     onCreateSlot(date, `${pad(hour)}:${pad(minute)}`)
   }
 
+  const renderDayColumn = (date: string) => {
+    const dayTurnos = turnos.filter((t) => t.date === date)
+    const isToday = date === todayEnZonaConsultorio
+    const dayLabel = formatShortDate(date)
+    const columnLayout = layoutTurnos(
+      dayTurnos.map((t) => {
+        const [h, m] = t.time.split(':').map(Number)
+        const startMinutes = h * 60 + m
+        return { id: t.id, startMinutes, endMinutes: startMinutes + t.duration }
+      }),
+    )
+
+    return (
+      <div key={date} className="week-day-column-wrapper">
+        <div className={`week-day-header ${isToday ? 'week-day-header--today' : ''}`}>
+          <span className="week-day-header-name">{WEEKDAY_HEADER_LABELS[new Date(`${date}T00:00:00Z`).getUTCDay() === 0 ? 6 : new Date(`${date}T00:00:00Z`).getUTCDay() - 1]}</span>
+          <span className="week-day-header-date">{dayLabel}</span>
+        </div>
+        <div className="calendar-column week-day-column" onClick={handleColumnClick(date)}>
+          <div className="timeline-lines">
+            {hourLabels.map((hour) => <div key={hour} className="timeline-row" />)}
+          </div>
+          {dayTurnos.map((turno) => {
+            const [hourString, minuteString] = turno.time.split(':')
+            const top = (Number(hourString) + Number(minuteString) / 60 - CALENDAR_START_HOUR) * 60
+            if (top < 0 || top > CALENDAR_TOTAL_MINUTES) return null
+            const specialty = specialtiesState.find((s) => s.id === turno.specialtyId)
+            const bgColor = specialty?.color ?? turno.color
+            const endTime = addMinutesToTime(turno.time, turno.duration)
+            const layout = columnLayout.get(turno.id)
+            const columns = layout?.columns ?? 1
+            const column = layout?.column ?? 0
+            const columnGapPx = 4
+            const left = `calc(4px + (100% - 8px) * ${column / columns})`
+            const width = columns > 1 ? `calc((100% - 8px) * ${1 / columns} - ${columnGapPx}px)` : 'calc(100% - 8px)'
+            const renderedHeight = Math.max(turno.duration - 2, 12)
+
+            return (
+              <button
+                key={turno.id}
+                type="button"
+                className={`turno-card turno-card--narrow ${turno.id === selectedTurnoId ? 'selected' : ''} short-turno`}
+                style={{ top: `${top}px`, height: `${renderedHeight}px`, left, width, backgroundColor: bgColor }}
+                onClick={(event) => { event.stopPropagation(); onSelectTurno(turno) }}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onContextMenuTurno(turno, event.clientX, event.clientY)
+                }}
+                title={`${turno.patientDisplay} — ${turno.time} a ${endTime}`}
+              >
+                <span className={`turno-card-status-dot turno-card-status-dot--${statusClass(turno.status)}`} aria-hidden="true" />
+                {turno.serieId ? (
+                  <span className="turno-card-recurrence-badge" aria-hidden="true">
+                    <RecurrenceIcon className="turno-card-recurrence-icon" />
+                  </span>
+                ) : null}
+                <strong>{turno.patientDisplay}</strong>
+                <span>{turno.time}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="week-view">
       {loading ? <p>Cargando turnos...</p> : null}
-      <div className="week-grid">
+      {isMobile ? (
+        <div className="week-day-strip" role="tablist" aria-label="Elegir día de la semana">
+          {weekDates.map((date) => {
+            const isToday = date === todayEnZonaConsultorio
+            const isSelected = date === selectedDate
+            const weekday = new Date(`${date}T00:00:00Z`).getUTCDay()
+            return (
+              <button
+                key={date}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                className={`week-day-strip-item ${isSelected ? 'week-day-strip-item--selected' : ''} ${isToday ? 'week-day-strip-item--today' : ''}`}
+                onClick={() => onSelectDate(date)}
+              >
+                <span className="week-day-strip-name">{WEEKDAY_HEADER_LABELS[weekday === 0 ? 6 : weekday - 1]}</span>
+                <span className="week-day-strip-date">{Number(date.split('-')[2])}</span>
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+      <div className={`week-grid ${isMobile ? 'week-grid--single-day' : ''}`}>
         <div className="hours-column week-hours-column">
           <div className="week-day-header week-day-header--spacer" aria-hidden="true" />
           {hourLabels.map((hour) => (
             <div key={hour} className="hour-label">{hour}:00</div>
           ))}
         </div>
-        {weekDates.map((date) => {
-          const dayTurnos = turnos.filter((t) => t.date === date)
-          const isToday = date === todayEnZonaConsultorio
-          const dayLabel = formatShortDate(date)
-          const columnLayout = layoutTurnos(
-            dayTurnos.map((t) => {
-              const [h, m] = t.time.split(':').map(Number)
-              const startMinutes = h * 60 + m
-              return { id: t.id, startMinutes, endMinutes: startMinutes + t.duration }
-            }),
-          )
-
-          return (
-            <div key={date} className="week-day-column-wrapper">
-              <div className={`week-day-header ${isToday ? 'week-day-header--today' : ''}`}>
-                <span className="week-day-header-name">{WEEKDAY_HEADER_LABELS[new Date(`${date}T00:00:00Z`).getUTCDay() === 0 ? 6 : new Date(`${date}T00:00:00Z`).getUTCDay() - 1]}</span>
-                <span className="week-day-header-date">{dayLabel}</span>
-              </div>
-              <div className="calendar-column week-day-column" onClick={handleColumnClick(date)}>
-                <div className="timeline-lines">
-                  {hourLabels.map((hour) => <div key={hour} className="timeline-row" />)}
-                </div>
-                {dayTurnos.map((turno) => {
-                  const [hourString, minuteString] = turno.time.split(':')
-                  const top = (Number(hourString) + Number(minuteString) / 60 - CALENDAR_START_HOUR) * 60
-                  if (top < 0 || top > CALENDAR_TOTAL_MINUTES) return null
-                  const specialty = specialtiesState.find((s) => s.id === turno.specialtyId)
-                  const bgColor = specialty?.color ?? turno.color
-                  const endTime = addMinutesToTime(turno.time, turno.duration)
-                  const layout = columnLayout.get(turno.id)
-                  const columns = layout?.columns ?? 1
-                  const column = layout?.column ?? 0
-                  const columnGapPx = 4
-                  const left = `calc(4px + (100% - 8px) * ${column / columns})`
-                  const width = columns > 1 ? `calc((100% - 8px) * ${1 / columns} - ${columnGapPx}px)` : 'calc(100% - 8px)'
-                  const renderedHeight = Math.max(turno.duration - 2, 12)
-
-                  return (
-                    <button
-                      key={turno.id}
-                      type="button"
-                      className={`turno-card turno-card--narrow ${turno.id === selectedTurnoId ? 'selected' : ''} short-turno`}
-                      style={{ top: `${top}px`, height: `${renderedHeight}px`, left, width, backgroundColor: bgColor }}
-                      onClick={(event) => { event.stopPropagation(); onSelectTurno(turno) }}
-                      onContextMenu={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        onContextMenuTurno(turno, event.clientX, event.clientY)
-                      }}
-                      title={`${turno.patientDisplay} — ${turno.time} a ${endTime}`}
-                    >
-                      <span className={`turno-card-status-dot turno-card-status-dot--${statusClass(turno.status)}`} aria-hidden="true" />
-                      {turno.serieId ? (
-                        <span className="turno-card-recurrence-badge" aria-hidden="true">
-                          <RecurrenceIcon className="turno-card-recurrence-icon" />
-                        </span>
-                      ) : null}
-                      <strong>{turno.patientDisplay}</strong>
-                      <span>{turno.time}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
+        {visibleDates.map((date) => renderDayColumn(date))}
       </div>
     </div>
   )
@@ -739,6 +770,11 @@ function Dashboard() {
   // un slot vacío; "Más opciones" pasa al formulario completo existente sin
   // resetear nada (mismo newTurnoForm/setNewTurnoForm).
   const [newTurnoExpanded, setNewTurnoExpanded] = useState(false)
+  const isMobile = useIsMobile()
+  // En mobile no existe la distinción compacta/"Más opciones" (ver spec de
+  // rediseño mobile-first) — el formulario completo (con Repetición
+  // incluida) se muestra siempre, sin un segundo paso.
+  const newTurnoIsFull = newTurnoExpanded || isMobile
   const [showViewTurno, setShowViewTurno] = useState(false)
   const [isEditingTurno, setIsEditingTurno] = useState(false)
   const [editingTurnoId, setEditingTurnoId] = useState<number | null>(null)
@@ -2323,6 +2359,22 @@ function Dashboard() {
           </div>
         </header>
 
+        {puedeCrearTurnos ? (
+          // FAB — reemplaza a "Nuevo turno" del header solo en mobile (ver
+          // @media 820px en App.css); en desktop el botón del header ya
+          // cumple esa función y este queda oculto.
+          <button
+            type="button"
+            className="fab-new-turno"
+            aria-label="Nuevo turno"
+            onClick={() => openNewTurnoModal()}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        ) : null}
+
         {loadError ? (
           <section className="schedule-panel" role="alert">
             <h2>No se pudieron cargar los datos</h2>
@@ -2613,7 +2665,9 @@ function Dashboard() {
                 })
               }}
               onCreateSlot={(date, time) => openNewTurnoModal(date, time)}
+              onSelectDate={setSelectedDate}
               canCreate={puedeCrearTurnos}
+              isMobile={isMobile}
             />
           ) : calendarView === 'month' ? (
             <MonthView
@@ -2683,27 +2737,33 @@ function Dashboard() {
 
         {showNewTurno && (
           <div className="modal-overlay">
-            <div className={`modal-card ${newTurnoExpanded ? '' : 'modal-card--compact'}`} ref={newModalRef}>
-              <div className={`modal-header ${newTurnoExpanded ? '' : 'modal-header--compact'}`}>
+            <div className={`modal-card ${newTurnoIsFull ? '' : 'modal-card--compact'}`} ref={newModalRef}>
+              <span className="sheet-drag-handle" aria-hidden="true" />
+              <div className={`modal-header ${newTurnoIsFull ? '' : 'modal-header--compact'}`}>
                 <div className="modal-header-title">
-                  {newTurnoExpanded ? (
+                  {newTurnoIsFull ? (
                     <span className="modal-header-icon" aria-hidden="true">
                       <CalendarIcon />
                     </span>
                   ) : null}
                   <div>
                     <h3>Nuevo turno</h3>
-                    {newTurnoExpanded ? <p>Completá los datos para agendar el turno.</p> : null}
+                    {newTurnoIsFull ? <p>Completá los datos para agendar el turno.</p> : null}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="close-button"
-                  aria-label="Cerrar nuevo turno"
-                  onClick={closeNewTurnoModal}
-                >
-                  &times;
-                </button>
+                <div className="modal-header-actions">
+                  <button type="button" className="modal-header-save-mobile" onClick={saveNewTurno}>
+                    Guardar
+                  </button>
+                  <button
+                    type="button"
+                    className="close-button"
+                    aria-label="Cerrar nuevo turno"
+                    onClick={closeNewTurnoModal}
+                  >
+                    &times;
+                  </button>
+                </div>
               </div>
 
               <TurnoFormFields
@@ -2720,8 +2780,8 @@ function Dashboard() {
                 onCreateGrupo={canSeeDiagnostico ? createDiagnosticoInlineParaTurno : undefined}
                 onFetchProximaSesion={fetchProximaSesion}
                 hideProfessionalField={user?.rol === 'PROFESIONAL'}
-                compact={!newTurnoExpanded}
-                allowRecurrence={!newTurnoExpanded}
+                compact={!newTurnoIsFull}
+                allowRecurrence={isMobile || !newTurnoExpanded}
               />
 
               {user?.rol === 'PROFESIONAL' && !profesionalVinculadoActivo ? (
@@ -2730,7 +2790,7 @@ function Dashboard() {
                 </p>
               ) : null}
 
-              <div className="modal-actions">
+              <div className="modal-actions modal-actions--new">
                 {newTurnoExpanded ? (
                   <button type="button" className="secondary-button" onClick={closeNewTurnoModal}>
                     Cancelar
@@ -2738,7 +2798,8 @@ function Dashboard() {
                 ) : (
                   // Sin "Cancelar" acá a propósito: la X del header ya cierra
                   // la card compacta — "Cancelar" solo vuelve a aparecer en
-                  // el formulario completo de "Más opciones" (arriba).
+                  // el formulario completo de "Más opciones" (arriba, oculto
+                  // en mobile — ver .modal-actions-more en App.css).
                   <button
                     type="button"
                     className="ghost-button modal-actions-more"
@@ -2758,6 +2819,7 @@ function Dashboard() {
         {showViewTurno && editingTurnoForm && (
           <div className="modal-overlay">
             <div className="modal-card" ref={viewModalRef}>
+              <span className="sheet-drag-handle" aria-hidden="true" />
               <div className="modal-header">
                 <div className="modal-header-title">
                   <span className="modal-header-icon" aria-hidden="true">
@@ -2770,6 +2832,11 @@ function Dashboard() {
                 </div>
 
                 <div className="modal-header-actions">
+                  {isEditingTurno ? (
+                    <button type="button" className="modal-header-save-mobile" onClick={saveEditedTurno}>
+                      Guardar
+                    </button>
+                  ) : null}
                   {!isEditingTurno && (() => {
                     const esPropio = user?.rol !== 'PROFESIONAL'
                       || (editingTurnoForm.professionalId != null && editingTurnoForm.professionalId === user.profesionalId)
@@ -2878,7 +2945,7 @@ function Dashboard() {
 
                 <button
                   type="button"
-                  className="secondary-button"
+                  className="secondary-button modal-actions-cancel-desktop"
                   onClick={closeTurnoDetails}
                 >
                   Cancelar
@@ -2886,7 +2953,7 @@ function Dashboard() {
 
                 <button
                   type="button"
-                  className="primary-button"
+                  className="primary-button modal-actions-save-desktop"
                   onClick={saveEditedTurno}
                 >
                   Guardar cambios

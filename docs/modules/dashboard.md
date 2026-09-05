@@ -306,7 +306,7 @@ El bloque `day-grid` existente no se tocó: timeline vertical, turnos como bloqu
 
 ### Semana
 
-Grilla de 7 columnas (Lun-Dom) con eje horario vertical — reutiliza el mismo rango operativo de horas que ya usa Día (nunca renderiza 24hs). Cada columna de día muestra header (nombre + fecha corta, resaltado si es "hoy"), y los turnos se posicionan/dimensionan por hora real, reutilizando `layoutTurnos()` (mismo algoritmo de columnas por colisión que Día) para superposiciones dentro de un mismo día. Muestra especialidad (color), paciente, horario (cuando el espacio alcanza) e ícono de recurrencia — igual criterio visual que las cards de Día, sin duplicar el componente. Interacción: click en slot vacío abre alta rápida con esa fecha/hora, click en un turno abre el mismo detalle/menú contextual que Día, navegación prev/next semana y "Hoy". En pantallas chicas, `.week-view` scrollea horizontalmente (`overflow-x: auto`, `min-width: 900px` en la grilla) sin romper el layout general de la página — verificado sin overflow horizontal a nivel `<body>` en 390px.
+Grilla de 7 columnas (Lun-Dom) con eje horario vertical — reutiliza el mismo rango operativo de horas que ya usa Día (nunca renderiza 24hs). Cada columna de día muestra header (nombre + fecha corta, resaltado si es "hoy"), y los turnos se posicionan/dimensionan por hora real, reutilizando `layoutTurnos()` (mismo algoritmo de columnas por colisión que Día) para superposiciones dentro de un mismo día. Muestra especialidad (color), paciente, horario (cuando el espacio alcanza) e ícono de recurrencia — igual criterio visual que las cards de Día, sin duplicar el componente. Interacción: click en slot vacío abre alta rápida con esa fecha/hora, click en un turno abre el mismo detalle/menú contextual que Día, navegación prev/next semana y "Hoy". En desktop/tablet, `.week-view` scrollea horizontalmente (`overflow-x: auto`, `min-width: 900px` en la grilla) sin romper el layout general de la página. **En mobile (≤820px) ya no scrollea 7 columnas angostas** — ver "Rediseño mobile-first (Home)" más abajo.
 
 ### Mes
 
@@ -319,6 +319,58 @@ Grilla de 7×4-6 semanas (siempre semanas completas, incluye días de meses adya
 ### Carga de datos (evitar N+1)
 
 Semana y Mes comparten un estado de carga por rango separado del de Día (`rangeTurnosState`/`rangeTurnosLoading`, `App.tsx`) — un solo `api.getTurnos({ from, to })` por cambio de rango (calculado con `getWeekDates`/`getMonthGridDates`), nunca un fetch por día ni por celda. El endpoint `GET /api/turnos` ya soportaba `from`/`to` (usado por `TurnosPage.tsx`) — no se tocó el backend ni se agregó ningún endpoint nuevo. La vista Día sigue usando su propio estado de carga de siempre (`turnosState`/`turnosLoading`, solo el día visible) — separado a propósito, para que Semana/Mes no puedan introducir ninguna regresión ahí. Año no dispara ningún fetch de turnos (ver arriba).
+
+---
+
+## Rediseño mobile-first (Home)
+
+**Actualización (implementado)**: ronda enfocada exclusivamente en la experiencia mobile del calendario de Inicio, sin tocar desktop (≥821px se comporta exactamente igual que antes — verificado explícitamente, ver "Validación" abajo). Reusa el breakpoint "CELULARES" ya existente (`≤820px`, ver sección 16 de `App.css`) — no se sumó un segundo breakpoint mobile (no existía ningún `768px` para reutilizar, como sugería el pedido).
+
+**Diagnóstico previo** (por qué la UX mobile era pobre, antes de tocar código):
+- El eje horario de Día **desaparecía por completo** en mobile: `.hours-column { display: none }` en el breakpoint de 480px — no era "poco visible", estaba literalmente oculto. Se angostó (`44px`) en vez de ocultarse.
+- No existía ningún patrón de bottom sheet: `.modal-card` era una card centrada a cualquier ancho (incluso a `calc(100% - 24px)` en 480px, seguía centrada verticalmente).
+- El buscador de Paciente/Profesional/Especialidad/Diagnóstico (`.dropdown-input-row input`) tenía `font-size: 15px` con especificidad `(0,2,1)` — por debajo del umbral de 16px que evita el zoom automático de iOS Safari al enfocar un input. No era exclusivo de esta ronda (afectaba también a desktop, sin consecuencia ahí), pero sí crítico para mobile.
+- `allowRecurrence` en `TurnoFormFields` (`frontend/src/components/FormFields.tsx`) estaba atado a `compact && allowRecurrence` — el formulario completo (no compacto) nunca tuvo UI de Repetición. Saltar directo al "formulario completo" en mobile (sin el paso intermedio "Más opciones") habría hecho desaparecer la recurrencia sin que nadie lo pidiera — se desacopló el gate de `compact` (ver más abajo).
+- `.side-panel` (mini calendario + "Datos del turno") ya era un `<aside>` hermano de `<main>`, reflowing debajo de él desde el breakpoint de 1170px — ocultarlo en mobile fue una regla de CSS, no una reestructuración.
+- Tocar un turno ya abría el modal completo "Editar turno" (detalle + acciones rápidas + eliminar) — esa es la superficie que pedía la spec para "tap en turno → bottom sheet"; no hizo falta ningún componente nuevo, solo el tratamiento visual de bottom sheet aplicado a `.modal-overlay`/`.modal-card` (ver abajo).
+- `WeekView` (Semana) renderizaba 7 columnas de `minmax(120px,1fr)` con `min-width: 900px` + scroll horizontal — ilegible en ~390px. Estrategia elegida: reusar el mismo timeline de un solo día que ya usa Día, con una franja de 7 días arriba para cambiar de día (en vez de construir una segunda grilla apretada de 7 columnas para mobile).
+- No hay ninguna librería de gestos en el stack — se descartó implementar swipe-to-dismiss manual (la spec lo permite explícitamente si resulta frágil): cerrar es vía `X` o tocando el backdrop, que ya existía.
+
+### Home: el calendario como protagonista
+
+`useIsMobile()` (nuevo, `frontend/src/hooks/useIsMobile.ts`) — hook reactivo sobre `matchMedia('(max-width: 820px)')`, mismo breakpoint que ya usa `App.css`. Se usa **solo** donde el comportamiento (no solo el estilo) tiene que cambiar: forzar el formulario completo + Repetición siempre visible al crear un turno, y el modo "un solo día" de `WeekView`. Todo lo demás (ocultar el sidebar, compactar el header, mostrar el FAB) es CSS puro, sin ninguna rama de JS nueva.
+
+- `.side-panel` (mini calendario + "Datos del turno"): oculto en mobile. El detalle de un turno ya se resuelve tocándolo (bottom sheet "Editar turno"), y la navegación de fecha la resuelve el header del calendario + el selector de vista.
+- `.main-header`: el breadcrumb "Home / Inicio" se oculta, el título "Turnos del día" se achica, y el botón grande "Nuevo turno" del header se oculta — reemplazado por un FAB.
+- **FAB** (`.fab-new-turno`, círculo fijo abajo a la derecha, `env(safe-area-inset-bottom)`): mismo `onClick={() => openNewTurnoModal()}` que el botón de header — un solo handler, dos superficies (oculto uno u otro según el breakpoint, nunca ambos a la vez). `z-index` deliberadamente **por debajo** de `.modal-overlay` (15 contra 20) — quedó clickeable por encima de un bottom sheet abierto en la primera pasada de verificación, corregido antes de reportar.
+- Navegación temporal (`.calendar-nav`/`.schedule-header`): título/subtítulo del período se achican, misma información, sin fila extra.
+
+### Bottom sheets: Nuevo turno / Editar turno / Recurrencia personalizada
+
+Un solo tratamiento CSS sobre las clases ya compartidas (`.modal-overlay`/`.modal-card`, y `.confirm-dialog-overlay`/`.custom-recurrence-modal` para la Recurrencia Personalizada) cubre los tres modales — no se creó un componente `BottomSheet` nuevo. En `≤820px`: `.modal-overlay` alinea el contenido al fondo (`align-items: flex-end`), `.modal-card`/`.confirm-dialog`/`.custom-recurrence-modal` pasan a ancho completo con esquinas superiores redondeadas únicamente, `max-height: 92dvh` (mismo criterio `dvh` sin fallback ya usado en otros lados de `App.css`, ej. `.sidebar`), animación de entrada `sheet-slide-up` (deshabilitada automáticamente por la regla global `prefers-reduced-motion: reduce` ya existente, sin lógica nueva) y un drag handle puramente decorativo (`.sheet-drag-handle`, no funcional — no hay swipe-to-dismiss, ver diagnóstico).
+
+**Nuevo turno**: en mobile ya no existe el paso intermedio "card compacta → Más opciones" — `newTurnoIsFull = newTurnoExpanded || isMobile` (`App.tsx`) fuerza el formulario completo desde que se abre. `allowRecurrence` pasa a `isMobile || !newTurnoExpanded` (en vez de solo `!newTurnoExpanded`), así que Repetición sigue disponible aunque el formulario ya esté "expandido" — esto exigió decouplear la UI de Repetición de `compact` en `FormFields.tsx` (antes solo existía en su versión ícono-sin-label): ahora la misma fila de controles se muestra con ícono (compacto, desktop) o con el label visible "Repetición" (mobile, estilo `!compact`), sin duplicar el `<select>`/botón/input de cantidad. El pie del modal ("Más opciones"/"Guardar turno", `.modal-actions--new`) se oculta completo en mobile — un botón "Guardar" nuevo vive en el header (`.modal-header-save-mobile`, mismo handler `saveNewTurno`), sticky junto al ícono y la `X`.
+
+**Editar turno**: mismo tratamiento de sheet. El botón "Guardar" del header (mismo `saveEditedTurno`) solo aparece mientras `isEditingTurno` es verdadero. En el pie, "Cancelar"/"Guardar cambios" (`.modal-actions-cancel-desktop`/`.modal-actions-save-desktop`) se ocultan en mobile por ser redundantes con la `X`/el "Guardar" del header — pero **"Eliminar turno" sigue visible**, es la única acción que no tiene otro lugar.
+
+**Recurrencia personalizada**: mismo tratamiento de sheet aplicado a `.custom-recurrence-modal`, sin mover "Cancelar"/"Listo" del pie al header — de las dos variantes que planteaba la spec (header con acción, o mantener el pie existente), se eligió la segunda por ser la más chica y de menor riesgo (reusa el mismo `.confirm-dialog-actions` sin tocar el componente).
+
+**Zoom de iOS**: `.modal-card input/select/textarea` y `.custom-recurrence-modal input/select` fuerzan `font-size: 16px` en mobile — incluyendo una regla específica `.modal-card .dropdown-input-row input:not([type="checkbox"])` para igualar la especificidad `(0,2,1)` de la regla de 15px que ya existía (ver diagnóstico) sin usar `!important`.
+
+### Vista Semana en mobile: franja de 7 días + un solo día
+
+`WeekView` (`App.tsx`) recibe una prop nueva `isMobile`. En mobile, en vez de las 7 columnas de siempre, se muestra una franja horizontal de 7 chips tocables (`.week-day-strip`, día+fecha, con estados "hoy"/"seleccionado") arriba, y la grilla de abajo renderiza **un solo día** (el de `selectedDate`) reusando exactamente la misma función de columna (`renderDayColumn`, extraída del cuerpo del `.map` original para no duplicarla entre el modo 7-columnas de desktop y el de 1-columna de mobile). Tocar un chip de la franja llama a un `onSelectDate` nuevo (→ `setSelectedDate`), igual que elegir un día en el mini calendario del sidebar. La navegación de semana completa (flechas prev/next del header) sigue moviendo la semana entera, no solo el día.
+
+### Qué se dejó afuera (permitido explícitamente por el pedido)
+
+- **Swipe-to-dismiss real**: no se implementó — el drag handle es decorativo. La spec permitía omitirlo si una implementación manual de gestos resultaba frágil sin agregar una librería nueva; se optó por eso en vez de escribir touch handlers propios de bajo valor frente a `X`/tap-en-backdrop, que ya funcionaban.
+- **Auto-scroll a la hora actual/primer turno** al abrir Día: no era obligatorio según la spec y no se tocó `App.tsx` en ese sentido.
+- **Wheel time picker custom**: se mantienen los `<select>` de hora/minuto ya existentes (o el date/time nativo según el modo) — la spec no pedía clonar el picker de Google Calendar, solo priorizar usabilidad.
+- **Pruebas específicas de WebKit real** (Playwright `webkit`): no estaba instalado en este entorno: la verificación mobile se hizo con Chromium emulando viewport 390×844 (mismo método ya usado en rondas anteriores de este proyecto para verificación responsive) — cubre layout/overflow/zoom-guard vía `font-size` computado, pero no es una prueba de motor WebKit real.
+
+### Validación
+
+`tsc -b --force`, `vitest run` (149/149), `npm run build`, `npm run lint` (mismo único error preexistente de `AuthContext.tsx`) limpios. Sin cambios de backend. Con Playwright, viewport 390×844: sidebar/"Datos del turno" ocultos, FAB visible y con el z-index correcto (detrás de un modal abierto), eje horario visible en Día, 0px de overflow horizontal en Día/Nuevo turno/Semana, tap a un turno abre el bottom sheet de detalle, FAB abre "Nuevo turno" ya en formulario completo (sin "Más opciones", con "Guardar" en el header, con Repetición visible), input de Paciente en `16px` de fuente, Recurrencia Personalizada abre como bottom sheet apilado sobre el de Nuevo turno, Semana mobile muestra 1 columna + franja de 7 días, modo oscuro correcto en Home/sheet/Semana. Regresión de desktop (1400×950) explícita: FAB oculto, sidebar visible, botón "Nuevo turno" del header visible, card compacta + "Más opciones" sin cambios, Repetición sigue desapareciendo del formulario completo tal cual antes de esta ronda (comportamiento preexistente, no una regresión introducida).
 
 ---
 
