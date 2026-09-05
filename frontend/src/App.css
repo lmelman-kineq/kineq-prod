@@ -4192,6 +4192,25 @@ select:disabled {
   font-size: 13px;
 }
 
+/* Tab "Turnos" del Paciente — acción "Exportar plan de sesiones" */
+.turnos-tab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.turnos-export-feedback {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.turnos-export-feedback--error {
+  color: var(--color-danger);
+}
+
 /* Diagnóstico + Archivos en la misma fila en desktop (Nueva evolución y
    edición de una evolución existente) — cada campo toma un ancho parejo;
    en mobile se apilan solos, sin breakpoint dedicado. */

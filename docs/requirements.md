@@ -48,6 +48,7 @@ Can request or reserve appointments, receive reminders, cancel or reschedule dep
 - Edit patient information
 - View patient details
 - Search patients
+- Export upcoming-sessions schedule as PDF — **implemented**: "Exportar plan de sesiones" button in the patient's Turnos tab, generated client-side (no new endpoint). See "Exportar plan de sesiones (PDF)" in `docs/modules/patients.md`.
 - Track patient status
 
 ### Clinical History

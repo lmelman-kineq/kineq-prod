@@ -2193,3 +2193,128 @@ visible, botón de header visible, card compacta + "Más opciones" sin
 cambios, Repetición sigue desapareciendo del formulario completo tal
 cual antes de esta ronda (comportamiento preexistente, no una
 regresión).
+
+---
+
+## Sesión: ajustes de feedback sobre el rediseño mobile-first del Home
+
+Ronda corta de feedback directo del usuario, cuatro pedidos puntuales sobre
+la ronda anterior. Sin backend, sin tests nuevos (cambios puramente
+visuales/de contenido, ya cubiertos por la suite existente).
+
+- **"No hay turnos para este día" eliminado** (desktop y mobile): era un
+  `<p className="empty-day-message">` en `App.tsx`, sin reemplazo — un día
+  vacío ahora solo muestra la grilla horaria en blanco. CSS sin uso
+  (`.empty-day-message`) borrado.
+- **Gap título↔controles en mobile, corregido de verdad**: la ronda
+  anterior le había puesto `margin-bottom: 8px` a `.main-header`, sin
+  efecto — el gap real lo pone `gap: 24px` de `.main-area` (flex), no el
+  margin de un hijo. Angostado a `8px` en el breakpoint mobile.
+- **"Calendario del día"/"Calendario semanal" (`<h2>`) oculto en mobile**,
+  en las 4 vistas — redundante con el selector de vista.
+- **Fecha larga (`<p>`) oculta en mobile, solo en Día/Semana** — Mes/Año la
+  conservan (más corta, y sin otro indicador de qué mes/año se ve, dado que
+  el sidebar también está oculto en mobile).
+- **Header "VIE / 4 sep" para Día en mobile**: mismo bloque visual que ya
+  tenía el header de columna de Semana (`.week-day-header`), ahora también
+  arriba del timeline de Día — nueva clase `.week-day-header--active`
+  (misma regla CSS que `--today`, pero con semántica distinta: Día siempre
+  la aplica al único día visible, sea o no hoy; Semana sigue usando
+  `--today` para su sentido original de "hoy" literal).
+
+`tsc -b --force`/`vitest run` (149/149)/`build`/`lint` limpios. Verificado
+con Playwright en 390×844: gap angosto, sin `<h2>`, sin fecha larga en
+Día/Semana, pill "VIE / 4 sep" arriba del timeline, "No hay turnos"
+ausente. Desktop regresión explícita: sin cambios.
+
+---
+
+## Sesión: Exportar plan de sesiones (PDF)
+
+Nueva funcionalidad en la tab Turnos del Paciente: botón "Exportar plan de
+sesiones" que descarga un PDF A4 con el cronograma de próximas sesiones.
+Ver el detalle completo en "Exportar plan de sesiones (PDF)" en
+`docs/modules/patients.md` — acá el resumen de arquitectura.
+
+### Diagnóstico previo
+
+- `PatientAppointmentsTable.tsx` (tab Turnos) es puramente presentacional
+  (`turnos`/`onEditTurno`), sin toolbar propia — `turnos` ya es la lista
+  completa (no eliminada) del paciente, cargada una vez en
+  `PatientDetailPage.tsx` vía `api.getTurnos({ pacienteId })`, ya scopeada
+  por `consultorioId` del lado del servidor.
+- `Turno.numeroSesion` es nullable; `EstadoTurno` tiene 6 valores
+  (`ASIGNADO`/`EN_ESPERA`/`ATENDIENDO`/`FINALIZADO`/`AUSENTE`/`CANCELADO`).
+  `GET /api/turnos` ya soporta `pacienteId`+`from`/`to`, sin `requireRole`
+  (los 4 roles autenticados del consultorio).
+- `Consultorio` no tiene ningún campo de logo — se confirmó explícitamente
+  (grep de "logo" en todo el repo, sin verdaderos positivos) antes de
+  decidir el branding del PDF.
+- Cero dependencia de PDF instalada en el repo (ni frontend ni backend);
+  `fetchAuthorizedBlob`/`openAuthorizedFile` (`services/api.ts`) es el
+  único patrón de descarga existente, pero pensado para un archivo real ya
+  almacenado (Vercel Blob) — no aplica acá, este PDF nunca se persiste.
+
+### Decisión de arquitectura: 100% cliente, sin endpoint nuevo
+
+`turnos` ya es exactamente el dato que pedía la spec (todas las sesiones
+del paciente, ya autorizado/scopeado) — generar el PDF en el cliente a
+partir de eso, en vez de agregar un endpoint backend, significa cero
+superficie de seguridad nueva: nunca se accede a datos que esta pantalla
+no tuviera ya cargados legítimamente. Único dato adicional: el nombre del
+consultorio, pedido on-demand (`api.getConsultorio()`) recién al exportar
+— no se suma al `Promise.all` de carga inicial del paciente.
+
+Dependencia nueva: `jspdf@4.2.1` (sin `jspdf-autotable` — layout de lista
+simple, no justifica el plugin de tablas). Agrega un chunk separado
+(~200KB, `html2canvas`, por el import condicional del método `.html()` de
+jsPDF que acá no se usa) — Vite lo separa solo, nunca se descarga en la
+práctica.
+
+### Cambios
+
+`frontend/src/utils/sesionesPlan.ts` (nuevo): `selectUpcomingSesiones`
+(turnos no `CANCELADO` con `inicio` ≥ ahora, orden ascendente — comparar
+instantes UTC nunca depende de zona horaria, a diferencia de *mostrar*
+fecha/hora, que sí usa `utcIsoToZonedParts` existente) y
+`buildSesionesPlanDocument` (DTO puro con todos los strings ya
+formateados — separa "normalizar datos" de "dibujar el PDF" para poder
+testear el contenido sin parsear el binario). `frontend/src/utils/
+sesionesPlanPdf.ts` (nuevo): `renderSesionesPlanPdf`, la única pieza que
+importa `jspdf` — A4, paginado automático, footer con fecha de generación
++ número de página en cada página.
+
+`PatientDetailPage.tsx`: nuevo estado `exportingPlan`/`exportPlanFeedback`,
+handler `exportSesionesPlan` (sin sesiones → mensaje inline, nunca
+`alert()`; error → mensaje inline con el texto genérico pedido), botón
+"Exportar plan de sesiones" (`.turnos-tab-toolbar`) arriba de
+`PatientAppointmentsTable` en el panel de la tab Turnos. Sin gate de rol
+— igual que la tab en sí y que los endpoints que ya usa.
+
+### Tests
+
+19 nuevos (`sesionesPlan.test.ts`: selección de próximas sesiones —
+futuro/pasado/cancelado/orden/individual+serie coexistiendo/ocurrencia
+reprogramada usa su fecha real/numeroSesion nunca recalculado/hueco de
+numeración no se corrige/sin sesiones; timezone cruzando el día
+UTC↔Buenos Aires; slugify/filename — y `sesionesPlanPdf.test.ts`: PDF
+válido, contenido incluye paciente/consultorio/sesión/hora, pagina con
+muchas sesiones). Sin snapshot pixel-perfect (frágil, evitado a propósito).
+
+### Verificación manual
+
+`tsc -b --force`/`vitest run` (168/168)/`build`/`lint` (mismo único error
+preexistente de `AuthContext.tsx`) limpios. Con Playwright, contra los dev
+servers reales: paciente con turnos futuros ASIGNADO (uno con hueco de
+numeración, `numeroSesion` 1 y 5, sin 2/3/4) + uno `CANCELADO` futuro + uno
+`FINALIZADO` pasado → descarga real de
+`plan-sesiones-nicolas-zotalis-2026-09-04.pdf`, PDF válido (`%PDF-`),
+contenido leído (paciente/consultorio reales, `Sesión 1`/`Sesión 5` sin
+renumerar, cancelado y pasado ausentes); paciente sin próximas sesiones →
+mensaje inline, sin descarga. Modo oscuro y mobile (390×844) verificados.
+
+### Qué no se implementó (fuera de alcance explícito)
+
+Envío por WhatsApp/email, firma digital, plantillas configurables de PDF,
+almacenamiento histórico del PDF generado, entidad `PlanSesiones` nueva,
+endpoint backend (no hacía falta ninguno de los dos últimos).

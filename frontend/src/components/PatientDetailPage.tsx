@@ -23,6 +23,10 @@ import { useFichaInicial } from '../hooks/useFichaInicial'
 import { groupEvolucionesByGrupo } from '../utils/groupEvolucionesByGrupo'
 import { SPECIALTY_COLOR_TOKENS } from '../utils/specialtyColors'
 import type { ClinicalNavRequest, ClinicalNavTarget } from '../utils/clinicalNavTarget'
+import { patientFullName } from '../utils/patient'
+import { todayInTimeZone } from '../utils/timezone'
+import { selectUpcomingSesiones, buildSesionesPlanDocument, buildSesionesPlanFilename } from '../utils/sesionesPlan'
+import { renderSesionesPlanPdf } from '../utils/sesionesPlanPdf'
 
 type PatientDetailPageProps = {
   patientId: number
@@ -75,6 +79,9 @@ export default function PatientDetailPage({
   const [editPatientOpen, setEditPatientOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
+
+  const [exportingPlan, setExportingPlan] = useState(false)
+  const [exportPlanFeedback, setExportPlanFeedback] = useState<{ type: 'info' | 'error'; message: string } | null>(null)
 
   const [showNewEvolucionForm, setShowNewEvolucionForm] = useState(false)
   const [newEvolucionText, setNewEvolucionText] = useState('')
@@ -549,6 +556,42 @@ export default function PatientDetailPage({
     })
   }
 
+  // "Exportar plan de sesiones" — íntegramente en el cliente: `turnos` ya es
+  // la lista completa (no cancelada) del paciente, ya scopeada por
+  // consultorio del lado del servidor (GET /api/turnos?pacienteId=...), así
+  // que no hace falta ningún endpoint ni validación nueva — nunca se accede
+  // a datos que esta pantalla no tuviera ya cargados legítimamente. Un solo
+  // dato adicional (nombre del consultorio) se pide on-demand, recién al
+  // exportar, para no sumar un fetch más a la carga inicial del paciente.
+  const exportSesionesPlan = async () => {
+    if (!patient || exportingPlan) return
+    setExportPlanFeedback(null)
+
+    const timeZone = api.getConsultorioTimeZone()
+    const upcoming = selectUpcomingSesiones(turnos, new Date().toISOString())
+    if (upcoming.length === 0) {
+      setExportPlanFeedback({ type: 'info', message: 'Este paciente no tiene próximas sesiones programadas.' })
+      return
+    }
+
+    setExportingPlan(true)
+    try {
+      const consultorio = await api.getConsultorio()
+      const documento = buildSesionesPlanDocument({
+        patientName: patientFullName(patient),
+        consultorioName: consultorio.nombre,
+        sesiones: upcoming,
+        timeZone,
+      })
+      const pdf = renderSesionesPlanPdf(documento)
+      pdf.save(buildSesionesPlanFilename(patientFullName(patient), todayInTimeZone(timeZone)))
+    } catch (exportError) {
+      setExportPlanFeedback({ type: 'error', message: getErrorMessage(exportError, 'No pudimos generar el plan de sesiones.') })
+    } finally {
+      setExportingPlan(false)
+    }
+  }
+
   const sortedEvoluciones = [...evoluciones].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
@@ -841,7 +884,26 @@ export default function PatientDetailPage({
       </>
     ),
     ficha: <InitialAssessmentPanel fichaHook={fichaHook} patientId={patientId} navTarget={navTarget} onNavTargetHandled={() => setNavTarget(null)} />,
-    turnos: <PatientAppointmentsTable turnos={turnos} onEditTurno={onEditTurno} />,
+    turnos: (
+      <>
+        <div className="turnos-tab-toolbar">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => { void exportSesionesPlan() }}
+            disabled={exportingPlan}
+          >
+            {exportingPlan ? 'Generando...' : 'Exportar plan de sesiones'}
+          </button>
+          {exportPlanFeedback ? (
+            <p className={`turnos-export-feedback ${exportPlanFeedback.type === 'error' ? 'turnos-export-feedback--error' : ''}`}>
+              {exportPlanFeedback.message}
+            </p>
+          ) : null}
+        </div>
+        <PatientAppointmentsTable turnos={turnos} onEditTurno={onEditTurno} />
+      </>
+    ),
     estudios: <FichaEstudiosTab fichaHook={fichaHook} navTarget={navTarget} onNavTargetHandled={() => setNavTarget(null)} />,
   }
 

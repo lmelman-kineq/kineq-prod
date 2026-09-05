@@ -64,6 +64,10 @@ Solo una variable propia de Blob, y **Vercel la agrega sola** al conectar el sto
 - No hace falta tocar Environment Variables en el dashboard de Vercel para este cambio — `BLOB_READ_WRITE_TOKEN_STORE_ID` ya está ahí desde que se conectó el store.
 - **Prueba real pendiente en el deployment de Vercel** (no se pudo verificar contra la infraestructura real desde este entorno de desarrollo): subir una imagen de Evolución, un archivo de Estudio, una foto de Paciente y una foto de Usuario; confirmar que cada uno aparece en el Blob Store, que la fila en MySQL tiene el `pathname` correcto, que la miniatura/preview carga en la UI, y que eliminar hace desaparecer el archivo del store.
 
+## PDFs generados en cliente (implementado)
+
+Distinto del punto anterior: un PDF generado *on demand* (nunca persistido, nunca pasa por Vercel Blob) se arma **enteramente en el navegador** con `jspdf` (única dependencia agregada, sin plugin de tablas). Primer y único caso hoy: "Exportar plan de sesiones" del paciente (ver `docs/modules/patients.md`) — toma datos ya cargados/scopeados por endpoints existentes (`GET /api/turnos`, `GET /api/pacientes/:id`, `GET /api/consultorio`), nunca requiere un endpoint nuevo ni backend adicional. Si una futura funcionalidad necesita un PDF con datos que el cliente no tiene ya cargados de forma segura, evaluar en ese momento si conviene generarlo en el backend en cambio — este patrón (cliente) asume que todos los datos ya pasaron por endpoints scopeados por `consultorioId`.
+
 ## Título de la app
 
 **Actualización (implementado)**: `frontend/index.html` tenía `<title>frontend</title>` (el default de Vite, nunca actualizado) — visible como el nombre de la pestaña del navegador en todo ambiente, dev y producción. Cambiado a `<title>Kineq</title>`. No hay ningún `document.title` dinámico en el resto del frontend que lo sobrescriba en tiempo de ejecución.

@@ -576,6 +576,26 @@ Estas secciones no deben implementarse todas de golpe si comprometen la simplici
 
 Ver "UX compacta, Evoluciones, permisos y rediseño de Paciente (70/30)", "Ajustes finos sobre la nueva pestaña de Paciente" y "Plantillas de Evolución, tabs y ajustes de Ficha Inicial" en `docs/tasks.md` para el detalle completo de cada ronda.
 
+### Exportar plan de sesiones (PDF)
+
+**Actualización (implementado)**: la tab Turnos del paciente (`PatientAppointmentsTable.tsx`) ganó un botón "Exportar plan de sesiones" (`.turnos-tab-toolbar`, arriba de la tabla) que descarga un PDF A4 con el cronograma de próximas sesiones del paciente — pensado para compartir con él, nunca un documento clínico.
+
+**Generación 100% en el cliente, sin endpoint nuevo**: `turnos` (el estado que ya carga `PatientDetailPage.tsx` vía `api.getTurnos({ pacienteId })`, ya scopeado por `consultorioId` del lado del servidor) es la única fuente de datos — no se agregó ningún endpoint ni tabla nueva. El único dato adicional es el nombre del consultorio, pedido on-demand (`api.getConsultorio()`) recién al tocar el botón, no en la carga inicial del paciente. Como el PDF se arma únicamente con datos que esta pantalla ya tenía acceso legítimo a mostrar, no hay superficie de seguridad nueva que validar — el aislamiento por consultorio ya lo garantizan `GET /api/turnos` y `GET /api/pacientes/:id` (sin cambios).
+
+**Criterio de "próximas sesiones"** (`frontend/src/utils/sesionesPlan.ts`, función pura `selectUpcomingSesiones`): turnos con `estado !== 'CANCELADO'` cuyo `inicio` (instante UTC real) sea `>=` el instante actual, ordenados ascendente. Comparar instantes UTC no depende de ninguna zona horaria (es aritmética de timestamps, no de calendario) — la zona horaria del consultorio solo importa para *mostrar* fecha/hora (`utcIsoToZonedParts`, reutilizado sin cambios de `utils/timezone.ts`), nunca para decidir qué es "futuro". No filtra por `serieId`: un turno individual, de una `SerieTurno`, o con recurrencia personalizada entran todos por el mismo criterio — el plan es la agenda real vigente, no una regla de recurrencia. Una ocurrencia de serie reprogramada a mano aparece en su fecha/hora real persistida (nunca recalculada desde el patrón). Una ocurrencia cancelada dentro de una serie simplemente no aparece — no se "rellena" el hueco ni se renumeran las sesiones restantes (`numeroSesion` siempre es el valor real guardado en el turno, nunca la posición en la lista; sin valor, fallback genérico "Sesión").
+
+**Contenido del PDF**: título "Planificación de sesiones", `Nombre del paciente | Nombre del consultorio` (ambos datos reales, nunca hardcodeados), "Cronograma de sesiones" con una fila por turno (`Sesión N` · día de semana + fecha corta · hora, y una segunda línea discreta con profesional · especialidad), pie con fecha de generación (zona horaria del consultorio) y paginado. **Nunca incluye datos clínicos** (diagnóstico, evoluciones, ficha inicial, antecedentes, alertas) — es un cronograma operativo, no un documento clínico. Sin logo de consultorio: no existe ningún campo/infraestructura de logo en `Consultorio` hoy (se investigó explícitamente antes de implementar) — el branding es solo el wordmark "KINEQ" en un acento sutil, nunca se agregó upload de logo para esta tarea.
+
+**Dependencia nueva**: `jspdf` (única, sin `jspdf-autotable` — el layout es una lista simple, no justifica el plugin de tablas). Elegida por ser la opción estándar para generar PDFs 100% en el cliente sin backend/headless-browser, mantenida y con tipos TypeScript propios. Agrega un chunk separado (~200KB, `html2canvas`) que Vite divide automáticamente por el import condicional de jsPDF para su método `.html()` — **no se usa ese método acá**, así que ese chunk nunca se descarga en la práctica.
+
+**Sin próximas sesiones**: no se genera ningún PDF — mensaje inline junto al botón ("Este paciente no tiene próximas sesiones programadas."), nunca `alert()`. Mismo lugar (no un modal) muestra el error si la generación falla ("No pudimos generar el plan de sesiones."). Mientras genera, el botón se deshabilita y cambia a "Generando..." para evitar doble descarga.
+
+**Permisos**: sin gate de rol — igual que la tab Turnos en sí (siempre visible, para los cuatro roles) y que `GET /api/turnos`/`GET /api/pacientes/:id` (sin `requireRole`, cualquier usuario autenticado del consultorio). No se vinculó a acceso clínico (`canEditClinical`) a propósito, ya que el contenido del PDF es exclusivamente administrativo.
+
+**Archivo**: `plan-sesiones-<nombre-slugificado>-<YYYY-MM-DD>.pdf` (acentos/espacios normalizados vía `slugifyForFilename`, mismo criterio de `slugifyCatalogo` en el backend — NFD + strip de diacríticos — reimplementado en frontend por ser un runtime distinto, no importable directamente).
+
+**Qué no se implementó** (fuera de alcance explícito de esta ronda): envío por WhatsApp/email, firma digital, plantillas de PDF configurables, almacenamiento histórico del PDF generado (siempre on-demand, nunca se persiste una copia), entidad `PlanSesiones` nueva (no hacía falta ninguna).
+
 ---
 
 ## Pendientes / mejoras futuras
