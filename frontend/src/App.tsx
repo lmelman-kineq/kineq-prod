@@ -8,6 +8,7 @@ import {
   type ComponentType,
   type SVGProps,
 } from 'react'
+import { createPortal } from 'react-dom'
 import './App.css'
 import TurnoFormFields, {
   type SpecialtyOption,
@@ -658,6 +659,10 @@ function Dashboard() {
   const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null)
   const profilePhotoInputRef = useRef<HTMLInputElement | null>(null)
   const avatarWrapperRef = useRef<HTMLDivElement | null>(null)
+  // El popover se renderiza vía portal en document.body (ver más abajo, no
+  // es descendiente DOM de avatarWrapperRef) — hace falta su propia ref
+  // para que el click-afuera no lo cierre apenas se toca un botón adentro.
+  const avatarPopoverRef = useRef<HTMLDivElement | null>(null)
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
   const [specialtiesState, setSpecialtiesState] = useState<SpecialtyOption[]>([])
   const [patientSocialWorkById, setPatientSocialWorkById] = useState<Record<number, string | null>>({})
@@ -1065,7 +1070,9 @@ function Dashboard() {
 
     const handleOutside = (event: MouseEvent) => {
       const target = event.target as Node
-      if (avatarWrapperRef.current && !avatarWrapperRef.current.contains(target)) {
+      const insideWrapper = avatarWrapperRef.current?.contains(target) ?? false
+      const insidePopover = avatarPopoverRef.current?.contains(target) ?? false
+      if (!insideWrapper && !insidePopover) {
         setProfilePhotoInfoOpen(false)
       }
     }
@@ -2229,11 +2236,18 @@ function Dashboard() {
                 event.target.value = ''
               }}
             />
-            {profilePhotoInfoOpen && profilePhotoPopoverPos ? (
+            {profilePhotoInfoOpen && profilePhotoPopoverPos ? createPortal(
+              // Portal a document.body por el mismo motivo que `.sidebar-tooltip`
+              // (ver ese comentario más abajo): `.sidebar` es `position: sticky`,
+              // que en Chromium crea su propio stacking context — un
+              // `position: fixed` adentro queda atrapado y pierde contra
+              // contenido posterior en el DOM (ej. el `<small>` con `opacity`
+              // de `.turnos-summary-card`) sin importar el z-index.
               <div
                 className="avatar-edit-popover"
                 role="dialog"
                 aria-label="Foto de perfil"
+                ref={avatarPopoverRef}
                 style={{ top: profilePhotoPopoverPos.top, left: profilePhotoPopoverPos.left }}
               >
                 <p className="avatar-edit-popover-title">Foto de perfil</p>
@@ -2249,7 +2263,8 @@ function Dashboard() {
                 </div>
                 {profilePhotoError ? <p className="evolution-form-error">{profilePhotoError}</p> : null}
                 <button type="button" className="secondary-button" onClick={() => setProfilePhotoInfoOpen(false)}>Cerrar</button>
-              </div>
+              </div>,
+              document.body,
             ) : null}
           </div>
           <div className="sidebar-brand-text">
@@ -2331,10 +2346,19 @@ function Dashboard() {
           <span className="nav-label">Cerrar sesión</span>
         </button>
 
-        {sidebarTooltip ? (
+        {sidebarTooltip ? createPortal(
+          // Portal a document.body: `.sidebar` es `position: sticky`, que en
+          // Chromium siempre crea su propio stacking context (con o sin
+          // z-index) — un `position: fixed` adentro queda atrapado ahí y
+          // pierde contra contenido posterior en el DOM (ej. un `<small>`
+          // con `opacity` dentro de `.turnos-summary-card`, que también crea
+          // su propio stacking context) sin importar cuán alto sea su
+          // z-index. Renderizarlo fuera de `.sidebar` lo saca del problema
+          // de raíz en vez de perseguir z-index más y más altos.
           <div className="sidebar-tooltip" style={{ top: sidebarTooltip.top, left: sidebarTooltip.left }}>
             {sidebarTooltip.label}
-          </div>
+          </div>,
+          document.body,
         ) : null}
       </aside>
 

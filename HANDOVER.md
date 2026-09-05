@@ -2318,3 +2318,15 @@ mensaje inline, sin descarga. Modo oscuro y mobile (390×844) verificados.
 Envío por WhatsApp/email, firma digital, plantillas configurables de PDF,
 almacenamiento histórico del PDF generado, entidad `PlanSesiones` nueva,
 endpoint backend (no hacía falta ninguno de los dos últimos).
+
+---
+
+## Sesión: fix — tooltip/popover de la sidebar quedaban tapados por contenido de la página
+
+**Bug real, reproducido y diagnosticado antes de tocar código** (no un ajuste de z-index a ciegas): el hover-tooltip de los íconos de la sidebar (`.sidebar-tooltip`) y el popover "Foto de perfil" (`.avatar-edit-popover`) son `position: fixed` con `z-index` altísimo (10010 y 9999 respectivamente) — en teoría, deberían ganar cualquier comparación de stacking. En la práctica, en Chromium, perdían contra contenido posterior en el DOM (ej. el `<small>` de `.turnos-summary-card`, que tiene `opacity: 0.86`).
+
+**Causa raíz confirmada con Playwright** (`document.elementsFromPoint` + forzar `.sidebar` a `position: static` y comparar): `.sidebar` es `position: sticky` — Chromium trata `position: sticky` como creador de stacking context **siempre**, con o sin `z-index` explícito (no es un detalle universal del spec CSS, es un comportamiento de motor bien conocido). Eso atrapa a cualquier `position: fixed` descendiente dentro del stacking context de `.sidebar` para efectos de *pintado* — su z-index solo gana comparaciones **dentro** de ese contexto, nunca contra el de un hermano posterior en el DOM (`<main>`) que también cree su propio stacking context (acá, vía `opacity` en el `<small>`). Confirmado experimentalmente: forzar `.sidebar { position: static }` hacía que el popover ganara de inmediato, sin tocar ningún z-index.
+
+**Fix**: `.sidebar-tooltip` y `.avatar-edit-popover` (`App.tsx`) se renderizan ahora vía `createPortal(..., document.body)` — primer uso de portales en el proyecto. Al salir del DOM de `.sidebar`, quedan completamente afuera de su stacking context, sin depender de ganar una comparación de z-index. El popover necesitó un ajuste adicional: su lógica de "cerrar al hacer click afuera" comparaba contra `avatarWrapperRef` (el contenedor del ícono en la sidebar) — al portar el popover, ya no es descendiente DOM de ese wrapper, así que cualquier click *adentro* del popover portado se hubiera interpretado como "afuera" y lo hubiera cerrado. Se agregó una ref propia (`avatarPopoverRef`) y la condición pasó a `!insideWrapper && !insidePopover`. El cierre por Escape no dependía de contención DOM, así que no necesitó cambios.
+
+Verificado con Playwright: ambos overlays confirmados renderizando como hijos directos de `<body>`; el popover sigue abriendo/cerrando igual que antes (click en "Subir foto" no lo cierra, "Cerrar"/click afuera sí); capturas antes/después mostrando el texto de fondo ("Pacientes esperando atención hoy") ya no se filtra a través del botón "Cerrar". `tsc -b --force`/`vitest run` (168/168)/`build`/`lint` limpios, sin cambios de backend.
