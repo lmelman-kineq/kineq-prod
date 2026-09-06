@@ -470,13 +470,11 @@ type MonthViewProps = {
   loading: boolean
   todayEnZonaConsultorio: string
   onSelectDay: (date: string) => void
-  onCreateSlot: (date: string) => void
-  canCreate: boolean
 }
 
 const MONTH_VIEW_MAX_VISIBLE_PER_DAY = 3
 
-function MonthView({ selectedDate, turnos, loading, todayEnZonaConsultorio, onSelectDay, onCreateSlot, canCreate }: MonthViewProps) {
+function MonthView({ selectedDate, turnos, loading, todayEnZonaConsultorio, onSelectDay }: MonthViewProps) {
   const gridDates = getMonthGridDates(selectedDate)
   const activeMonth = Number(selectedDate.split('-')[1])
   const turnosByDate = useMemo(() => {
@@ -511,12 +509,12 @@ function MonthView({ selectedDate, turnos, loading, todayEnZonaConsultorio, onSe
               className={`month-view-cell ${inCurrentMonth ? '' : 'month-view-cell--outside'} ${isToday ? 'month-view-cell--today' : ''}`}
               role="button"
               tabIndex={0}
-              onClick={() => (canCreate ? onCreateSlot(date) : onSelectDay(date))}
+              aria-label={`Ver semana del ${dayNumber}`}
+              onClick={() => onSelectDay(date)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault()
-                  if (canCreate) onCreateSlot(date)
-                  else onSelectDay(date)
+                  onSelectDay(date)
                 }
               }}
             >
@@ -2761,8 +2759,6 @@ function Dashboard() {
                 setSelectedDate(date)
                 setCalendarView('week')
               }}
-              onCreateSlot={(date) => openNewTurnoModal(date)}
-              canCreate={puedeCrearTurnos}
             />
           ) : (
             <YearView

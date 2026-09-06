@@ -6309,6 +6309,16 @@ select:disabled {
     width: auto;
   }
 
+  /* Mismo bug, mismo fix, en el listado principal de Turnos (`TurnosPage`):
+     `.turnos-table-col-sesion` fija `width: 1%` para achicar la columna
+     "Sesión" en desktop — en mobile, donde cada <td> es su propia fila
+     flex, ese `width: 1%` encoge la fila entera (etiqueta + valor) en vez
+     del ancho de columna, dejando "Sesión   1" apretado a la izquierda en
+     vez de "1" alineado a la derecha como el resto de las filas. */
+  .turnos-table-col-sesion {
+    width: auto;
+  }
+
   .patient-turnos-cell-truncate {
     max-width: 60%;
   }

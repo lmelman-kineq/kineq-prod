@@ -598,6 +598,8 @@ Ver "UX compacta, Evoluciones, permisos y rediseño de Paciente (70/30)", "Ajust
 
 **Actualización (implementado) — mobile: alineación de "Nro. de sesión" y back button icon-only**: la tabla de Turnos del Paciente (`.patient-turnos-table`) fija anchos de columna por `nth-child` en desktop (`table-layout: fixed`) — en mobile, donde cada `<td>` pasa a ser su propia fila (`display: flex`), esos anchos fijos (ej. 64px para "Sesión") comprimían el valor en el medio de la card en vez de dejarlo alineado a la derecha como el resto de las filas. Se resetea (`width: auto`) específicamente en el breakpoint mobile — ver "Rediseño mobile-first" en `docs/modules/dashboard.md`. El botón "Volver a Pacientes" del header del Paciente (`.patient-detail-back-button`) muestra solo el ícono `‹` en mobile — el texto queda en un `<span aria-hidden>` oculto ahí (nombre accesible vía `aria-label` del botón, siempre presente). Desktop sin cambios en ambos casos.
 
+**Mismo bug, otra tabla — "Listado de turnos" (`TurnosPage.tsx`)**: `.turnos-table-col-sesion` (usada ahí, no en `.patient-turnos-table`) fija `width: 1%` en desktop para achicar la columna "Sesión" — el mismo problema descripto arriba, sin resetear en mobile, hasta la ronda "Ajustes de navegación del calendario y simplificación mobile" (ver `docs/modules/dashboard.md`). Mismo fix: `width: auto` en el breakpoint mobile.
+
 ---
 
 ## Pendientes / mejoras futuras
