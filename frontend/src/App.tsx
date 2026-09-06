@@ -3101,7 +3101,17 @@ function Dashboard() {
         )}
 
         {contextMenu ? (() => {
-          const menuTurno = turnosState.find((item) => item.id === contextMenu.turnoId)
+          // El turno puede venir de Día (`turnosState`, un solo día) o de
+          // Semana/Mes (`rangeTurnosState`, el rango visible completo) — el
+          // menú se dispara desde ambas vistas, así que hay que buscar en
+          // las dos. Antes solo miraba `turnosState`: al hacer click derecho
+          // sobre un turno de un día distinto al `selectedDate` en Semana,
+          // no lo encontraba, `menuTurno` quedaba `undefined` y como cada
+          // item del menú está condicionado a `menuTurno`, no se renderizaba
+          // ninguno — el rectángulo vacío que se reportó.
+          const menuTurno =
+            turnosState.find((item) => item.id === contextMenu.turnoId) ??
+            rangeTurnosState.find((item) => item.id === contextMenu.turnoId)
           const allActions = menuTurno ? getTurnoQuickActions(menuTurno) : []
           // Orden fijo pedido para este menú, sin importar el estado: Ver
           // Historia Clínica / Editar Turno / [acciones de estado] /
