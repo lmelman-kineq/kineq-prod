@@ -5550,6 +5550,16 @@ select:disabled {
   flex: 1 1 auto;
 }
 
+/* El botón de eliminar/quitar siempre pegado al extremo derecho del item.
+   En el archivo ya subido, el nombre vive en `.ficha-estudio-archivo-link`
+   (`flex: 1 1 auto`, arriba) que empuja el botón solo — pero en el archivo
+   staged (todavía no guardado) el nombre es texto suelto sin ese wrapper,
+   así que nada empuja el botón: quedaba pegado al nombre en vez de a la
+   derecha. `margin-left: auto` en el botón cubre ambos casos por igual. */
+.ficha-estudio-staged-archivo-chip .config-icon-button {
+  margin-left: auto;
+}
+
 .ficha-estudio-staged-archivo-chip svg {
   width: 16px;
   height: 16px;
