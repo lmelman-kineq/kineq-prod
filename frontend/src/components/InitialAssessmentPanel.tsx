@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { UseFichaInicial } from '../hooks/useFichaInicial'
 import { formatDateTime } from '../utils/dateFormat'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { professionalName } from '../utils/professional'
 import { FICHA_COMPLETION_LABELS, FICHA_COMPLETION_PILL_CLASS, computeFichaCompletionStatus, fichaSeccionesResumen } from '../utils/fichaInicial'
 import AssessmentSectionNav, { type AssessmentSection } from './AssessmentSectionNav'
+import MobileSectionSelect from './MobileSectionSelect'
 import ClinicalAntecedentesSection from './ClinicalAntecedentesSection'
 import FichaAllergyList from './FichaAllergyList'
 import FichaMedicationList from './FichaMedicationList'
@@ -118,6 +120,7 @@ type InitialAssessmentPanelProps = {
 export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget, onNavTargetHandled }: InitialAssessmentPanelProps) {
   const [activeKey, setActiveKey] = useState('antecedentes')
   const { ficha, loading, form, saving, saveError, canWrite, updateField, toggleAlertaCampo } = fichaHook
+  const isMobile = useIsMobile()
 
   // Ficha Inicial ya no tiene una subpestaña "Resumen" (ese rol lo cumple
   // ahora la tab principal "Resumen clínico" de PatientDetailPage.tsx) —
@@ -184,7 +187,7 @@ export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget
           focusCategoria={navTarget?.outerTab === 'ficha' && navTarget.section === 'antecedentes' ? navTarget.categoria : undefined}
           focusToken={navTarget?.token}
         />
-        <FichaSection icon={ICONS.antecedentes} title="Notas adicionales" description="Texto libre complementario a la lista de arriba.">
+        <FichaSection icon={ICONS.antecedentes} title="Notas adicionales" description={isMobile ? undefined : 'Texto libre complementario a la lista de arriba.'}>
           <TextAreaField label="Antecedentes personales (notas)" value={form.antecedentesPersonales} onChange={(v) => updateField('antecedentesPersonales', v)} />
           <TextAreaField label="Antecedentes familiares (notas)" value={form.antecedentesFamiliares} onChange={(v) => updateField('antecedentesFamiliares', v)} />
           <TextAreaField label="Cirugías (notas)" value={form.cirugias} onChange={(v) => updateField('cirugias', v)} />
@@ -265,11 +268,17 @@ export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget
         </span>
         <span className="ficha-saving-hint">{revisadas} de {total} secciones revisadas</span>
         {saving ? <span className="ficha-saving-hint">Guardando...</span> : null}
-        <p className="patient-detail-note patient-detail-note--inline">
-          {ficha
-            ? `Última actualización: ${formatDateTime(ficha.updatedAt)}${ficha.profesionalResponsable ? ` · ${professionalName(ficha.profesionalResponsable)}` : ''}`
-            : 'Completá la información clínica base del paciente. Los cambios se guardan automáticamente.'}
-        </p>
+        {ficha ? (
+          <p className="patient-detail-note patient-detail-note--inline">
+            {`Última actualización: ${formatDateTime(ficha.updatedAt)}${ficha.profesionalResponsable ? ` · ${professionalName(ficha.profesionalResponsable)}` : ''}`}
+          </p>
+        ) : isMobile ? null : (
+          // Solo ruido en mobile: en desktop sigue aclarando el autoguardado
+          // antes de que exista una primera versión guardada de la ficha.
+          <p className="patient-detail-note patient-detail-note--inline">
+            Completá la información clínica base del paciente. Los cambios se guardan automáticamente.
+          </p>
+        )}
       </div>
 
       {!canWrite ? (
@@ -279,7 +288,11 @@ export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget
       ) : null}
 
       <div className="assessment-workspace">
-        <AssessmentSectionNav sections={NAV_SECTIONS} activeKey={activeKey} onChange={setActiveKey} />
+        {isMobile ? (
+          <MobileSectionSelect ariaLabel="Sección de la ficha inicial" options={NAV_SECTIONS} value={activeKey} onChange={setActiveKey} />
+        ) : (
+          <AssessmentSectionNav sections={NAV_SECTIONS} activeKey={activeKey} onChange={setActiveKey} />
+        )}
         <fieldset disabled={!canWrite} className="assessment-workspace-panel assessment-workspace-fieldset">{panels[activeKey]}</fieldset>
       </div>
 

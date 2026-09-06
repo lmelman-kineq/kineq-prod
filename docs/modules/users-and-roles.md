@@ -495,6 +495,8 @@ Inicialmente:
 
 **Actualización (implementado)**: la pestaña Configuración (`ConfiguracionPage.tsx`, con las subsecciones General, Usuarios, Profesionales, Especialidades y Obras sociales) ya está desarrollada y es **exclusiva de `ADMINISTRADOR`**: el ítem de navegación está oculto para el resto de los roles, y todos los endpoints de escritura (`POST`/`PATCH`/`DELETE` de usuarios, profesionales, especialidades, obras sociales y datos generales del consultorio) devuelven `403` para `PROFESIONAL`, `RECEPCION` y `SUPERVISOR` — el backend es la autoridad, no el ocultamiento del menú. Los listados (`GET`) siguen abiertos a cualquier rol autenticado porque también los consumen otras pantallas (por ejemplo, los selectores de profesional/obra social al crear un turno o paciente).
 
+**Actualización (implementado) — selector compacto de subsección en mobile**: en `≤820px`, las 5 subsecciones (antes cinco tabs en una fila, apretadas) se reemplazan por `MobileSectionSelect` (nuevo `opt-in` de `ClinicalTabs.tsx` vía la prop `mobileCollapse`, default `false` — no afecta a otros usos de `ClinicalTabs`, como las tabs principales del Paciente) — un `<select>` de ancho completo, mismo chevron custom que el resto de Kineq. El breadcrumb "Home / Configuración" y el subtítulo también se ocultan en mobile (`.configuracion-page-header`), dejando solo el título "Configuración". En desktop, sin cambios: siguen las 5 tabs de siempre. Ver "Rediseño mobile-first" en `docs/modules/dashboard.md` para el diagnóstico completo de esta ronda.
+
 Configuraciones futuras:
 
 - Profesionales.

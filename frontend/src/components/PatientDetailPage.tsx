@@ -910,11 +910,16 @@ export default function PatientDetailPage({
   return (
     <div className="patient-detail-page">
       <div className="patient-detail-topbar">
-        <button type="button" className="patient-detail-back-button" onClick={onBack}>
+        <button
+          type="button"
+          className="patient-detail-back-button"
+          onClick={onBack}
+          aria-label={activeTurno ? 'Volver' : 'Volver a Pacientes'}
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M15 6l-6 6 6 6" />
           </svg>
-          {activeTurno ? 'Volver' : 'Volver a Pacientes'}
+          <span className="patient-detail-back-label" aria-hidden="true">{activeTurno ? 'Volver' : 'Volver a Pacientes'}</span>
         </button>
 
         <div className="patient-detail-topbar-actions">

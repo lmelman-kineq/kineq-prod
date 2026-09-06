@@ -33,7 +33,7 @@ export default function ConfiguracionPage({ onRequestConfirm, onProfesionalesCha
 
   return (
     <div className="patients-page">
-      <header className="patients-page-header">
+      <header className="patients-page-header configuracion-page-header">
         <div>
           <p className="breadcrumb">Home / Configuración</p>
           <h1>Configuración</h1>
@@ -42,7 +42,7 @@ export default function ConfiguracionPage({ onRequestConfirm, onProfesionalesCha
       </header>
 
       <div className="patient-detail-card clinical-workspace">
-        <ClinicalTabs tabs={TABS} activeKey={activeTab} onChange={setActiveTab} panels={panels} />
+        <ClinicalTabs tabs={TABS} activeKey={activeTab} onChange={setActiveTab} panels={panels} mobileCollapse />
       </div>
     </div>
   )

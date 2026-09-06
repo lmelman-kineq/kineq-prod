@@ -1,16 +1,29 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.archivoParaCliente = archivoParaCliente;
 exports.estudioParaCliente = estudioParaCliente;
 exports.fichaParaCliente = fichaParaCliente;
-// El frontend nunca recibe `archivoPathname` (clave interna del blob
-// privado) — solo `archivoUrl`, la ruta propia que sirve el contenido tras
-// validar consultorio/permisos (ver estudioArchivoRoutes.ts). Compartido
-// entre app.ts (ficha inicial completa, alta/edición de estudio) y
-// estudioArchivoRoutes.ts (subir/reemplazar archivo) para no tener dos
-// versiones de este mapeo.
+// El frontend nunca recibe `pathname` (clave interna del blob privado) —
+// solo la ruta propia que sirve el contenido tras validar consultorio/
+// permisos (ver estudioArchivoRoutes.ts). Mismo criterio que
+// evolucionImagenSerializer.ts.
+function archivoParaCliente(archivo) {
+    return {
+        id: archivo.id,
+        estudioId: archivo.estudioId,
+        nombreOriginal: archivo.nombreOriginal,
+        mimeType: archivo.mimeType,
+        sizeBytes: archivo.sizeBytes,
+        createdAt: archivo.createdAt,
+        url: `/api/ficha-estudios/${archivo.estudioId}/archivos/${archivo.id}/contenido`,
+    };
+}
+// `archivoPathname`/`archivoNombreOriginal`/`archivoMimeType`/`archivoSizeBytes`
+// son las 4 columnas deprecadas (ver schema.prisma) — nunca se exponen al
+// cliente, que solo conoce la relación `archivos` (múltiples archivos).
 function estudioParaCliente(estudio) {
-    const { archivoPathname, ...rest } = estudio;
-    return { ...rest, archivoUrl: archivoPathname ? `/api/ficha-estudios/${estudio.id}/archivo/contenido` : null };
+    const { archivoPathname, archivoNombreOriginal, archivoMimeType, archivoSizeBytes, archivos, ...rest } = estudio;
+    return { ...rest, archivos: (archivos ?? []).map(archivoParaCliente) };
 }
 function fichaParaCliente(ficha) {
     if (!ficha)

@@ -83,7 +83,7 @@ export default function FichaAllergyList({ alergias, onAdd, onUpdate, onRemove }
       <div className="antecedentes-search">
         <input
           type="text"
-          placeholder="Buscar alergia conocida o escribir una nueva..."
+          placeholder="Buscar o crear alergia"
           value={query}
           onFocus={search.onFocus}
           onBlur={search.close}

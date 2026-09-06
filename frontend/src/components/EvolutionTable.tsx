@@ -3,6 +3,7 @@ import type { Evolucion, GrupoEvolucion } from '../types/domain'
 import { formatDateTime } from '../utils/dateFormat'
 import { professionalName, professionalNameCompact } from '../utils/professional'
 import { sanitizeRichTextHtml } from '../utils/richTextSanitize'
+import { useIsMobile } from '../hooks/useIsMobile'
 import RichTextEditor from './RichTextEditor'
 import EvolucionContent from './EvolucionContent'
 import EvolucionImages from './EvolucionImages'
@@ -93,8 +94,17 @@ export default function EvolutionTable({
   // sidebar (position:fixed + getBoundingClientRect, ver App.tsx), acá con
   // contenido rico en vez de una sola línea: escapa de cualquier overflow
   // del contenedor de tabla y no reordena el layout.
+  //
+  // Nunca en mobile: pensado para el caso "hover sobre resumen truncado" de
+  // desktop — en mobile el resumen ya no trunca (se muestra completo, ver
+  // @media 820px) y no existe un "mouseleave" real en touch (un tap dispara
+  // foco/hover sintéticos sin su salida correspondiente), así que quedaba
+  // "colgado" abierto y duplicaba el contenido del acordeón que se expande
+  // con el mismo tap — bug real reportado, no solo cosmético.
+  const isMobile = useIsMobile()
   const [resumenPopover, setResumenPopover] = useState<{ evolucion: Evolucion; top: number; left: number } | null>(null)
   const showResumenPopover = (evolucion: Evolucion) => (event: { currentTarget: HTMLElement }) => {
+    if (isMobile) return
     const rect = event.currentTarget.getBoundingClientRect()
     setResumenPopover({ evolucion, top: rect.bottom + 8, left: rect.left })
   }

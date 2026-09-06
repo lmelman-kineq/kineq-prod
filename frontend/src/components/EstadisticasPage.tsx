@@ -13,6 +13,8 @@ import {
   ResumenProfesionalesTable,
 } from './EstadisticasCharts'
 import { SkeletonCards } from './Skeleton'
+import MobileSectionSelect from './MobileSectionSelect'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message
@@ -37,6 +39,7 @@ export default function EstadisticasPage() {
   const { user } = useAuth()
   const esProfesional = user?.rol === 'PROFESIONAL'
   const sinAcceso = user?.rol === 'RECEPCION'
+  const isMobile = useIsMobile()
 
   const [preset, setPreset] = useState<PeriodoPreset>(DEFAULT_PERIODO_PRESET)
   const [customDesde, setCustomDesde] = useState('')
@@ -125,18 +128,27 @@ export default function EstadisticasPage() {
       <div className="patients-page-header"><h1>Estadísticas</h1></div>
 
       <section className="patients-table-card stats-filters-card">
-        <div className="stats-periodo-chips antecedentes-categorias">
-          {PERIODO_PRESETS.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              className={`antecedentes-categoria-button${preset === p.key ? ' antecedentes-categoria-button--active' : ''}`}
-              onClick={() => setPreset(p.key)}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        {isMobile ? (
+          <MobileSectionSelect
+            ariaLabel="Período de estadísticas"
+            options={PERIODO_PRESETS}
+            value={preset}
+            onChange={(key) => setPreset(key as PeriodoPreset)}
+          />
+        ) : (
+          <div className="stats-periodo-chips antecedentes-categorias">
+            {PERIODO_PRESETS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                className={`antecedentes-categoria-button${preset === p.key ? ' antecedentes-categoria-button--active' : ''}`}
+                onClick={() => setPreset(p.key)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="config-filters-row">
           {preset === 'personalizado' ? (

@@ -189,12 +189,12 @@ export function useFichaInicial(patientId: number, canEditClinical: boolean, ref
     await api.deleteFichaEstudio(id)
     await refresh()
   }
-  const uploadEstudioArchivo = async (id: number, file: File) => {
-    await api.uploadEstudioArchivo(id, file)
+  const uploadEstudioArchivos = async (id: number, files: File[]) => {
+    await api.uploadEstudioArchivos(id, files)
     await refresh()
   }
-  const removeEstudioArchivo = async (id: number) => {
-    await api.deleteEstudioArchivo(id)
+  const removeEstudioArchivo = async (estudioId: number, archivoId: number) => {
+    await api.deleteEstudioArchivo(estudioId, archivoId)
     await refresh()
   }
 
@@ -219,7 +219,7 @@ export function useFichaInicial(patientId: number, canEditClinical: boolean, ref
     addEstudio,
     updateEstudio,
     removeEstudio,
-    uploadEstudioArchivo,
+    uploadEstudioArchivos,
     removeEstudioArchivo,
     toggleAlertaCampo,
   }

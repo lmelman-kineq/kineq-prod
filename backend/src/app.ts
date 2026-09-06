@@ -1916,7 +1916,7 @@ const FICHA_INICIAL_INCLUDE = {
   antecedentes: { where: { activo: true }, include: { catalogoItem: true } },
   alergias: { where: { activa: true }, include: { catalogoItem: true } },
   medicaciones: { where: { activa: true } },
-  estudios: { where: { activo: true }, include: { profesional: true } },
+  estudios: { where: { activo: true }, include: { profesional: true, archivos: true } },
   alertasCampo: true,
   seccionesEstado: true,
 } as const
@@ -2536,7 +2536,7 @@ app.delete('/api/ficha-medicacion/:id', requireRole(...CLINICAL_ROLES), async (r
 
 // ESTUDIOS COMPLEMENTARIOS (entradas individuales; el campo de texto libre
 // `estudiosComplementarios` en FichaInicial se mantiene como nota general)
-app.use('/api/ficha-estudios/:id/archivo', estudioArchivoRoutes)
+app.use('/api/ficha-estudios/:id/archivos', estudioArchivoRoutes)
 
 app.post('/api/pacientes/:pacienteId/ficha-inicial/estudios', requireRole(...CLINICAL_ROLES), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
@@ -2563,7 +2563,7 @@ app.post('/api/pacientes/:pacienteId/ficha-inicial/estudios', requireRole(...CLI
       resumen: resumen || null,
       observaciones: observaciones || null,
     },
-    include: { profesional: true },
+    include: { profesional: true, archivos: true },
   })
   res.status(201).json(estudioParaCliente(estudio))
 })
@@ -2589,7 +2589,7 @@ app.patch('/api/ficha-estudios/:id', requireRole(...CLINICAL_ROLES), async (req,
   if (resumen !== undefined) payload.resumen = resumen || null
   if (observaciones !== undefined) payload.observaciones = observaciones || null
 
-  const updated = await prisma.fichaEstudioComplementario.update({ where: { id }, data: payload })
+  const updated = await prisma.fichaEstudioComplementario.update({ where: { id }, data: payload, include: { archivos: true } })
   res.json(estudioParaCliente(updated))
 })
 

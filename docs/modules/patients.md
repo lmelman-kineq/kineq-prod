@@ -596,6 +596,8 @@ Ver "UX compacta, Evoluciones, permisos y rediseño de Paciente (70/30)", "Ajust
 
 **Qué no se implementó** (fuera de alcance explícito de esta ronda): envío por WhatsApp/email, firma digital, plantillas de PDF configurables, almacenamiento histórico del PDF generado (siempre on-demand, nunca se persiste una copia), entidad `PlanSesiones` nueva (no hacía falta ninguna).
 
+**Actualización (implementado) — mobile: alineación de "Nro. de sesión" y back button icon-only**: la tabla de Turnos del Paciente (`.patient-turnos-table`) fija anchos de columna por `nth-child` en desktop (`table-layout: fixed`) — en mobile, donde cada `<td>` pasa a ser su propia fila (`display: flex`), esos anchos fijos (ej. 64px para "Sesión") comprimían el valor en el medio de la card en vez de dejarlo alineado a la derecha como el resto de las filas. Se resetea (`width: auto`) específicamente en el breakpoint mobile — ver "Rediseño mobile-first" en `docs/modules/dashboard.md`. El botón "Volver a Pacientes" del header del Paciente (`.patient-detail-back-button`) muestra solo el ícono `‹` en mobile — el texto queda en un `<span aria-hidden>` oculto ahí (nombre accesible vía `aria-label` del botón, siempre presente). Desktop sin cambios en ambos casos.
+
 ---
 
 ## Pendientes / mejoras futuras

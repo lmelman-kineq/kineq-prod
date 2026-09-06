@@ -298,6 +298,18 @@ export interface FichaMedicacion {
   updatedAt: string
 }
 
+export interface EstudioArchivo {
+  id: number
+  estudioId: number
+  // Ruta propia del backend que sirve el contenido (nunca la URL de Vercel
+  // Blob, que es privada) — ver services/api.ts uploadEstudioArchivos().
+  url: string
+  nombreOriginal: string
+  mimeType: string
+  sizeBytes: number
+  createdAt: string
+}
+
 export interface FichaEstudioComplementario {
   id: number
   consultorioId: number
@@ -309,13 +321,9 @@ export interface FichaEstudioComplementario {
   activo: boolean
   createdAt: string
   updatedAt: string
-  // Archivo adjunto (PDF o imagen) — `archivoUrl` es la ruta propia que
-  // sirve el contenido (nunca la URL de Vercel Blob), null si no hay
-  // archivo cargado. Ver services/api.ts uploadEstudioArchivo().
-  archivoUrl?: string | null
-  archivoNombreOriginal?: string | null
-  archivoMimeType?: string | null
-  archivoSizeBytes?: number | null
+  // Un estudio puede tener varios archivos (PDF o imagen) adjuntos — ver
+  // "Estudios: múltiples archivos" en docs/modules/clinical-history.md.
+  archivos: EstudioArchivo[]
 }
 
 export type SeccionFicha = 'MOTIVO' | 'ANTECEDENTES' | 'SEGURIDAD' | 'HABITOS' | 'DOLOR_FUNCION' | 'ESTUDIOS'

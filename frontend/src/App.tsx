@@ -39,6 +39,7 @@ import { utcIsoToZonedParts, zonedTimeToUtcIso, todayInTimeZone, todayDateInTime
 import { buildSerieFechasInicio, buildMonthlySerieFechasInicio, buildCustomSerieFechasInicio, type CustomRecurrenceUnit } from './utils/recurrence'
 import { getWeekDates, getMonthGridDates, getYearMonths, navigateDate, type CalendarView } from './utils/calendarRange'
 import { useIsMobile } from './hooks/useIsMobile'
+import { useSwipeNavigation } from './hooks/useSwipeNavigation'
 
 const CALENDAR_VIEW_STORAGE_KEY = 'kineq-calendar-view'
 const CALENDAR_VIEW_TITLES: Record<CalendarView, string> = {
@@ -568,11 +569,24 @@ function YearView({ selectedDate, todayEnZonaConsultorio, onSelectDay, onSelectM
         const days = getMonthDays(monthDate)
         const monthAnchor = `${year}-${pad(month)}-01`
 
+        const monthLabel = `${MONTH_NAMES[month - 1][0].toUpperCase()}${MONTH_NAMES[month - 1].slice(1)}`
+
         return (
-          <div key={month} className="year-view-month">
-            <button type="button" className="year-view-month-header" onClick={() => onSelectMonth(monthAnchor)}>
-              {MONTH_NAMES[month - 1][0].toUpperCase()}{MONTH_NAMES[month - 1].slice(1)}
-            </button>
+          <div
+            key={month}
+            className="year-view-month"
+            role="button"
+            tabIndex={0}
+            aria-label={`Abrir ${MONTH_NAMES[month - 1]} de ${year}`}
+            onClick={() => onSelectMonth(monthAnchor)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onSelectMonth(monthAnchor)
+              }
+            }}
+          >
+            <span className="year-view-month-header">{monthLabel}</span>
             <div className="year-view-weekdays">
               {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((label, index) => <div key={index}>{label}</div>)}
             </div>
@@ -586,7 +600,10 @@ function YearView({ selectedDate, todayEnZonaConsultorio, onSelectDay, onSelectM
                     type="button"
                     className={`year-view-day ${day ? '' : 'year-view-day--empty'} ${isToday ? 'year-view-day--today' : ''}`}
                     disabled={!day}
-                    onClick={() => dayStr && onSelectDay(dayStr)}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      if (dayStr) onSelectDay(dayStr)
+                    }}
                   >
                     {day ?? ''}
                   </button>
@@ -1950,10 +1967,18 @@ function Dashboard() {
 
   // Navegación del calendario principal — respeta la vista activa (Día:
   // ±1 día, Semana: ±7 días, Mes: ±1 mes calendario, Año: ±1 año). "Hoy"
-  // vuelve al período que contiene la fecha actual sin cambiar de vista.
+  // vuelve al período que contiene la fecha actual sin cambiar de vista —
+  // excepto en mobile, donde además cambia a Día (pedido explícito: "Hoy"
+  // ahí siempre debe mostrar el calendario diario de hoy).
   const goToPreviousPeriod = () => setSelectedDate((current) => navigateDate(current, calendarView, -1))
   const goToNextPeriod = () => setSelectedDate((current) => navigateDate(current, calendarView, 1))
-  const goToToday = () => setSelectedDate(todayInTimeZone(api.getConsultorioTimeZone()))
+  const goToToday = () => {
+    setSelectedDate(todayInTimeZone(api.getConsultorioTimeZone()))
+    if (isMobile) setCalendarView('day')
+  }
+  // Swipe horizontal sobre el área del calendario — mismo destino que las
+  // flechas, nunca las reemplaza. Izquierda = siguiente, derecha = anterior.
+  const calendarSwipeHandlers = useSwipeNavigation(goToNextPeriod, goToPreviousPeriod)
 
   // Redimensiona visualmente durante el movimiento y persiste una sola vez al soltar.
   const onResizeStart = (event: React.MouseEvent, turnoId: number) => {
@@ -2527,6 +2552,7 @@ function Dashboard() {
               </div>
             </div>
 
+          <div className="calendar-swipe-area" onTouchStart={calendarSwipeHandlers.onTouchStart} onTouchEnd={calendarSwipeHandlers.onTouchEnd}>
           {calendarView === 'day' && turnosLoading ? (
             <p>Cargando turnos...</p>
           ) : null}
@@ -2552,6 +2578,22 @@ function Dashboard() {
                 <span className="week-day-header-date">{formatShortDate(selectedDate)}</span>
               </div>
             </div>
+          ) : null}
+
+          {calendarView === 'month' || calendarView === 'year' ? (
+            // Mobile únicamente (ver .calendar-period-compact-label en
+            // App.css) — reemplaza el título + fecha larga que se ocultan
+            // en mobile para las 4 vistas (.calendar-nav-title). Mes: "Sep
+            // 2026". Año: "2026". Día y Semana ya tienen su propio label
+            // (arriba / franja de 7 días) y no lo necesitan.
+            <p className="calendar-period-compact-label" aria-hidden="true">
+              {calendarView === 'month'
+                ? (() => {
+                    const shortMonth = MONTH_NAMES_SHORT[Number(selectedDate.split('-')[1]) - 1]
+                    return `${shortMonth[0].toUpperCase()}${shortMonth.slice(1)} ${selectedDate.split('-')[0]}`
+                  })()
+                : selectedDate.split('-')[0]}
+            </p>
           ) : null}
 
           {calendarView === 'day' ? (
@@ -2712,7 +2754,13 @@ function Dashboard() {
               turnos={rangeTurnosState}
               loading={rangeTurnosLoading}
               todayEnZonaConsultorio={todayEnZonaConsultorio}
-              onSelectDay={(date) => { setSelectedDate(date); setCalendarView('day') }}
+              onSelectDay={(date) => {
+                // Mes → Semana con ese día seleccionado — desktop y mobile
+                // por igual (pedido explícito de la ronda de navegación;
+                // supera la decisión mobile-only de una ronda anterior).
+                setSelectedDate(date)
+                setCalendarView('week')
+              }}
               onCreateSlot={(date) => openNewTurnoModal(date)}
               canCreate={puedeCrearTurnos}
             />
@@ -2721,9 +2769,20 @@ function Dashboard() {
               selectedDate={selectedDate}
               todayEnZonaConsultorio={todayEnZonaConsultorio}
               onSelectDay={(date) => { setSelectedDate(date); setCalendarView('day') }}
-              onSelectMonth={(date) => { setSelectedDate(date); setCalendarView('month') }}
+              onSelectMonth={(monthAnchor) => {
+                // Año → Mes, desktop y mobile. Regla de fecha ancla: si
+                // selectedDate ya pertenece al mes tocado, se mantiene tal
+                // cual; si no, se usa el día 1 del mes tocado. Nunca la
+                // fecha actual si pertenece a otro mes.
+                const [anchorYear, anchorMonth] = monthAnchor.split('-')
+                const [currentYear, currentMonth] = selectedDate.split('-')
+                const staysInSameMonth = anchorYear === currentYear && anchorMonth === currentMonth
+                setSelectedDate(staysInSameMonth ? selectedDate : monthAnchor)
+                setCalendarView('month')
+              }}
             />
           )}
+          </div>
         </section>
           </>
         ) : activePage === 'turnos' ? (

@@ -745,8 +745,7 @@ model FichaMedicacion {
 
 // Entradas individuales de estudios complementarios. El campo de texto libre
 // `estudiosComplementarios` en FichaInicial se mantiene como nota general;
-// esto es para registros puntuales con fecha. Sin `documentoId` todavía —
-// la carga real de archivos está fuera de alcance.
+// esto es para registros puntuales con fecha.
 model FichaEstudioComplementario {
   id                    Int       @id @default(autoincrement())
   consultorioId         Int
@@ -757,10 +756,12 @@ model FichaEstudioComplementario {
   resumen               String?
   observaciones         String?
   activo                Boolean   @default(true)
-  // Archivo adjunto (PDF/imagen del estudio) — un archivo por entrada, mismo
-  // criterio que EvolucionImagen/Usuario.fotoPathname: solo la referencia al
-  // blob privado, nunca la URL ni el binario. Todos nullable: la mayoría de
-  // los estudios existentes no tiene archivo cargado.
+  // Deprecados (migración 20260906120000_estudio_archivo_multiple): un
+  // estudio soportaba un único archivo directo en estas 4 columnas — ya
+  // migrados a filas de `EstudioArchivo` (backfill en esa migración), acá
+  // solo quedan nullable para no perder el dato de estudios muy viejos si
+  // algo del backfill fallara. El código ya no lee ni escribe estas 4
+  // columnas — usar siempre la relación `archivos`.
   archivoPathname       String?   @db.Text
   archivoNombreOriginal String?
   archivoMimeType       String?
@@ -768,12 +769,31 @@ model FichaEstudioComplementario {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  consultorio  Consultorio  @relation(fields: [consultorioId], references: [id])
-  fichaInicial FichaInicial @relation(fields: [fichaInicialId], references: [id])
-  profesional  Profesional? @relation(fields: [profesionalId], references: [id])
+  consultorio  Consultorio      @relation(fields: [consultorioId], references: [id])
+  fichaInicial FichaInicial     @relation(fields: [fichaInicialId], references: [id])
+  profesional  Profesional?     @relation(fields: [profesionalId], references: [id])
+  archivos     EstudioArchivo[]
 
   @@index([consultorioId])
   @@index([fichaInicialId])
+}
+
+// Múltiples archivos por Estudio (migración 20260906120000_estudio_archivo_multiple)
+// — mismo modelo que EvolucionImagen: solo la referencia al blob privado
+// (pathname), nunca la URL ni el binario en MySQL.
+model EstudioArchivo {
+  id             Int      @id @default(autoincrement())
+  consultorioId  Int
+  estudioId      Int
+  pathname       String   @db.Text
+  nombreOriginal String
+  mimeType       String
+  sizeBytes      Int
+  createdAt      DateTime @default(now())
+
+  estudio FichaEstudioComplementario @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+
+  @@index([consultorioId, estudioId])
 }
 
 model FichaSeccionEstado {

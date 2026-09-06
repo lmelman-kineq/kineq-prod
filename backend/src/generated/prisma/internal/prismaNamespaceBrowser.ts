@@ -73,6 +73,7 @@ export const ModelName = {
   FichaAlergia: 'FichaAlergia',
   FichaMedicacion: 'FichaMedicacion',
   FichaEstudioComplementario: 'FichaEstudioComplementario',
+  EstudioArchivo: 'EstudioArchivo',
   FichaSeccionEstado: 'FichaSeccionEstado'
 } as const
 
@@ -480,6 +481,20 @@ export const FichaEstudioComplementarioScalarFieldEnum = {
 export type FichaEstudioComplementarioScalarFieldEnum = (typeof FichaEstudioComplementarioScalarFieldEnum)[keyof typeof FichaEstudioComplementarioScalarFieldEnum]
 
 
+export const EstudioArchivoScalarFieldEnum = {
+  id: 'id',
+  consultorioId: 'consultorioId',
+  estudioId: 'estudioId',
+  pathname: 'pathname',
+  nombreOriginal: 'nombreOriginal',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  createdAt: 'createdAt'
+} as const
+
+export type EstudioArchivoScalarFieldEnum = (typeof EstudioArchivoScalarFieldEnum)[keyof typeof EstudioArchivoScalarFieldEnum]
+
+
 export const FichaSeccionEstadoScalarFieldEnum = {
   id: 'id',
   consultorioId: 'consultorioId',
@@ -705,4 +720,13 @@ export const FichaEstudioComplementarioOrderByRelevanceFieldEnum = {
 } as const
 
 export type FichaEstudioComplementarioOrderByRelevanceFieldEnum = (typeof FichaEstudioComplementarioOrderByRelevanceFieldEnum)[keyof typeof FichaEstudioComplementarioOrderByRelevanceFieldEnum]
+
+
+export const EstudioArchivoOrderByRelevanceFieldEnum = {
+  pathname: 'pathname',
+  nombreOriginal: 'nombreOriginal',
+  mimeType: 'mimeType'
+} as const
+
+export type EstudioArchivoOrderByRelevanceFieldEnum = (typeof EstudioArchivoOrderByRelevanceFieldEnum)[keyof typeof EstudioArchivoOrderByRelevanceFieldEnum]
 

@@ -1830,7 +1830,7 @@ const FICHA_INICIAL_INCLUDE = {
     antecedentes: { where: { activo: true }, include: { catalogoItem: true } },
     alergias: { where: { activa: true }, include: { catalogoItem: true } },
     medicaciones: { where: { activa: true } },
-    estudios: { where: { activo: true }, include: { profesional: true } },
+    estudios: { where: { activo: true }, include: { profesional: true, archivos: true } },
     alertasCampo: true,
     seccionesEstado: true,
 };
@@ -2425,7 +2425,7 @@ app.delete('/api/ficha-medicacion/:id', (0, auth_1.requireRole)(...auth_1.CLINIC
 });
 // ESTUDIOS COMPLEMENTARIOS (entradas individuales; el campo de texto libre
 // `estudiosComplementarios` en FichaInicial se mantiene como nota general)
-app.use('/api/ficha-estudios/:id/archivo', estudioArchivoRoutes_1.default);
+app.use('/api/ficha-estudios/:id/archivos', estudioArchivoRoutes_1.default);
 app.post('/api/pacientes/:pacienteId/ficha-inicial/estudios', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
     const pacienteId = Number(req.params.pacienteId);
@@ -2451,7 +2451,7 @@ app.post('/api/pacientes/:pacienteId/ficha-inicial/estudios', (0, auth_1.require
             resumen: resumen || null,
             observaciones: observaciones || null,
         },
-        include: { profesional: true },
+        include: { profesional: true, archivos: true },
     });
     res.status(201).json((0, estudioSerializer_1.estudioParaCliente)(estudio));
 });
@@ -2479,7 +2479,7 @@ app.patch('/api/ficha-estudios/:id', (0, auth_1.requireRole)(...auth_1.CLINICAL_
         payload.resumen = resumen || null;
     if (observaciones !== undefined)
         payload.observaciones = observaciones || null;
-    const updated = await prisma_1.default.fichaEstudioComplementario.update({ where: { id }, data: payload });
+    const updated = await prisma_1.default.fichaEstudioComplementario.update({ where: { id }, data: payload, include: { archivos: true } });
     res.json((0, estudioSerializer_1.estudioParaCliente)(updated));
 });
 app.delete('/api/ficha-estudios/:id', (0, auth_1.requireRole)(...auth_1.CLINICAL_ROLES), async (req, res) => {

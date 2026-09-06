@@ -32,7 +32,7 @@ No se sobrecargó Inicio con nada de esto — es una página nueva e independien
 
 ## Filtros
 
-- **Período**: chips de preset (Últimos 7 días, Últimos 30 días — default, Este mes, Mes anterior, Últimos 3 meses, Este año) + "Personalizado" con dos `DateInput`. Presets calculados en `frontend/src/utils/statsPeriods.ts` (`rangoParaPreset`), reutilizando el mismo criterio de límites de día que ya usa el filtro de fecha de Turnos (`normalizeDateBoundary` en `services/api.ts` — hora local del navegador, no la del consultorio; mismo límite conocido y aceptado que ya tenía ese filtro).
+- **Período**: chips de preset (Últimos 7 días, Últimos 30 días — default, Este mes, Mes anterior, Últimos 3 meses, Este año) + "Personalizado" con dos `DateInput`. Presets calculados en `frontend/src/utils/statsPeriods.ts` (`rangoParaPreset`), reutilizando el mismo criterio de límites de día que ya usa el filtro de fecha de Turnos (`normalizeDateBoundary` en `services/api.ts` — hora local del navegador, no la del consultorio; mismo límite conocido y aceptado que ya tenía ese filtro). **En `≤820px`** (implementado): los chips se reemplazan por `MobileSectionSelect` (mismo componente reusado en Ficha Inicial/Configuración, ver "Rediseño mobile-first" en `docs/modules/dashboard.md`) — un `<select>` de ancho completo en vez de una fila de chips apretada. "Personalizado" sigue abriendo los dos `DateInput` inline, sin cambios. En desktop, los chips siguen igual.
 - **Profesional**: `<select>` poblado con `GET /api/profesionales` (endpoint ya existente, no se agregó un catálogo nuevo al endpoint de estadísticas). Fijo/oculto para rol Profesional.
 - **Especialidad**: `<select>` poblado con `GET /api/especialidades` (ídem).
 

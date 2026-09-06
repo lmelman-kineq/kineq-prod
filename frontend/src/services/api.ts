@@ -680,12 +680,32 @@ export function deleteFichaEstudio(id: number): Promise<void> {
   return request(`/api/ficha-estudios/${id}`, { method: 'DELETE' })
 }
 
-export function uploadEstudioArchivo(estudioId: number, file: File): Promise<FichaEstudioComplementario> {
-  return uploadFileViaClientToken(`/api/ficha-estudios/${estudioId}/archivo/upload-token`, `/api/ficha-estudios/${estudioId}/archivo/confirm`, file)
+// Varios archivos en una sola operación — mismo patrón que
+// uploadEvolucionImagenes(): un token por archivo, cada uno sube directo a
+// Blob, un solo /confirm con todos los items. Devuelve el estudio ya
+// actualizado (con `archivos` completo), no solo los nuevos.
+export async function uploadEstudioArchivos(estudioId: number, files: File[]): Promise<FichaEstudioComplementario> {
+  const { items: tokenItems } = await request<{ items: Array<{ presignedUrl: string; pathname: string }> }>(
+    `/api/ficha-estudios/${estudioId}/archivos/upload-tokens`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ files: files.map((file) => ({ nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size })) }),
+    },
+  )
+
+  const confirmedItems = await Promise.all(files.map(async (file, index) => {
+    await putToPresignedUrl(tokenItems[index].presignedUrl, file)
+    return { pathname: tokenItems[index].pathname, nombreOriginal: file.name, mimeType: file.type, sizeBytes: file.size }
+  }))
+
+  return request(`/api/ficha-estudios/${estudioId}/archivos/confirm`, {
+    method: 'POST',
+    body: JSON.stringify({ items: confirmedItems }),
+  })
 }
 
-export function deleteEstudioArchivo(estudioId: number): Promise<void> {
-  return request(`/api/ficha-estudios/${estudioId}/archivo`, { method: 'DELETE' })
+export function deleteEstudioArchivo(estudioId: number, archivoId: number): Promise<void> {
+  return request(`/api/ficha-estudios/${estudioId}/archivos/${archivoId}`, { method: 'DELETE' })
 }
 
 export function putAlertaCampo(pacienteId: number, campo: string): Promise<FichaAlertaCampo> {

@@ -419,6 +419,7 @@ export const ModelName = {
   FichaAlergia: 'FichaAlergia',
   FichaMedicacion: 'FichaMedicacion',
   FichaEstudioComplementario: 'FichaEstudioComplementario',
+  EstudioArchivo: 'EstudioArchivo',
   FichaSeccionEstado: 'FichaSeccionEstado'
 } as const
 
@@ -435,7 +436,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "consultorio" | "usuario" | "paciente" | "profesional" | "especialidad" | "consultorioEspecialidadOculta" | "profesionalEspecialidad" | "obraSocial" | "consultorioObraSocialOculta" | "turno" | "serieTurno" | "evolucion" | "evolucionImagen" | "grupoEvolucion" | "plantillaEvolucion" | "fichaInicial" | "fichaAlertaCampo" | "catalogoClinicoItem" | "fichaAntecedente" | "fichaAlergia" | "fichaMedicacion" | "fichaEstudioComplementario" | "fichaSeccionEstado"
+    modelProps: "consultorio" | "usuario" | "paciente" | "profesional" | "especialidad" | "consultorioEspecialidadOculta" | "profesionalEspecialidad" | "obraSocial" | "consultorioObraSocialOculta" | "turno" | "serieTurno" | "evolucion" | "evolucionImagen" | "grupoEvolucion" | "plantillaEvolucion" | "fichaInicial" | "fichaAlertaCampo" | "catalogoClinicoItem" | "fichaAntecedente" | "fichaAlergia" | "fichaMedicacion" | "fichaEstudioComplementario" | "estudioArchivo" | "fichaSeccionEstado"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1891,6 +1892,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    EstudioArchivo: {
+      payload: Prisma.$EstudioArchivoPayload<ExtArgs>
+      fields: Prisma.EstudioArchivoFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EstudioArchivoFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EstudioArchivoPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EstudioArchivoFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EstudioArchivoPayload>
+        }
+        findFirst: {
+          args: Prisma.EstudioArchivoFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EstudioArchivoPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EstudioArchivoFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EstudioArchivoPayload>
+        }
+        findMany: {
+          args: Prisma.EstudioArchivoFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EstudioArchivoPayload>[]
+        }
+        create: {
+          args: Prisma.EstudioArchivoCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EstudioArchivoPayload>
+        }
+        createMany: {
+          args: Prisma.EstudioArchivoCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.EstudioArchivoDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EstudioArchivoPayload>
+        }
+        update: {
+          args: Prisma.EstudioArchivoUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EstudioArchivoPayload>
+        }
+        deleteMany: {
+          args: Prisma.EstudioArchivoDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EstudioArchivoUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.EstudioArchivoUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EstudioArchivoPayload>
+        }
+        aggregate: {
+          args: Prisma.EstudioArchivoAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEstudioArchivo>
+        }
+        groupBy: {
+          args: Prisma.EstudioArchivoGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EstudioArchivoGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EstudioArchivoCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EstudioArchivoCountAggregateOutputType> | number
+        }
+      }
+    }
     FichaSeccionEstado: {
       payload: Prisma.$FichaSeccionEstadoPayload<ExtArgs>
       fields: Prisma.FichaSeccionEstadoFieldRefs
@@ -2384,6 +2451,20 @@ export const FichaEstudioComplementarioScalarFieldEnum = {
 export type FichaEstudioComplementarioScalarFieldEnum = (typeof FichaEstudioComplementarioScalarFieldEnum)[keyof typeof FichaEstudioComplementarioScalarFieldEnum]
 
 
+export const EstudioArchivoScalarFieldEnum = {
+  id: 'id',
+  consultorioId: 'consultorioId',
+  estudioId: 'estudioId',
+  pathname: 'pathname',
+  nombreOriginal: 'nombreOriginal',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  createdAt: 'createdAt'
+} as const
+
+export type EstudioArchivoScalarFieldEnum = (typeof EstudioArchivoScalarFieldEnum)[keyof typeof EstudioArchivoScalarFieldEnum]
+
+
 export const FichaSeccionEstadoScalarFieldEnum = {
   id: 'id',
   consultorioId: 'consultorioId',
@@ -2609,6 +2690,15 @@ export const FichaEstudioComplementarioOrderByRelevanceFieldEnum = {
 } as const
 
 export type FichaEstudioComplementarioOrderByRelevanceFieldEnum = (typeof FichaEstudioComplementarioOrderByRelevanceFieldEnum)[keyof typeof FichaEstudioComplementarioOrderByRelevanceFieldEnum]
+
+
+export const EstudioArchivoOrderByRelevanceFieldEnum = {
+  pathname: 'pathname',
+  nombreOriginal: 'nombreOriginal',
+  mimeType: 'mimeType'
+} as const
+
+export type EstudioArchivoOrderByRelevanceFieldEnum = (typeof EstudioArchivoOrderByRelevanceFieldEnum)[keyof typeof EstudioArchivoOrderByRelevanceFieldEnum]
 
 
 
@@ -2894,6 +2984,7 @@ export type GlobalOmitConfig = {
   fichaAlergia?: Prisma.FichaAlergiaOmit
   fichaMedicacion?: Prisma.FichaMedicacionOmit
   fichaEstudioComplementario?: Prisma.FichaEstudioComplementarioOmit
+  estudioArchivo?: Prisma.EstudioArchivoOmit
   fichaSeccionEstado?: Prisma.FichaSeccionEstadoOmit
 }
 

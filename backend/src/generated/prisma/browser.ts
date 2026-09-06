@@ -128,6 +128,11 @@ export type FichaMedicacion = Prisma.FichaMedicacionModel
  */
 export type FichaEstudioComplementario = Prisma.FichaEstudioComplementarioModel
 /**
+ * Model EstudioArchivo
+ * 
+ */
+export type EstudioArchivo = Prisma.EstudioArchivoModel
+/**
  * Model FichaSeccionEstado
  * 
  */

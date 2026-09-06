@@ -2334,7 +2334,7 @@ describe('auth, roles y aislamiento por consultorio', () => {
     })
   })
 
-  describe('estudios: archivo adjunto', () => {
+  describe('estudios: archivos adjuntos (múltiples)', () => {
     const fakeFile = (): FakeFile => ({ filename: 'rx.pdf', contentType: 'application/pdf', buffer: Buffer.from('fake-pdf-bytes') })
 
     async function crearEstudio() {
@@ -2343,84 +2343,185 @@ describe('auth, roles y aislamiento por consultorio', () => {
         .set('Cookie', cookies.profesionalA)
         .send({ tipo: 'RX' })
       expect(res.status).toBe(201)
+      expect(res.body.archivos).toEqual([])
       return res.body.id as number
     }
 
-    it('sube un archivo, sirve el contenido y no expone archivoPathname', async () => {
+    // Mismo patrón que simulateEvolucionImagenesUpload: upload-tokens (plural)
+    // + confirm con "items". Devuelve la respuesta de /confirm tal cual (el
+    // estudio actualizado, con `archivos`).
+    async function simulateEstudioArchivosUpload(cookie: string, estudioId: number, files: FakeFile[]): Promise<request.Response> {
+      const tokenRes = await request(app)
+        .post(`/api/ficha-estudios/${estudioId}/archivos/upload-tokens`)
+        .set('Cookie', cookie)
+        .send({ files: files.map((f) => ({ nombreOriginal: f.filename, mimeType: f.contentType, sizeBytes: f.buffer.length })) })
+      if (tokenRes.status !== 200) return tokenRes
+
+      const items = (tokenRes.body.items as Array<{ presignedUrl: string; pathname: string }>).map((item, i) => {
+        fakeBlobStore.set(item.pathname, files[i].buffer)
+        return { pathname: item.pathname, nombreOriginal: files[i].filename, mimeType: files[i].contentType, sizeBytes: files[i].buffer.length }
+      })
+
+      return request(app)
+        .post(`/api/ficha-estudios/${estudioId}/archivos/confirm`)
+        .set('Cookie', cookie)
+        .send({ items })
+    }
+
+    it('sube un archivo, sirve el contenido y no expone pathname', async () => {
       const estudioId = await crearEstudio()
 
-      const res = await simulateClientUpload(cookies.profesionalA, `/api/ficha-estudios/${estudioId}/archivo`, fakeFile())
+      const res = await simulateEstudioArchivosUpload(cookies.profesionalA, estudioId, [fakeFile()])
       expect(res.status).toBe(201)
-      expect(res.body.archivoUrl).toBe(`/api/ficha-estudios/${estudioId}/archivo/contenido`)
+      expect(res.body.archivos).toHaveLength(1)
+      const archivo = res.body.archivos[0]
+      expect(archivo.url).toBe(`/api/ficha-estudios/${estudioId}/archivos/${archivo.id}/contenido`)
+      expect(archivo).not.toHaveProperty('pathname')
       expect(res.body).not.toHaveProperty('archivoPathname')
 
-      const contenido = await request(app).get(res.body.archivoUrl).set('Cookie', cookies.adminA)
+      const contenido = await request(app).get(archivo.url).set('Cookie', cookies.adminA)
       expect(contenido.status).toBe(200)
       expect(contenido.headers['content-type']).toContain('application/pdf')
       expect(contenido.body.equals(fakeFile().buffer)).toBe(true)
 
       const ficha = await request(app).get(`/api/pacientes/${pacienteAId}/ficha-inicial`).set('Cookie', cookies.adminA)
       const estudioEnFicha = ficha.body.estudios.find((e: any) => e.id === estudioId)
-      expect(estudioEnFicha.archivoUrl).toBe(res.body.archivoUrl)
-      expect(estudioEnFicha).not.toHaveProperty('archivoPathname')
+      expect(estudioEnFicha.archivos).toHaveLength(1)
+      expect(estudioEnFicha.archivos[0].url).toBe(archivo.url)
 
       await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
     })
 
-    it('rechaza un formato no permitido (400)', async () => {
+    it('sube varios archivos en una sola operación, todos quedan asociados al mismo estudio', async () => {
       const estudioId = await crearEstudio()
 
-      const res = await simulateClientUpload(cookies.profesionalA, `/api/ficha-estudios/${estudioId}/archivo`, {
-        filename: 'nota.txt', contentType: 'text/plain', buffer: Buffer.from('fake-pdf-bytes'),
-      })
+      const res = await simulateEstudioArchivosUpload(cookies.profesionalA, estudioId, [
+        { filename: 'radiografia-frente.jpg', contentType: 'image/jpeg', buffer: Buffer.from('frente') },
+        { filename: 'radiografia-perfil.jpg', contentType: 'image/jpeg', buffer: Buffer.from('perfil') },
+        { filename: 'informe.pdf', contentType: 'application/pdf', buffer: Buffer.from('informe') },
+      ])
+      expect(res.status).toBe(201)
+      expect(res.body.archivos).toHaveLength(3)
+      expect(res.body.archivos.map((a: any) => a.nombreOriginal).sort()).toEqual(['informe.pdf', 'radiografia-frente.jpg', 'radiografia-perfil.jpg'])
+
+      await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
+    })
+
+    it('rechaza un formato no permitido (400), sin subir ninguno de la tanda', async () => {
+      const estudioId = await crearEstudio()
+
+      const res = await simulateEstudioArchivosUpload(cookies.profesionalA, estudioId, [
+        fakeFile(),
+        { filename: 'nota.txt', contentType: 'text/plain', buffer: Buffer.from('fake-pdf-bytes') },
+      ])
       expect(res.status).toBe(400)
 
+      const ficha = await request(app).get(`/api/pacientes/${pacienteAId}/ficha-inicial`).set('Cookie', cookies.adminA)
+      const estudioEnFicha = ficha.body.estudios.find((e: any) => e.id === estudioId)
+      expect(estudioEnFicha.archivos).toEqual([])
+
       await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
     })
 
-    it('un usuario sin profesional vinculado no puede subir el archivo', async () => {
+    it('un usuario sin profesional vinculado no puede subir archivos', async () => {
       const estudioId = await crearEstudio()
 
-      const res = await simulateClientUpload(cookies.profesionalSinVinculo, `/api/ficha-estudios/${estudioId}/archivo`, fakeFile())
+      const res = await simulateEstudioArchivosUpload(cookies.profesionalSinVinculo, estudioId, [fakeFile()])
       expect(res.status).toBe(403)
 
       await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
     })
 
-    it('no se puede subir ni ver el archivo de un estudio de otro consultorio', async () => {
+    it('no se puede subir ni ver archivos de un estudio de otro consultorio', async () => {
       const estudioId = await crearEstudio()
 
-      const subida = await simulateClientUpload(cookies.adminB, `/api/ficha-estudios/${estudioId}/archivo`, fakeFile())
+      const subida = await simulateEstudioArchivosUpload(cookies.adminB, estudioId, [fakeFile()])
       expect(subida.status).toBe(404)
 
-      await simulateClientUpload(cookies.profesionalA, `/api/ficha-estudios/${estudioId}/archivo`, fakeFile())
+      const propia = await simulateEstudioArchivosUpload(cookies.profesionalA, estudioId, [fakeFile()])
+      const archivoId = propia.body.archivos[0].id
 
-      const lectura = await request(app).get(`/api/ficha-estudios/${estudioId}/archivo/contenido`).set('Cookie', cookies.adminB)
+      const lectura = await request(app).get(`/api/ficha-estudios/${estudioId}/archivos/${archivoId}/contenido`).set('Cookie', cookies.adminB)
       expect(lectura.status).toBe(404)
 
       await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
     })
 
-    it('reemplaza el archivo existente y lo elimina', async () => {
+    it('elimina un archivo puntual sin afectar a los demás del mismo estudio', async () => {
       const estudioId = await crearEstudio()
 
-      const primero = await simulateClientUpload(cookies.profesionalA, `/api/ficha-estudios/${estudioId}/archivo`, {
-        filename: 'v1.pdf', contentType: 'application/pdf', buffer: Buffer.from('fake-pdf-bytes'),
-      })
-      expect(primero.status).toBe(201)
+      const subida = await simulateEstudioArchivosUpload(cookies.profesionalA, estudioId, [
+        { filename: 'v1.pdf', contentType: 'application/pdf', buffer: Buffer.from('uno') },
+        { filename: 'v2.pdf', contentType: 'application/pdf', buffer: Buffer.from('dos') },
+      ])
+      expect(subida.status).toBe(201)
+      const [primero, segundo] = subida.body.archivos
 
-      const segundo = await simulateClientUpload(cookies.profesionalA, `/api/ficha-estudios/${estudioId}/archivo`, {
-        filename: 'v2.pdf', contentType: 'application/pdf', buffer: Buffer.from('otro contenido'),
-      })
-      expect(segundo.status).toBe(201)
-
-      const del = await request(app).delete(`/api/ficha-estudios/${estudioId}/archivo`).set('Cookie', cookies.profesionalA)
+      const del = await request(app).delete(`/api/ficha-estudios/${estudioId}/archivos/${primero.id}`).set('Cookie', cookies.profesionalA)
       expect(del.status).toBe(204)
 
-      const despues = await request(app).get(`/api/ficha-estudios/${estudioId}/archivo/contenido`).set('Cookie', cookies.adminA)
-      expect(despues.status).toBe(404)
+      const despuesPrimero = await request(app).get(primero.url).set('Cookie', cookies.adminA)
+      expect(despuesPrimero.status).toBe(404)
+
+      const despuesSegundo = await request(app).get(segundo.url).set('Cookie', cookies.adminA)
+      expect(despuesSegundo.status).toBe(200)
 
       await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
+    })
+
+    it('respeta el máximo de archivos por estudio', async () => {
+      const estudioId = await crearEstudio()
+      const files: FakeFile[] = Array.from({ length: 11 }, (_, i) => ({
+        filename: `f${i}.pdf`, contentType: 'application/pdf', buffer: Buffer.from(`contenido-${i}`),
+      }))
+
+      const res = await simulateEstudioArchivosUpload(cookies.profesionalA, estudioId, files)
+      expect(res.status).toBe(400)
+
+      await prisma.fichaEstudioComplementario.delete({ where: { id: estudioId } })
+    })
+
+    it('un estudio migrado (archivo histórico en las columnas deprecadas) sigue funcionando tras el backfill de la migración', async () => {
+      // Simula un estudio "viejo" (pre-migración): archivo solo en las 4
+      // columnas escalares, sin fila en EstudioArchivo — exactamente el
+      // estado que tenía cualquier estudio real antes de
+      // 20260906120000_estudio_archivo_multiple. El backfill de esa
+      // migración ya corrió una vez sobre la base real; acá se verifica que
+      // el mismo backfill (reproducido a mano) deja el estudio legible.
+      const estudio = await prisma.fichaEstudioComplementario.create({
+        data: {
+          consultorioId: consultorioAId,
+          fichaInicialId: (await prisma.fichaInicial.findFirstOrThrow({ where: { pacienteId: pacienteAId } })).id,
+          tipo: 'RX histórica',
+          archivoPathname: 'estudios/legacy/historico.pdf',
+          archivoNombreOriginal: 'historico.pdf',
+          archivoMimeType: 'application/pdf',
+          archivoSizeBytes: 1234,
+        },
+      })
+      fakeBlobStore.set('estudios/legacy/historico.pdf', Buffer.from('contenido historico'))
+
+      await prisma.estudioArchivo.create({
+        data: {
+          consultorioId: consultorioAId,
+          estudioId: estudio.id,
+          pathname: 'estudios/legacy/historico.pdf',
+          nombreOriginal: 'historico.pdf',
+          mimeType: 'application/pdf',
+          sizeBytes: 1234,
+        },
+      })
+
+      const ficha = await request(app).get(`/api/pacientes/${pacienteAId}/ficha-inicial`).set('Cookie', cookies.adminA)
+      const estudioEnFicha = ficha.body.estudios.find((e: any) => e.id === estudio.id)
+      expect(estudioEnFicha.archivos).toHaveLength(1)
+      expect(estudioEnFicha.archivos[0].nombreOriginal).toBe('historico.pdf')
+
+      const contenido = await request(app).get(estudioEnFicha.archivos[0].url).set('Cookie', cookies.adminA)
+      expect(contenido.status).toBe(200)
+      expect(contenido.body.equals(Buffer.from('contenido historico'))).toBe(true)
+
+      await prisma.fichaEstudioComplementario.delete({ where: { id: estudio.id } })
     })
   })
 
