@@ -5,6 +5,7 @@ import type { ObraSocial } from '../types/domain'
 import ConfigSectionHeader from './ConfigSectionHeader'
 import ConfigRowActions from './ConfigRowActions'
 import ObraSocialFormModal from './ObraSocialFormModal'
+import KineqLoader from './KineqLoader'
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message
@@ -173,7 +174,7 @@ export default function ConfiguracionObrasSociales({ onRequestConfirm }: Configu
       {error ? <p className="evolution-form-error">{error}</p> : null}
 
       {loading ? (
-        <p>Cargando obras sociales...</p>
+        <div className="tab-content-loading"><KineqLoader size="medium" label="Cargando obras sociales" /></div>
       ) : visibleObrasSociales.length === 0 ? (
         <div className="turnos-table-message">
           <strong>No hay obras sociales para mostrar.</strong>

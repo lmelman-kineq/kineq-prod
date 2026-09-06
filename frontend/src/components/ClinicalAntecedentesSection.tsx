@@ -3,6 +3,7 @@ import * as api from '../services/api'
 import type { CatalogoClinicoItem, FichaAntecedente, FichaAntecedenteInput } from '../types/domain'
 import { useClinicalCatalogSearch } from '../hooks/useClinicalCatalogSearch'
 import DateInput from './DateInput'
+import KineqLoader from './KineqLoader'
 
 type Categoria = 'ANTECEDENTE_PERSONAL' | 'ANTECEDENTE_FAMILIAR' | 'PROCEDIMIENTO_QUIRURGICO'
 
@@ -554,7 +555,7 @@ function CatalogoCompletoDrawer({
 
         <div className="catalogo-drawer-list">
           {loading ? (
-            <p>Cargando catálogo...</p>
+            <KineqLoader size="medium" label="Cargando catálogo" className="catalogo-drawer-loader" />
           ) : visibleItems.length === 0 ? (
             <p className="patient-detail-note">Sin resultados.</p>
           ) : (

@@ -716,6 +716,14 @@ body,
   background: var(--color-danger);
 }
 
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .primary-button--danger:hover {
   background: color-mix(in srgb, var(--color-danger) 85%, black);
 }
@@ -3590,6 +3598,13 @@ select:disabled {
   gap: 20px;
 }
 
+.patient-detail-page--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
 .patient-detail-topbar {
   display: flex;
   align-items: center;
@@ -4830,6 +4845,13 @@ select:disabled {
   margin-bottom: 20px;
 }
 
+.tab-content-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
 .config-section-header h2 {
   margin: 0;
 }
@@ -5627,6 +5649,10 @@ select:disabled {
   gap: 6px;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.catalogo-drawer-loader {
+  grid-column: 1 / -1;
 }
 
 .catalogo-drawer-add-item {
@@ -6595,7 +6621,8 @@ select:disabled {
 .modal-header-save-mobile,
 .sheet-drag-handle,
 .week-day-strip,
-.day-grid-mobile-header {
+.day-grid-mobile-header,
+.calendar-period-compact-label {
   display: none;
 }
 
@@ -6708,6 +6735,7 @@ select:disabled {
      Semana ya tiene su franja de 7 días — ninguno de los dos necesita
      este label genérico. */
   .calendar-period-compact-label {
+    display: block;
     margin: 0 0 8px;
     color: var(--color-text-muted);
     font-size: 13px;
@@ -6781,6 +6809,12 @@ select:disabled {
     color: var(--color-on-primary);
     font-weight: 600;
     font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .modal-header-save-mobile:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   /* "Guardar"/"X" ya viven en el header — el pie de "Nuevo turno" (Más

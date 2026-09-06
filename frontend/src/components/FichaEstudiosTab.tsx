@@ -4,6 +4,7 @@ import FichaEstudiosList from './FichaEstudiosList'
 import AlertToggleButton from './AlertToggleButton'
 import type { ClinicalNavTarget } from '../utils/clinicalNavTarget'
 import { scrollToAndHighlight } from '../utils/scrollAndHighlight'
+import KineqLoader from './KineqLoader'
 
 const ESTUDIOS_ICON = (
   <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6Z" /><path d="M15 2v5h5" /><path d="M9 13h6M9 17h6" /></svg>
@@ -26,7 +27,7 @@ export default function FichaEstudiosTab({ fichaHook, navTarget, onNavTargetHand
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navTarget?.token])
 
-  if (loading) return <p>Cargando estudios...</p>
+  if (loading) return <div className="tab-content-loading"><KineqLoader size="medium" label="Cargando estudios" /></div>
 
   const alertaEstudiosActiva = (ficha?.alertasCampo ?? []).some((a) => a.campo === 'estudiosComplementarios')
 

@@ -5,6 +5,7 @@ import type { Especialidad, Profesional, Usuario } from '../types/domain'
 import ConfigSectionHeader from './ConfigSectionHeader'
 import ConfigRowActions from './ConfigRowActions'
 import ProfesionalFormModal from './ProfesionalFormModal'
+import KineqLoader from './KineqLoader'
 import { useAuth } from '../auth/AuthContext'
 import { professionalFullName } from '../utils/professional'
 
@@ -158,7 +159,7 @@ export default function ConfiguracionProfesionales({ onRequestConfirm, onProfesi
       {error ? <p className="evolution-form-error">{error}</p> : null}
 
       {loading ? (
-        <p>Cargando profesionales...</p>
+        <div className="tab-content-loading"><KineqLoader size="medium" label="Cargando profesionales" /></div>
       ) : visibleProfesionales.length === 0 ? (
         <div className="turnos-table-message">
           <strong>No hay profesionales para mostrar.</strong>

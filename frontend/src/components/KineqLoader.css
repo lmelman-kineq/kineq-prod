@@ -1,0 +1,118 @@
+.kineq-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.kineq-loader--small {
+  padding: 12px 0;
+}
+
+.kineq-loader--medium {
+  padding: 32px 0;
+}
+
+.kineq-loader--large {
+  padding: 64px 0;
+  min-height: 260px;
+}
+
+.kineq-loader__composition {
+  position: relative;
+  aspect-ratio: 1 / 1;
+}
+
+/* Mismo truco de centrado que BootScreen: `inset: 0` + `margin: auto`
+   sobre una caja de tamaño explícito, para que cada capa pueda animar su
+   propio `transform` (rotación/pulso) sin pisar el centrado. */
+.kineq-loader__ring,
+.kineq-loader__logo {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  overflow: visible;
+  transform-origin: center;
+}
+
+.kineq-loader__ring--outer {
+  width: 100%;
+  height: 100%;
+}
+
+.kineq-loader__ring--outer circle {
+  fill: none;
+  stroke: var(--color-primary-border);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 4 14;
+  opacity: 0.7;
+}
+
+.kineq-loader__ring--middle {
+  width: 76%;
+  height: 76%;
+}
+
+.kineq-loader__ring--middle circle {
+  fill: none;
+  stroke: var(--color-primary-hover);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 46 60;
+  opacity: 0.6;
+}
+
+.kineq-loader__ring--inner {
+  width: 40%;
+  height: 40%;
+  border-radius: 50%;
+  border: 3px solid var(--color-primary);
+  opacity: 0.5;
+}
+
+.kineq-loader__logo {
+  width: 38%;
+  height: 38%;
+}
+
+.kineq-loader--small .kineq-loader__composition {
+  width: 36px;
+}
+
+.kineq-loader--medium .kineq-loader__composition {
+  width: 64px;
+}
+
+.kineq-loader--large .kineq-loader__composition {
+  width: 112px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kineq-loader__ring--outer {
+    animation: kineq-loader-rotate-cw 9s linear infinite;
+  }
+
+  .kineq-loader__ring--middle {
+    animation: kineq-loader-rotate-ccw 6s linear infinite;
+  }
+
+  .kineq-loader__ring--inner {
+    animation: kineq-loader-pulse 2.2s ease-in-out infinite;
+  }
+}
+
+@keyframes kineq-loader-rotate-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes kineq-loader-rotate-ccw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes kineq-loader-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.06); opacity: 0.65; }
+}

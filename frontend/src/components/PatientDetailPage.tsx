@@ -19,6 +19,7 @@ import PatientAppointmentsTable from './PatientAppointmentsTable'
 import FichaEstudiosTab from './FichaEstudiosTab'
 import PatientFormModal from './PatientFormModal'
 import RichTextEditor from './RichTextEditor'
+import KineqLoader from './KineqLoader'
 import { useFichaInicial } from '../hooks/useFichaInicial'
 import { groupEvolucionesByGrupo } from '../utils/groupEvolucionesByGrupo'
 import { SPECIALTY_COLOR_TOKENS } from '../utils/specialtyColors'
@@ -511,8 +512,8 @@ export default function PatientDetailPage({
 
   if (loading) {
     return (
-      <div className="patient-detail-page">
-        <p>Cargando paciente...</p>
+      <div className="patient-detail-page patient-detail-page--loading">
+        <KineqLoader size="large" label="Cargando paciente" />
       </div>
     )
   }

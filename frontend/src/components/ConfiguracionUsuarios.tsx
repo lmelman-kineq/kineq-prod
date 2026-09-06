@@ -5,6 +5,7 @@ import type { Profesional, RolUsuario, Usuario } from '../types/domain'
 import ConfigSectionHeader from './ConfigSectionHeader'
 import ConfigRowActions from './ConfigRowActions'
 import UsuarioFormModal from './UsuarioFormModal'
+import KineqLoader from './KineqLoader'
 import { formatDateOnly } from '../utils/dateFormat'
 import { useAuth } from '../auth/AuthContext'
 import { userFullName } from '../utils/usuario'
@@ -172,7 +173,7 @@ export default function ConfiguracionUsuarios({ onRequestConfirm, onProfesionale
       {error ? <p className="evolution-form-error">{error}</p> : null}
 
       {loading ? (
-        <p>Cargando usuarios...</p>
+        <div className="tab-content-loading"><KineqLoader size="medium" label="Cargando usuarios" /></div>
       ) : visibleUsuarios.length === 0 ? (
         <div className="turnos-table-message">
           <strong>No hay usuarios para mostrar.</strong>

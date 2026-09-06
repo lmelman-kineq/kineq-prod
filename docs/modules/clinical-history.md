@@ -571,6 +571,10 @@ Solo se ofrece el selector de Diagnóstico en el formulario de Turno a roles con
 
 **Gap preexistente encontrado, no corregido en esta ronda** (fuera del alcance pedido, que era específicamente Evoluciones): `.patient-detail-page` tiene un overflow horizontal de ~30-45px a 390/414/430px que **no es específico de Evoluciones** — se reproduce igual en la tab "Ficha inicial", que esta ronda no tocó. Afecta al contenedor de toda la página de detalle de paciente (header, cards de resumen), no a las cards de evolución en sí. Necesita su propia investigación (probablemente un hijo de un grid/flex sin `min-width: 0`) y toca componentes compartidos por todas las tabs clínicas (`PatientProfileHeader.tsx`, `PatientSummaryCards.tsx`), por lo que corregirlo ahí hubiera excedido el pedido explícito de "sin rediseñar módulos completos, solo Evoluciones".
 
+#### Bug real: expandir una evolución en mobile duplicaba el Resumen
+
+**Actualización (implementado)**: en mobile, la card colapsada de `.evolution-row` ya muestra el Resumen completo y el Diagnóstico sin truncar (ver arriba, "cards reorganizadas"). Al tocar la card para expandirla, `EvolutionTable.tsx` igual renderizaba `<EvolucionContent>` completo debajo — repitiendo el mismo texto del Resumen (y el mismo chip de Diagnóstico) en un segundo bloque más angosto e indentado, un duplicado real de contenido, no solo cosmético. Fix: en mobile, expandir sin estar editando ya no renderiza `EvolucionContent` — solo agrega lo que la card colapsada **no** muestra (el bloque de Archivos/imágenes, si tiene); si no hay archivos, expandir no agrega nada nuevo y la fila expandida directamente no se renderiza (`showExpandedRow = isExpanded && (isEditing || !isMobile || hasImagenes)`). El modo edición (mismo tap en el lápiz) no cambió: sigue mostrando el formulario completo con textarea/rich text, igual en cualquier plataforma. Desktop sin cambios — ahí sí sigue teniendo sentido `EvolucionContent`, porque el Resumen de la card colapsada está truncado.
+
 ---
 
 ## Diagnóstico, motivo de consulta y problemas

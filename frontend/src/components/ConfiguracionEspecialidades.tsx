@@ -5,6 +5,7 @@ import type { Especialidad } from '../types/domain'
 import ConfigSectionHeader from './ConfigSectionHeader'
 import ConfigRowActions from './ConfigRowActions'
 import EspecialidadFormModal from './EspecialidadFormModal'
+import KineqLoader from './KineqLoader'
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message
@@ -173,7 +174,7 @@ export default function ConfiguracionEspecialidades({ onRequestConfirm }: Config
       {error ? <p className="evolution-form-error">{error}</p> : null}
 
       {loading ? (
-        <p>Cargando especialidades...</p>
+        <div className="tab-content-loading"><KineqLoader size="medium" label="Cargando especialidades" /></div>
       ) : visibleEspecialidades.length === 0 ? (
         <div className="turnos-table-message">
           <strong>No hay especialidades para mostrar.</strong>

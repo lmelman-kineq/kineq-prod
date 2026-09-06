@@ -12,6 +12,7 @@ import FichaMedicationList from './FichaMedicationList'
 import AlertToggleButton from './AlertToggleButton'
 import type { ClinicalNavTarget } from '../utils/clinicalNavTarget'
 import { scrollToAndHighlight } from '../utils/scrollAndHighlight'
+import KineqLoader from './KineqLoader'
 
 type AlertProps = { active: boolean; disabled?: boolean; onToggle: () => void }
 
@@ -148,7 +149,7 @@ export default function InitialAssessmentPanel({ fichaHook, patientId, navTarget
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navTarget?.token])
 
-  if (loading) return <p>Cargando ficha inicial...</p>
+  if (loading) return <div className="tab-content-loading"><KineqLoader size="medium" label="Cargando ficha inicial" /></div>
 
   const completionStatus = computeFichaCompletionStatus(form)
   const { revisadas, total } = fichaSeccionesResumen(ficha?.seccionesEstado)

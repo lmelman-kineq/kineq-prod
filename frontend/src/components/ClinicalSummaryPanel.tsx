@@ -3,6 +3,7 @@ import { fichaHasAnyClinicalData } from '../utils/fichaInicial'
 import { computeAlertasClinicas } from '../utils/clinicalAlerts'
 import type { ClinicalNavRequest } from '../utils/clinicalNavTarget'
 import ClinicalAlertsList from './ClinicalAlertsList'
+import KineqLoader from './KineqLoader'
 
 type ClinicalSummaryPanelProps = {
   loading: boolean
@@ -26,7 +27,7 @@ export default function ClinicalSummaryPanel({
   onNavigateToTarget,
   showNoEvolucionAlert = false,
 }: ClinicalSummaryPanelProps) {
-  if (loading) return <p>Cargando resumen clínico...</p>
+  if (loading) return <KineqLoader size="small" label="Cargando resumen clínico" />
 
   const fichaPendiente = !fichaHasAnyClinicalData(ficha, fichaForm)
   const alertas = computeAlertasClinicas(ficha)

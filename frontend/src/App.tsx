@@ -29,6 +29,7 @@ import RegisterPage from './auth/RegisterPage'
 import KineqIsologo from './assets/branding/KineqIsologo'
 import BootScreen from './components/BootScreen'
 import { useBootPhase } from './components/useBootPhase'
+import KineqLoader from './components/KineqLoader'
 import { WAITING_ALERT_MINUTES, formatMinutesAgo, getElapsedMinutes } from './utils/turnoTimers'
 import { mapEstadoToStatus, statusClass } from './utils/turnoStatus'
 import { getSpecialtyColor, SPECIALTY_COLOR_TOKENS } from './utils/specialtyColors'
@@ -428,7 +429,7 @@ function WeekView({
 
   return (
     <div className="week-view">
-      {loading ? <p>Cargando turnos...</p> : null}
+      {loading ? <KineqLoader size="small" label="Cargando turnos" /> : null}
       {isMobile ? (
         <div className="week-day-strip" role="tablist" aria-label="Elegir día de la semana">
           {weekDates.map((date) => {
@@ -490,7 +491,7 @@ function MonthView({ selectedDate, turnos, loading, todayEnZonaConsultorio, onSe
 
   return (
     <div className="month-view">
-      {loading ? <p>Cargando turnos...</p> : null}
+      {loading ? <KineqLoader size="small" label="Cargando turnos" /> : null}
       <div className="month-view-weekdays">
         {WEEKDAY_HEADER_LABELS.map((label) => <div key={label} className="month-view-weekday">{label}</div>)}
       </div>
@@ -811,6 +812,19 @@ function Dashboard() {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>(null)
   const [serieScopeDialog, setSerieScopeDialog] = useState<SerieScopeDialogState>(null)
   const [serieScopeChoice, setSerieScopeChoice] = useState<'unico' | 'siguientes'>('unico')
+  // Único flag para las 4 rutas de guardado del modal de turno (individual,
+  // serie, edición única, edición "y los siguientes") — todas terminan en
+  // uno de estos leafs sin importar si el camino pasa por un diálogo de
+  // confirmación (superposición/alcance de serie) antes. Guard contra doble
+  // submit (doble click o Enter+click) y feedback del botón "Guardar".
+  const [savingTurno, setSavingTurno] = useState(false)
+  // El guard real vive en un ref, no en el state: dos clicks disparados en
+  // el mismo tick (verificado con Playwright: un doble click real puede
+  // llegar así) invocan el handler dos veces ANTES de que React re-renderice
+  // con `savingTurno=true` — leen el mismo valor stale de `savingTurno` por
+  // clausura y ambos pasan el guard. Un ref se actualiza sincrónicamente,
+  // sin esperar un render, así que el segundo call sí lo ve en `true`.
+  const savingTurnoRef = useRef(false)
 
   const contextMenuRef = useRef<HTMLDivElement | null>(null)
   const confirmDialogRef = useRef<HTMLDivElement | null>(null)
@@ -1064,6 +1078,11 @@ function Dashboard() {
         setFiltersOpen(false)
       }
 
+      // Mientras se guarda un turno, un click afuera no cierra el modal —
+      // evita perder el formulario o disparar un segundo guardado a mitad
+      // de la request en curso.
+      if (savingTurno) return
+
       if (showNewTurno && newModalRef.current && !newModalRef.current.contains(target)) {
         closeNewTurnoModal()
       }
@@ -1077,7 +1096,7 @@ function Dashboard() {
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [confirmDialog, serieScopeDialog, filtersOpen, showNewTurno, showViewTurno, closeNewTurnoModal])
+  }, [confirmDialog, serieScopeDialog, filtersOpen, showNewTurno, showViewTurno, closeNewTurnoModal, savingTurno])
 
   // Cierra el popover de "Foto de perfil" al hacer click afuera o presionar Escape.
   useEffect(() => {
@@ -1400,6 +1419,7 @@ function Dashboard() {
   // appointments.md), se ofrece confirmar y reintentar en vez de bloquear —
   // Kineq nunca bloquea turnos superpuestos, solo advierte.
   const saveNewTurnoSerie = async (confirmarSuperposicion: boolean) => {
+    if (savingTurnoRef.current) return
     if (!newTurnoForm.patientId || !newTurnoForm.professionalId || newTurnoForm.recurrenceFrequency === 'none') return
     const timeZone = api.getConsultorioTimeZone()
     const { recurrenceFrequency } = newTurnoForm
@@ -1427,6 +1447,8 @@ function Dashboard() {
       frecuenciaSemanas = recurrenceFrequency
     }
 
+    savingTurnoRef.current = true
+    setSavingTurno(true)
     try {
       const { turnos } = await api.createSerieTurno({
         pacienteId: newTurnoForm.patientId,
@@ -1466,10 +1488,14 @@ function Dashboard() {
         return
       }
       setLoadError(getErrorMessage(error, 'No pudimos crear la serie de turnos.'))
+    } finally {
+      savingTurnoRef.current = false
+      setSavingTurno(false)
     }
   }
 
   const saveNewTurno = async () => {
+    if (savingTurnoRef.current) return
     if (!newTurnoForm.patientId || !newTurnoForm.professionalId || newTurnoForm.specialtyId === 0) return
 
     if (newTurnoForm.recurrenceFrequency !== 'none') {
@@ -1477,6 +1503,8 @@ function Dashboard() {
       return
     }
 
+    savingTurnoRef.current = true
+    setSavingTurno(true)
     try {
       const created = await api.createTurno({
         pacienteId: newTurnoForm.patientId,
@@ -1499,6 +1527,9 @@ function Dashboard() {
       setLoadError(null)
     } catch (error) {
       setLoadError(getErrorMessage(error, 'No se pudo crear el turno.'))
+    } finally {
+      savingTurnoRef.current = false
+      setSavingTurno(false)
     }
   }
 
@@ -1768,9 +1799,12 @@ function Dashboard() {
   }
 
   const saveEditedTurnoSingle = async () => {
+    if (savingTurnoRef.current) return
     if (editingTurnoId === null || !editingTurnoForm) return
     if (!editingTurnoForm.patientId || !editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) return
 
+    savingTurnoRef.current = true
+    setSavingTurno(true)
     try {
       const updated = await api.patchTurno(editingTurnoId, {
         pacienteId: editingTurnoForm.patientId,
@@ -1800,6 +1834,9 @@ function Dashboard() {
       setTurnosPageRefreshKey((key) => key + 1)
     } catch (error) {
       setLoadError(getErrorMessage(error, 'No se pudieron guardar los cambios del turno.'))
+    } finally {
+      savingTurnoRef.current = false
+      setSavingTurno(false)
     }
   }
 
@@ -1811,9 +1848,12 @@ function Dashboard() {
   // turnosState a mano, ya que las ocurrencias afectadas casi siempre caen
   // en otros días del calendario diario.
   const saveEditedTurnoSiguientes = async (confirmarSuperposicion: boolean) => {
+    if (savingTurnoRef.current) return
     if (editingTurnoId === null || !editingTurnoForm) return
     if (!editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) return
 
+    savingTurnoRef.current = true
+    setSavingTurno(true)
     try {
       const { turnos: siguientes } = await api.getSerieTurno(editingTurnoId)
       const timeZone = api.getConsultorioTimeZone()
@@ -1858,10 +1898,14 @@ function Dashboard() {
         return
       }
       setLoadError(getErrorMessage(error, 'No pudimos modificar los turnos siguientes.'))
+    } finally {
+      savingTurnoRef.current = false
+      setSavingTurno(false)
     }
   }
 
   const saveEditedTurno = async () => {
+    if (savingTurnoRef.current) return
     if (editingTurnoId === null || !editingTurnoForm) return
     if (!editingTurnoForm.patientId || !editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) return
 
@@ -1972,7 +2016,7 @@ function Dashboard() {
   const goToNextPeriod = () => setSelectedDate((current) => navigateDate(current, calendarView, 1))
   const goToToday = () => {
     setSelectedDate(todayInTimeZone(api.getConsultorioTimeZone()))
-    if (isMobile) setCalendarView('day')
+    setCalendarView('day')
   }
   // Swipe horizontal sobre el área del calendario — mismo destino que las
   // flechas, nunca las reemplaza. Izquierda = siguiente, derecha = anterior.
@@ -2552,7 +2596,7 @@ function Dashboard() {
 
           <div className="calendar-swipe-area" onTouchStart={calendarSwipeHandlers.onTouchStart} onTouchEnd={calendarSwipeHandlers.onTouchEnd}>
           {calendarView === 'day' && turnosLoading ? (
-            <p>Cargando turnos...</p>
+            <KineqLoader size="small" label="Cargando turnos" />
           ) : null}
 
           {calendarView === 'day' && hiddenDayTurnosCount > 0 ? (
@@ -2844,8 +2888,8 @@ function Dashboard() {
                   </div>
                 </div>
                 <div className="modal-header-actions">
-                  <button type="button" className="modal-header-save-mobile" onClick={saveNewTurno}>
-                    Guardar
+                  <button type="button" className="modal-header-save-mobile" disabled={savingTurno} onClick={saveNewTurno}>
+                    {savingTurno ? 'Creando...' : 'Guardar'}
                   </button>
                   <button
                     type="button"
@@ -2900,8 +2944,8 @@ function Dashboard() {
                     Más opciones
                   </button>
                 )}
-                <button type="button" className="primary-button" onClick={saveNewTurno}>
-                  Guardar turno
+                <button type="button" className="primary-button" disabled={savingTurno} onClick={saveNewTurno}>
+                  {savingTurno ? 'Creando turno...' : 'Guardar turno'}
                 </button>
               </div>
             </div>
@@ -2925,8 +2969,8 @@ function Dashboard() {
 
                 <div className="modal-header-actions">
                   {isEditingTurno ? (
-                    <button type="button" className="modal-header-save-mobile" onClick={saveEditedTurno}>
-                      Guardar
+                    <button type="button" className="modal-header-save-mobile" disabled={savingTurno} onClick={saveEditedTurno}>
+                      {savingTurno ? 'Guardando...' : 'Guardar'}
                     </button>
                   ) : null}
                   {!isEditingTurno && (() => {
@@ -3046,9 +3090,10 @@ function Dashboard() {
                 <button
                   type="button"
                   className="primary-button modal-actions-save-desktop"
+                  disabled={savingTurno}
                   onClick={saveEditedTurno}
                 >
-                  Guardar cambios
+                  {savingTurno ? 'Guardando cambios...' : 'Guardar cambios'}
                 </button>
               </div>
             </div>
@@ -3232,7 +3277,7 @@ function Dashboard() {
 
         <div className="details-card">
           {catalogsLoading || turnosLoading ? (
-            <p>Cargando datos del turno...</p>
+            <KineqLoader size="small" label="Cargando datos del turno" />
           ) : selectedTurno ? (
             <>
               <div className="details-header">

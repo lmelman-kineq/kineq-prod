@@ -156,6 +156,15 @@ export default function EvolutionTable({
             const isExpanded = expandedId === evolucion.id
             const isEditing = editingId === evolucion.id
             const wasEdited = new Date(evolucion.updatedAt).getTime() !== new Date(evolucion.createdAt).getTime()
+            const hasImagenes = Boolean(evolucion.imagenes?.length)
+            // En mobile la card colapsada ya muestra el Resumen completo y el
+            // Diagnóstico (sin truncar, ver @media 820px) — `EvolucionContent`
+            // repetiría exactamente ese mismo texto en un bloque angosto
+            // debajo, duplicando contenido (bug real reportado). Al expandir
+            // en mobile sin estar editando, solo agrega lo que la card
+            // colapsada no muestra (Archivos); si no hay archivos, no hay
+            // nada nuevo que mostrar y no se renderiza la fila expandida.
+            const showExpandedRow = isExpanded && (isEditing || !isMobile || hasImagenes)
 
             return (
               <Fragment key={evolucion.id}>
@@ -215,7 +224,7 @@ export default function EvolutionTable({
                   </td>
                 </tr>
 
-                {isExpanded ? (
+                {showExpandedRow ? (
                   <tr className="evolution-expanded-row">
                     <td colSpan={5}>
                       <div className="evolution-expanded-content">
@@ -264,6 +273,13 @@ export default function EvolutionTable({
                               </button>
                             </div>
                           </div>
+                        ) : isMobile ? (
+                          hasImagenes ? (
+                            <div className="evolution-item-diagnostico">
+                              <span className="details-label">Archivos</span>
+                              <EvolucionImages items={evolucion.imagenes!.map((img) => ({ key: String(img.id), url: img.url, name: img.nombreOriginal }))} />
+                            </div>
+                          ) : null
                         ) : (
                           <EvolucionContent evolucion={evolucion} />
                         )}

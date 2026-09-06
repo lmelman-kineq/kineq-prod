@@ -4,6 +4,7 @@ import type { Consultorio, ConsultorioInput } from '../types/domain'
 import ConfigSectionHeader from './ConfigSectionHeader'
 import AddressAutocompleteInput from './AddressAutocompleteInput'
 import { TIMEZONE_OPTIONS, getTimezoneOffsetLabel } from '../utils/timezone'
+import KineqLoader from './KineqLoader'
 
 type FormState = {
   nombre: string
@@ -59,7 +60,7 @@ export default function ConfiguracionGeneral() {
     }
   }, [])
 
-  if (loading) return <p>Cargando configuración...</p>
+  if (loading) return <div className="tab-content-loading"><KineqLoader size="medium" label="Cargando configuración" /></div>
   if (error || !consultorio || !form) return <p className="evolution-form-error">{error ?? 'No se pudo cargar.'}</p>
 
   const dirty = JSON.stringify(form) !== JSON.stringify(formFromConsultorio(consultorio))
