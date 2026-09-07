@@ -26,10 +26,14 @@ const UNIT_LABELS: Record<CustomRecurrenceUnit, [string, string]> = {
  */
 export default function CustomRecurrenceModal({ startDate, initialConfig, initialCount, onCancel, onConfirm }: CustomRecurrenceModalProps) {
   const startWeekday = new Date(`${startDate}T00:00:00Z`).getUTCDay()
-  const [intervalo, setIntervalo] = useState(initialConfig?.intervalo ?? 1)
+  // `'' ` es un estado transitorio válido mientras se escribe (permite
+  // borrar el campo para reemplazarlo) — nunca se persiste así: `canConfirm`
+  // ya exige `Number.isInteger(...)`, que da `false` para `''`, y el blur de
+  // cada campo lo repone a un valor válido si se queda vacío.
+  const [intervalo, setIntervalo] = useState<number | ''>(initialConfig?.intervalo ?? 1)
   const [unidad, setUnidad] = useState<CustomRecurrenceUnit>(initialConfig?.unidad ?? 'SEMANA')
   const [diasSemana, setDiasSemana] = useState<number[]>(initialConfig?.diasSemana?.length ? initialConfig.diasSemana : [startWeekday])
-  const [cantidad, setCantidad] = useState(Math.max(2, initialCount || 2))
+  const [cantidad, setCantidad] = useState<number | ''>(Math.max(2, initialCount || 2))
 
   const modalRef = useRef<HTMLDivElement | null>(null)
 
@@ -59,15 +63,20 @@ export default function CustomRecurrenceModal({ startDate, initialConfig, initia
     })
   }
 
-  const canConfirm = Number.isInteger(intervalo) && intervalo >= 1
-    && Number.isInteger(cantidad) && cantidad >= 2 && cantidad <= 60
+  const canConfirm = intervalo !== '' && Number.isInteger(intervalo) && intervalo >= 1
+    && cantidad !== '' && Number.isInteger(cantidad) && cantidad >= 2 && cantidad <= 60
     && (unidad !== 'SEMANA' || diasSemana.length >= 1)
 
   const handleConfirm = () => {
     if (!canConfirm) return
+    // `canConfirm` ya garantiza que ambos son enteros válidos acá — el
+    // `Number(...)` es solo para que TypeScript vea `number`, no `number | ''`
+    // (ese `''` es un estado transitorio de los inputs mientras se escribe).
+    const intervaloValido = Number(intervalo)
+    const cantidadValida = Number(cantidad)
     onConfirm(
-      unidad === 'SEMANA' ? { intervalo, unidad, diasSemana } : { intervalo, unidad },
-      cantidad,
+      unidad === 'SEMANA' ? { intervalo: intervaloValido, unidad, diasSemana } : { intervalo: intervaloValido, unidad },
+      cantidadValida,
     )
   }
 
@@ -88,7 +97,11 @@ export default function CustomRecurrenceModal({ startDate, initialConfig, initia
                 type="number"
                 min={1}
                 value={intervalo}
-                onChange={(event) => setIntervalo(Math.max(1, Number(event.target.value) || 1))}
+                onChange={(event) => {
+                  const raw = event.target.value
+                  setIntervalo(raw === '' ? '' : Number(raw))
+                }}
+                onBlur={() => setIntervalo((current) => (current === '' || current < 1 ? 1 : current))}
               />
               <span className="select-chevron-wrap">
                 <select value={unidad} onChange={(event) => setUnidad(event.target.value as CustomRecurrenceUnit)}>
@@ -128,7 +141,11 @@ export default function CustomRecurrenceModal({ startDate, initialConfig, initia
               min={2}
               max={60}
               value={cantidad}
-              onChange={(event) => setCantidad(Number(event.target.value))}
+              onChange={(event) => {
+                const raw = event.target.value
+                setCantidad(raw === '' ? '' : Number(raw))
+              }}
+              onBlur={() => setCantidad((current) => (current === '' || current < 2 ? 2 : current > 60 ? 60 : current))}
             />
           </label>
         </div>
