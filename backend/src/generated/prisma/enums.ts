@@ -15,7 +15,8 @@ export const EstadoTurno = {
   ATENDIENDO: 'ATENDIENDO',
   FINALIZADO: 'FINALIZADO',
   AUSENTE: 'AUSENTE',
-  CANCELADO: 'CANCELADO'
+  CANCELADO: 'CANCELADO',
+  REPROGRAMADO: 'REPROGRAMADO'
 } as const
 
 export type EstadoTurno = (typeof EstadoTurno)[keyof typeof EstadoTurno]

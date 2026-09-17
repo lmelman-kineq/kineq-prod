@@ -23,7 +23,6 @@ export default function GestionarGruposModal({ grupos, onClose, onEditGrupo, onN
           <div className="modal-header-title">
             <div>
               <h3>Gestionar diagnósticos</h3>
-              <p>Organización visual de evoluciones de este paciente.</p>
             </div>
           </div>
           <button type="button" className="close-button" aria-label="Cerrar" onClick={onClose}>&times;</button>

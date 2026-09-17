@@ -1042,6 +1042,68 @@ body,
   margin: 6px 0;
 }
 
+/* Legend/subtítulo del header de un modal (ej. "Modificá los datos del
+   turno.", "Elegí qué sesiones incluir en el PDF.") — clase propia para
+   poder ocultarlo puntualmente en mobile sin afectar el resto de
+   `.modal-header-title p`. */
+.modal-header-subtitle {
+  margin: 0;
+}
+
+/* Modal "Exportar plan de sesiones": Desde/Hasta en una fila, estados como
+   grilla de checkboxes que puede wrappear libremente (7 estados + "Todos"
+   no tienen que entrar en una sola línea acá, a diferencia del toolbar de
+   Evoluciones). */
+.export-plan-date-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Estado en "Exportar plan de sesiones": mismo dropdown de checkboxes
+   (`.filter-button` + `.filters-panel`/`.filter-group`) que ya usa el
+   filtro de Turnos — acá a ancho completo, como el resto de los campos del
+   modal, en vez del ancho fijo que usa ese filtro suelto en un toolbar. */
+.export-plan-estado-button {
+  width: 100%;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+/* `.field-invalid` ya resalta input/select/.dropdown-input-row (ver sección
+   18) — un <button> no matchea ninguno de esos, así que el borde rojo de
+   este caso puntual se resuelve acá. */
+.export-plan-estado-button.field-invalid {
+  border-color: var(--color-danger);
+}
+
+.export-plan-estado-chevron {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.15s ease;
+}
+
+.export-plan-estado-chevron--open {
+  transform: rotate(180deg);
+}
+
+/* top/left/width vienen inline por JS (position: fixed, calculado contra el
+   botón — ver ExportSesionesPlanModal.tsx) para escapar del overflow-y:auto
+   de `.modal-card`, que si no recortaba el panel. `overflow-y: auto` ya lo
+   hereda de `.filters-panel` (scrollea internamente, nunca desborda la
+   card redondeada) — acá solo el max-height más bajo que este dropdown
+   puntual necesita. Selector de dos clases a propósito (en vez de
+   reordenar el archivo o `!important`) para ganarle de forma confiable a
+   `.filters-panel` sin importar dónde quede declarada esa regla. */
+.filters-panel.export-plan-estado-panel {
+  max-height: 280px;
+}
+
 .modal-body input.narrow-input {
   width: auto;
   min-width: 140px;
@@ -2477,6 +2539,20 @@ select:disabled {
   cursor: pointer;
   box-shadow: var(--shadow-turno);
   transition: transform 0.2s ease, border-color 0.2s ease;
+  /* Deja que el scroll vertical nativo siga andando mientras se espera un
+     long-press (ver onTouchDragStart, App.tsx) — el `preventDefault()` del
+     drag recién se aplica a mano una vez armado, esto es solo la base. */
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+}
+
+/* Long-press armado (mobile): mismo lenguaje visual que ".selected" pero
+   más notorio — separa claramente "drag activo" de un tap/hover normal. */
+.turno-card--drag-active {
+  transform: scale(1.03);
+  border-color: var(--color-on-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  z-index: 5;
 }
 
 .turno-card:hover,
@@ -2638,6 +2714,10 @@ select:disabled {
   background: var(--color-danger);
 }
 
+.turno-card-status-dot--reprogramado {
+  background: var(--color-text-muted);
+}
+
 .resize-handle {
   position: absolute;
   right: 0;
@@ -2703,6 +2783,21 @@ select:disabled {
 
 .context-menu-item--danger:hover {
   background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+}
+
+/* Menú "…" del encabezado del paciente: mismo `.context-menu`/`.context-menu-item`
+   que el menú de turnos, pero anclado por CSS al botón (sin coordenadas por
+   JS como el de turnos, ya que siempre cuelga del mismo lugar). */
+.patient-header-menu-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.patient-header-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
 }
 
 /* "Turno recurrente — Sesión X de Y" en Datos del turno (ver
@@ -3379,6 +3474,11 @@ select:disabled {
 .turnos-status-pill--cancelado {
   background: color-mix(in srgb, var(--color-danger) 14%, transparent);
   color: var(--color-danger);
+}
+
+.turnos-status-pill--reprogramado {
+  background: color-mix(in srgb, var(--color-text-muted) 16%, transparent);
+  color: var(--color-text-muted);
 }
 
 .turnos-actions-cell {
@@ -4069,6 +4169,15 @@ select:disabled {
   flex-wrap: wrap;
 }
 
+/* "Ver diagnósticos": a diferencia de un .secondary-button de solo texto,
+   este tiene texto + ícono como hijos separados — sin flex/gap quedaban
+   pegados uno contra el otro. */
+.evolutions-toolbar-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .evolutions-by-group {
   display: grid;
   gap: 20px;
@@ -4178,6 +4287,20 @@ select:disabled {
   background: var(--color-surface-muted);
 }
 
+.evolution-form-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* X de cierre rápido, acceso adicional a la misma acción que "Cancelar" —
+   solo mobile, para no obligar a bajar hasta el final del form. */
+.evolution-form-close {
+  display: none;
+  flex-shrink: 0;
+}
+
 .evolution-load-button {
   width: 100%;
   margin-top: 18px;
@@ -4221,16 +4344,6 @@ select:disabled {
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
-}
-
-.turnos-export-feedback {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-.turnos-export-feedback--error {
-  color: var(--color-danger);
 }
 
 /* Diagnóstico + Archivos en la misma fila en desktop (Nueva evolución y
@@ -4780,6 +4893,59 @@ select:disabled {
 
 .clinical-tab-panel[hidden] {
   display: none;
+}
+
+/* Barra compacta mobile de ClinicalTabs (`mobileMenu`): nombre de la sección
+   activa siempre visible como texto (nunca escondido dentro de un <select>
+   cerrado, a diferencia de `mobileCollapse`) + botón hamburguesa que abre un
+   popover con el resto — mismo `.context-menu`/`.context-menu-item` que ya
+   usa el menú de turnos y el menú "…" del paciente. */
+.mobile-tab-menu-bar {
+  position: relative;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.mobile-tab-menu-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.mobile-tab-menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.mobile-tab-menu-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.mobile-tab-menu-popover {
+  top: calc(100% + 6px);
+  left: auto;
+  right: 0;
+  min-width: 200px;
 }
 
 .documents-placeholder {
@@ -6077,9 +6243,34 @@ select:disabled {
     padding: 18px;
   }
 
+  /* Compactación mobile de "Editar turno"/"Nuevo turno" (formulario
+     completo, no el quick-create): NO se colapsa genéricamente a 1 columna
+     (eso comprimía Paciente/Profesional/Especialidad, que necesitan ancho
+     completo, y perdía el agrupado de a pares que ya funciona en
+     desktop). Se mantienen 2 columnas — Fecha+Hora ya empareja por posición
+     de siempre; Paciente/Profesional/Especialidad/Diagnóstico/"Sesión de
+     consulta" siguen a ancho completo vía `.dropdown-field`/
+     `.appointment-form-full-row` (sin cambios) — y se reagrupan por `order`
+     (mobile-only, el DOM/desktop no se toca) Nro.sesión+Duración y
+     Monto+Estado, que es el agrupado pedido para mobile específicamente. */
   .appointment-form {
-    grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 12px 10px;
+  }
+
+  .appointment-field-session-number {
+    order: 1;
+  }
+
+  .appointment-field-duracion {
+    order: 2;
+  }
+
+  .appointment-field-monto {
+    order: 3;
+  }
+
+  .appointment-field-estado {
+    order: 4;
   }
 
   .modal-header-icon {
@@ -6230,6 +6421,34 @@ select:disabled {
     gap: 16px;
   }
 
+  .modal-header-subtitle {
+    display: none;
+  }
+
+  /* "Exportar plan de sesiones", tanto en la tab Turnos como (si algún día
+     se usa suelto) fuera de un toolbar con más botones — ancho completo y
+     centrado, mismo criterio que el resto de los botones primarios mobile. */
+  .turnos-tab-export-button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .evolution-form-close {
+    display: block;
+  }
+
+  /* El título quedaba pegado al borde superior de la card — un poco más de
+     aire arriba, sin exagerar. */
+  .evolution-form {
+    padding-top: 22px;
+  }
+
+  .evolucion-images-upload-button {
+    width: 100%;
+    justify-content: center;
+  }
+
   /* Layout 70/30 apilado en mobile: una sola columna, sin sticky/scroll
      interno (todo scrollea con la página, más previsible en touch). */
   .patient-detail-layout {
@@ -6240,6 +6459,12 @@ select:disabled {
     position: static;
     max-height: none;
     overflow-y: visible;
+    /* Perfil + alertas clínicas primero: es la información que el
+       kinesiólogo quiere ver antes que el contenido de la tab activa. Puro
+       reorder visual (CSS Grid respeta `order` igual que flexbox) — el DOM
+       no cambia, así que el foco/lectura de pantalla siguen el orden lógico
+       de siempre. */
+    order: -1;
   }
 
   .patient-detail-main {
@@ -6259,10 +6484,8 @@ select:disabled {
     padding: 18px;
   }
 
-  /* Tabs clínicas en filas de a dos (el wrap en sí ya es la base, ver .clinical-tabs-list). */
-  .clinical-tab {
-    flex: 1 1 calc(50% - 4px);
-    justify-content: center;
+  .mobile-tab-menu-bar {
+    display: flex;
   }
 
   /* Tablas como lista de cards en vez de scroll horizontal: cada <tr> pasa a
@@ -6405,6 +6628,10 @@ select:disabled {
     justify-content: flex-end;
   }
 
+  /* Colapsada, la card mobile muestra el Resumen recortado a 2 líneas (no
+     una sola línea truncada con "…", ni el texto completo de antes — ver
+     EvolutionTable.tsx) — el contenido completo recién aparece al expandir
+     (accordion, una card abierta a la vez). */
   .evolution-table .evolution-resumen-cell {
     max-width: none;
     overflow: visible;
@@ -6414,8 +6641,12 @@ select:disabled {
   }
 
   .evolution-table .evolution-resumen-cell span {
+    display: -webkit-box;
     min-width: 0;
     flex: 1 1 auto;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 
   /* Nombre de diagnóstico largo: nunca fuerza scroll horizontal de la card. */
@@ -6483,35 +6714,37 @@ select:disabled {
     flex-wrap: wrap;
   }
 
-  /* Ver por fecha/diagnóstico + Filtro + Ver diagnósticos: copy compacto
-     (.label-compact, ver arriba), Filtro icon-only, y menos padding/gap para
-     que entren en una sola fila a los anchos probados (390/414/430px). "Por
-     diagnóstico"/"Ver diagnósticos" son más largos que el "grupo" original;
-     se permite wrap como salvavidas en vez de forzar una fila y desbordar. */
+  /* Ver por fecha/diagnóstico + Filtro + Ver diagnósticos, siempre en una
+     sola línea (nunca wrap): copy compacto (.label-compact) en el
+     segmentado, "Filtro" y "Ver diagnósticos" icon-only (.label-full
+     oculto, mismo criterio para los dos) — a los anchos probados
+     (360/390/414/430px) entran sin desbordar ni ocultar ninguna acción. */
   .evolutions-toolbar {
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-wrap: nowrap;
+    gap: 6px;
   }
 
   .evolutions-toolbar-actions {
     gap: 6px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+  }
+
+  .evolutions-toolbar .antecedentes-categorias {
+    min-width: 0;
+    flex-shrink: 1;
   }
 
   .evolutions-toolbar .antecedentes-categoria-button {
-    padding: 8px 10px;
+    padding: 8px 8px;
     font-size: 11px;
     white-space: nowrap;
   }
 
-  .evolutions-toolbar-actions .filter-button {
-    padding: 8px 10px;
-  }
-
+  .evolutions-toolbar-actions .filter-button,
   .evolutions-toolbar-actions .secondary-button {
-    padding: 8px 10px;
-    font-size: 11px;
-    white-space: nowrap;
+    padding: 8px;
+    flex-shrink: 0;
   }
 
   /* Acciones rápidas de "Editar turno" (Marcar en espera/ausente/Cancelar/...)
@@ -6785,6 +7018,29 @@ select:disabled {
     animation: sheet-slide-up 0.25s ease;
   }
 
+  /* Menú de acciones de un turno (tap corto en Día/Semana mobile): mismo
+     tratamiento de bottom sheet que los modales de arriba — position fija
+     abajo, ancho completo, esquinas superiores redondeadas — en vez del
+     popover anclado al click que usa desktop. El componente no manda
+     top/left inline en mobile (ver App.tsx) para no competir con esto. */
+  .turno-action-menu {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-radius: 20px 20px 0 0;
+    animation: sheet-slide-up 0.25s ease;
+  }
+
+  .turno-action-menu .context-menu-item {
+    padding: 14px 16px;
+    font-size: 15px;
+  }
+
   .sheet-drag-handle {
     display: block;
     width: 36px;
@@ -6991,4 +7247,45 @@ select:disabled {
   .patient-detail-back-label {
     display: none;
   }
+}
+
+/* =========================================================
+   18. VALIDACIÓN VISUAL DE CAMPOS OBLIGATORIOS (Turno/Paciente)
+   Al final del archivo a propósito: incluye selectores con la misma
+   especificidad que varios resets de input ya existentes más arriba
+   (`.modal-body input:not([type="checkbox"])`, `.dropdown-input-row
+   input`, etc.) — a especificidad empatada gana el que se declaró después,
+   mismo criterio que ya usa el resto de este archivo (ver "Doble borde" en
+   docs/modules/appointments.md), nunca `!important`.
+   ========================================================= */
+
+/* Campo obligatorio faltante al intentar Guardar — borde rojo + una
+   sacudida breve para llamar la atención, nunca un mensaje largo debajo de
+   cada campo. Se aplica al wrapper (`<label>` o, en combobox custom,
+   `.dropdown-field`), nunca directo al `<input>` — así el borde rojo
+   alcanza también al ícono/chevron/contenedor del campo, no solo al
+   recuadro de texto. Se limpia al corregir el campo (ver los componentes
+   que usan esta clase: FormFields.tsx, PatientFormModal.tsx). */
+.field-invalid input:not([type="checkbox"]),
+.field-invalid select,
+.field-invalid .dropdown-input-row {
+  border-color: var(--color-danger);
+}
+
+.field-invalid {
+  animation: field-shake 0.35s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field-invalid {
+    animation: none;
+  }
+}
+
+@keyframes field-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
 }

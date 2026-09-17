@@ -22,7 +22,6 @@ export default function PlantillasListModal({ plantillas, onClose, onAplicar, on
           <div className="modal-header-title">
             <div>
               <h3>Plantillas de evolución</h3>
-              <p>Contenido reutilizable para cargar evoluciones más rápido.</p>
             </div>
           </div>
           <button type="button" className="close-button" aria-label="Cerrar" onClick={onClose}>&times;</button>

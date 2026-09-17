@@ -72,6 +72,7 @@ const ALL_STATUSES: TurnoStatus[] = [
   'Finalizado',
   'Ausente',
   'Cancelado',
+  'Reprogramado',
 ]
 
 const EMPTY_FILTERS: TableFilters = {

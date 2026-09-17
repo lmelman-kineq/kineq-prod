@@ -156,15 +156,7 @@ export default function EvolutionTable({
             const isExpanded = expandedId === evolucion.id
             const isEditing = editingId === evolucion.id
             const wasEdited = new Date(evolucion.updatedAt).getTime() !== new Date(evolucion.createdAt).getTime()
-            const hasImagenes = Boolean(evolucion.imagenes?.length)
-            // En mobile la card colapsada ya muestra el Resumen completo y el
-            // Diagnóstico (sin truncar, ver @media 820px) — `EvolucionContent`
-            // repetiría exactamente ese mismo texto en un bloque angosto
-            // debajo, duplicando contenido (bug real reportado). Al expandir
-            // en mobile sin estar editando, solo agrega lo que la card
-            // colapsada no muestra (Archivos); si no hay archivos, no hay
-            // nada nuevo que mostrar y no se renderiza la fila expandida.
-            const showExpandedRow = isExpanded && (isEditing || !isMobile || hasImagenes)
+            const showExpandedRow = isExpanded
 
             return (
               <Fragment key={evolucion.id}>
@@ -274,12 +266,13 @@ export default function EvolutionTable({
                             </div>
                           </div>
                         ) : isMobile ? (
-                          hasImagenes ? (
-                            <div className="evolution-item-diagnostico">
-                              <span className="details-label">Archivos</span>
-                              <EvolucionImages items={evolucion.imagenes!.map((img) => ({ key: String(img.id), url: img.url, name: img.nombreOriginal }))} />
-                            </div>
-                          ) : null
+                          // Colapsada, la card mobile trunca el Resumen (ver
+                          // .evolution-resumen-cell en @media 820px) y ya
+                          // muestra el Diagnóstico en su propia columna — al
+                          // expandir se pide el contenido completo (texto
+                          // sin truncar + Archivos), sin repetir el chip de
+                          // Diagnóstico que ya se ve arriba en la card.
+                          <EvolucionContent evolucion={evolucion} showDiagnostico={false} />
                         ) : (
                           <EvolucionContent evolucion={evolucion} />
                         )}

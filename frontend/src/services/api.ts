@@ -271,8 +271,10 @@ export function deleteUsuarioFoto(): Promise<void> {
   return request('/api/usuarios/me/foto', { method: 'DELETE' })
 }
 
-export function getPacientes(): Promise<Paciente[]> {
-  return request('/api/pacientes')
+// `incluirInactivos` solo tiene efecto para un usuario ADMINISTRADOR (lo
+// vuelve a validar el propio backend) — mismo patrón que getProfesionales.
+export function getPacientes(incluirInactivos = false): Promise<Paciente[]> {
+  return request(`/api/pacientes${incluirInactivos ? '?estado=todos' : ''}`)
 }
 
 export function uploadPacienteFoto(pacienteId: number, file: File): Promise<{ fotoUrl: string }> {

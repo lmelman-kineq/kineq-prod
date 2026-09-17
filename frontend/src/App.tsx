@@ -14,6 +14,7 @@ import TurnoFormFields, {
   type SpecialtyOption,
   type TurnoFormValue,
   type TurnoStatus,
+  type DropdownName,
 } from './components/FormFields'
 import TurnosPage, { type TurnosPageItem } from './components/TurnosPage'
 import PatientsPage from './components/PatientsPage'
@@ -403,7 +404,13 @@ function WeekView({
                 type="button"
                 className={`turno-card turno-card--narrow ${turno.id === selectedTurnoId ? 'selected' : ''} short-turno`}
                 style={{ top: `${top}px`, height: `${renderedHeight}px`, left, width, backgroundColor: bgColor }}
-                onClick={(event) => { event.stopPropagation(); onSelectTurno(turno) }}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  // Mismo criterio que Día: en mobile el tap abre primero el
+                  // menú de acciones, no directo "Editar Turno".
+                  if (isMobile) onContextMenuTurno(turno, event.clientX, event.clientY)
+                  else onSelectTurno(turno)
+                }}
                 onContextMenu={(event) => {
                   event.preventDefault()
                   event.stopPropagation()
@@ -621,6 +628,18 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
+// Mismos 3 campos que ya validan los guards mudos de saveNewTurno/
+// saveEditedTurno* — esto solo decide cuáles resaltar en rojo, nunca agrega
+// una regla de obligatoriedad nueva. `professional` nunca se resalta si el
+// campo está oculto (PROFESIONAL, que se autoasigna del lado del backend).
+function computeTurnoInvalidFields(value: TurnoFormValue, hideProfessionalField: boolean): Set<DropdownName> {
+  const invalid = new Set<DropdownName>()
+  if (!value.patientId) invalid.add('patient')
+  if (!hideProfessionalField && !value.professionalId) invalid.add('professional')
+  if (value.specialtyId === 0) invalid.add('specialty')
+  return invalid
+}
+
 function mapUiStatusToApi(status: TurnoStatus): EstadoTurno {
   const statusMap: Record<TurnoStatus, EstadoTurno> = {
     Asignado: 'ASIGNADO',
@@ -629,6 +648,7 @@ function mapUiStatusToApi(status: TurnoStatus): EstadoTurno {
     Finalizado: 'FINALIZADO',
     Ausente: 'AUSENTE',
     Cancelado: 'CANCELADO',
+    Reprogramado: 'REPROGRAMADO',
   }
 
   return statusMap[status]
@@ -751,6 +771,13 @@ function Dashboard() {
   })
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [showNewTurno, setShowNewTurno] = useState(false)
+  // Validación visual de campos obligatorios (Paciente/Profesional/
+  // Especialidad): `true` recién después de un intento de Guardar fallido —
+  // `invalidFields` se recalcula en cada render a partir del form actual
+  // (ver computeTurnoInvalidFields), así que se limpia solo al completar
+  // el campo, sin ningún efecto/listener extra.
+  const [newTurnoSubmitAttempted, setNewTurnoSubmitAttempted] = useState(false)
+  const [editingTurnoSubmitAttempted, setEditingTurnoSubmitAttempted] = useState(false)
   // Placeholder visual del turno que se está por crear al clickear una
   // franja vacía del calendario diario. Puramente de frontend: no se
   // persiste, no afecta filtros ni contadores, y sigue la misma fecha/hora/
@@ -846,6 +873,12 @@ function Dashboard() {
     duration: number
   } | null>(null)
   const isDraggingRef = useRef(false)
+  // Long-press drag mobile (ver onTouchDragStart más abajo): timer del
+  // long-press en curso, y qué turno tiene el drag armado (para el feedback
+  // visual — necesita ser state, no ref, porque tiene que disparar
+  // re-render de la className del bloque).
+  const longPressTimerRef = useRef<number | null>(null)
+  const [dragActiveTurnoId, setDragActiveTurnoId] = useState<number | null>(null)
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -1268,9 +1301,130 @@ function Dashboard() {
     document.addEventListener('mouseup', onUp)
   }
 
+  // Drag táctil (mobile, vista Día únicamente — Semana no tiene drag ni en
+  // desktop, ver diagnóstico). Mismo cálculo de horario/persistencia que
+  // `onDragStart`, pero gateado por un long-press explícito en vez de
+  // arrancar en el primer touch:
+  // - Mientras se espera el long-press, cualquier movimiento por encima de
+  //   `LONG_PRESS_MOVE_CANCEL_PX` cancela el timer sin llamar
+  //   `preventDefault()` en ningún momento — el scroll nativo de la página
+  //   sigue funcionando exactamente igual que si no hubiera ningún handler.
+  // - Recién cuando el long-press dispara (sin haberse movido antes) se arma
+  //   el drag; a partir de ahí, y solo ahí, `touchmove` hace
+  //   `preventDefault()` para mover el turno en vez de scrollear.
+  // - Un long-press que se suelta sin mover no persiste nada (mismo guard
+  //   que ya usaba `onUp`) y el tap corto sintético que dispara el browser
+  //   después cae en el mismo `onClick` de siempre (abre el menú de
+  //   acciones en mobile).
+  const LONG_PRESS_MS = 450
+  const LONG_PRESS_MOVE_CANCEL_PX = 10
+  const DRAG_MOVE_THRESHOLD_PX = 6
+
+  const onTouchDragStart = (event: React.TouchEvent, turnoId: number, top: number, duration: number) => {
+    const touch = event.touches[0]
+    if (!touch) return
+    const startX = touch.clientX
+    const startY = touch.clientY
+
+    const armDrag = () => {
+      longPressTimerRef.current = null
+      const turno = turnosState.find((item) => item.id === turnoId)
+      if (!turno) return
+      setDragActiveTurnoId(turnoId)
+      draggingRef.current = {
+        id: turnoId,
+        startY,
+        startTop: top,
+        originalTime: turno.time,
+        currentTime: turno.time,
+        duration,
+      }
+      isDraggingRef.current = false
+      if (typeof navigator.vibrate === 'function') navigator.vibrate(15)
+    }
+
+    longPressTimerRef.current = window.setTimeout(armDrag, LONG_PRESS_MS)
+
+    const onMove = (moveEvent: TouchEvent) => {
+      const currentTouch = moveEvent.touches[0]
+      if (!currentTouch) return
+
+      if (!draggingRef.current) {
+        // Todavía esperando el long-press: un movimiento acá es un scroll
+        // normal, no un intento de drag — se cancela el timer sin tocar el
+        // gesto nativo.
+        const dx = Math.abs(currentTouch.clientX - startX)
+        const dy = Math.abs(currentTouch.clientY - startY)
+        if ((dx > LONG_PRESS_MOVE_CANCEL_PX || dy > LONG_PRESS_MOVE_CANCEL_PX) && longPressTimerRef.current) {
+          window.clearTimeout(longPressTimerRef.current)
+          longPressTimerRef.current = null
+        }
+        return
+      }
+
+      moveEvent.preventDefault()
+      const dragging = draggingRef.current
+      const deltaY = currentTouch.clientY - dragging.startY
+      if (Math.abs(deltaY) > DRAG_MOVE_THRESHOLD_PX) isDraggingRef.current = true
+
+      const newTop = Math.max(0, Math.min(CALENDAR_TOTAL_MINUTES - dragging.duration, dragging.startTop + deltaY))
+      const minutesFromEight = Math.round(newTop / 5) * 5
+      const hour = CALENDAR_START_HOUR + Math.floor(minutesFromEight / 60)
+      const minute = minutesFromEight % 60
+      const newTime = `${pad(hour)}:${pad(minute)}`
+
+      dragging.currentTime = newTime
+      setTurnosState((currentTurnos) =>
+        currentTurnos.map((item) => (item.id === dragging.id ? { ...item, time: newTime } : item)),
+      )
+    }
+
+    const onEnd = async () => {
+      if (longPressTimerRef.current) {
+        window.clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+      document.removeEventListener('touchmove', onMove)
+      document.removeEventListener('touchend', onEnd)
+      document.removeEventListener('touchcancel', onEnd)
+      setDragActiveTurnoId(null)
+
+      const dragging = draggingRef.current
+      draggingRef.current = null
+      if (!dragging || dragging.currentTime === dragging.originalTime) return
+
+      const currentTurno = turnosState.find((item) => item.id === dragging.id)
+      const date = currentTurno?.date ?? selectedDate
+
+      try {
+        const updated = await api.patchTurno(dragging.id, {
+          date,
+          time: dragging.currentTime,
+        })
+        const mapped = mapApiTurnoToUi(updated)
+        setTurnosState((currentTurnos) =>
+          currentTurnos.map((item) => (item.id === mapped.id ? mapped : item)),
+        )
+        setTurnosPageRefreshKey((key) => key + 1)
+      } catch (error) {
+        setTurnosState((currentTurnos) =>
+          currentTurnos.map((item) =>
+            item.id === dragging.id ? { ...item, time: dragging.originalTime } : item,
+          ),
+        )
+        setLoadError(getErrorMessage(error, 'No se pudo guardar el nuevo horario del turno.'))
+      }
+    }
+
+    document.addEventListener('touchmove', onMove, { passive: false })
+    document.addEventListener('touchend', onEnd)
+    document.addEventListener('touchcancel', onEnd)
+  }
+
   const openNewTurnoModal = (prefillDate?: string, prefillTime?: string, prefillPatientId?: number) => {
     setShowNewTurno(true)
     setNewTurnoExpanded(false)
+    setNewTurnoSubmitAttempted(false)
     setNewTurnoForm({
       date: prefillDate ?? (activePage === 'turnos' ? formatDate(new Date()) : selectedDate),
       time: prefillTime ?? '09:00',
@@ -1496,7 +1650,10 @@ function Dashboard() {
 
   const saveNewTurno = async () => {
     if (savingTurnoRef.current) return
-    if (!newTurnoForm.patientId || !newTurnoForm.professionalId || newTurnoForm.specialtyId === 0) return
+    if (!newTurnoForm.patientId || !newTurnoForm.professionalId || newTurnoForm.specialtyId === 0) {
+      setNewTurnoSubmitAttempted(true)
+      return
+    }
 
     if (newTurnoForm.recurrenceFrequency !== 'none') {
       await saveNewTurnoSerie(false)
@@ -1539,6 +1696,7 @@ function Dashboard() {
   setEditingTurnoSerieId(turno.serieId ?? null)
   setIsEditingTurno(true)
   setShowViewTurno(true)
+  setEditingTurnoSubmitAttempted(false)
 }
 
   const closeTurnoDetails = () => {
@@ -1801,7 +1959,10 @@ function Dashboard() {
   const saveEditedTurnoSingle = async () => {
     if (savingTurnoRef.current) return
     if (editingTurnoId === null || !editingTurnoForm) return
-    if (!editingTurnoForm.patientId || !editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) return
+    if (!editingTurnoForm.patientId || !editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) {
+      setEditingTurnoSubmitAttempted(true)
+      return
+    }
 
     savingTurnoRef.current = true
     setSavingTurno(true)
@@ -1850,7 +2011,10 @@ function Dashboard() {
   const saveEditedTurnoSiguientes = async (confirmarSuperposicion: boolean) => {
     if (savingTurnoRef.current) return
     if (editingTurnoId === null || !editingTurnoForm) return
-    if (!editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) return
+    if (!editingTurnoForm.professionalId || editingTurnoForm.specialtyId === 0) {
+      setEditingTurnoSubmitAttempted(true)
+      return
+    }
 
     savingTurnoRef.current = true
     setSavingTurno(true)
@@ -2572,7 +2736,7 @@ function Dashboard() {
                     </div>
                     <div className="filter-group">
                       <strong>Estado</strong>
-                      {['Asignado', 'En Espera', 'Atendiendo', 'Finalizado', 'Ausente', 'Cancelado'].map((status) => (
+                      {['Asignado', 'En Espera', 'Atendiendo', 'Finalizado', 'Ausente', 'Cancelado', 'Reprogramado'].map((status) => (
                         <label key={status}>
                           <input
                             type="checkbox"
@@ -2681,7 +2845,7 @@ function Dashboard() {
                   <button
                     key={turno.id}
                     type="button"
-                    className={`turno-card ${turno.id === selectedTurnoId ? 'selected' : ''} ${turno.duration < 60 ? 'short-turno' : ''} ${columns > 1 ? 'turno-card--narrow' : ''}`}
+                    className={`turno-card ${turno.id === selectedTurnoId ? 'selected' : ''} ${turno.duration < 60 ? 'short-turno' : ''} ${columns > 1 ? 'turno-card--narrow' : ''} ${dragActiveTurnoId === turno.id ? 'turno-card--drag-active' : ''}`}
                     style={{
                       top: `${top}px`,
                       height: `${renderedHeight}px`,
@@ -2691,6 +2855,7 @@ function Dashboard() {
                       alignItems: 'flex-start'
                     }}
                     onMouseDown={(e) => onDragStart(e, turno.id, top, turno.duration)}
+                    onTouchStart={(e) => onTouchDragStart(e, turno.id, top, turno.duration)}
                     onClick={(e) => {
                       if (e.button !== 0) return
                       if (isDraggingRef.current) {
@@ -2699,7 +2864,22 @@ function Dashboard() {
                         return
                       }
                       setSelectedTurnoId(turno.id)
-                      openTurnoDetails(turno)
+                      if (isMobile) {
+                        // Tap corto en mobile: abre primero el menú de
+                        // acciones (mismo contenido que el click derecho de
+                        // escritorio) — Editar Turno queda una opción más
+                        // ahí adentro, en vez de abrirse directo.
+                        const actions = getTurnoQuickActions(turno)
+                        const menuWidth = 190
+                        const menuHeight = (actions.length + 2) * 40 + 12
+                        setContextMenu({
+                          turnoId: turno.id,
+                          x: Math.max(8, window.innerWidth - menuWidth - 8),
+                          y: Math.max(8, window.innerHeight - menuHeight - 8),
+                        })
+                      } else {
+                        openTurnoDetails(turno)
+                      }
                     }}
                     onContextMenu={(e) => {
                       // El menú nativo del navegador nunca debe aparecer sobre un turno,
@@ -2854,6 +3034,7 @@ function Dashboard() {
             patientSocialWorkById={patientSocialWorkById}
             refreshKey={turnosPageRefreshKey}
             onBack={closeAttentionScreen}
+            onNewTurno={(patientId) => openNewTurnoModal(undefined, undefined, patientId)}
             onEditTurno={(turno) => openTurnoDetails(mapApiTurnoToUi(turno))}
             onRequestConfirm={setConfirmDialog}
             activeTurno={attentionTurno}
@@ -2918,6 +3099,7 @@ function Dashboard() {
                 hideProfessionalField={user?.rol === 'PROFESIONAL'}
                 compact={!newTurnoIsFull}
                 allowRecurrence={isMobile || !newTurnoExpanded}
+                invalidFields={newTurnoSubmitAttempted ? computeTurnoInvalidFields(newTurnoForm, user?.rol === 'PROFESIONAL') : undefined}
               />
 
               {user?.rol === 'PROFESIONAL' && !profesionalVinculadoActivo ? (
@@ -2963,7 +3145,7 @@ function Dashboard() {
                   </span>
                   <div>
                     <h3>Editar turno</h3>
-                    <p>{isEditingTurno ? 'Modificá los datos del turno.' : 'Revisá los datos del turno.'}</p>
+                    <p className="modal-header-subtitle">{isEditingTurno ? 'Modificá los datos del turno.' : 'Revisá los datos del turno.'}</p>
                   </div>
                 </div>
 
@@ -3060,6 +3242,7 @@ function Dashboard() {
                 onCreateGrupo={canSeeDiagnostico ? createDiagnosticoInlineParaTurno : undefined}
                 onFetchProximaSesion={fetchProximaSesion}
                 hideProfessionalField={user?.rol === 'PROFESIONAL'}
+                invalidFields={editingTurnoSubmitAttempted && editingTurnoForm ? computeTurnoInvalidFields(editingTurnoForm, user?.rol === 'PROFESIONAL') : undefined}
               />
 
               <div className="modal-actions">
@@ -3124,9 +3307,13 @@ function Dashboard() {
 
           return (
             <div
-              className="context-menu"
+              className="context-menu turno-action-menu"
               ref={contextMenuRef}
-              style={{ top: contextMenu.y, left: contextMenu.x }}
+              // En mobile es un bottom sheet posicionado por CSS (ver
+              // `.turno-action-menu` en el breakpoint móvil) — sin estilo
+              // inline, que ganaría por especificidad y lo dejaría flotando
+              // en el punto del tap en vez de anclado abajo.
+              style={isMobile ? undefined : { top: contextMenu.y, left: contextMenu.x }}
             >
               {menuTurno ? (
                 <button

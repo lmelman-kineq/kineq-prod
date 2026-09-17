@@ -21,6 +21,11 @@ enum EstadoTurno {
   FINALIZADO
   AUSENTE
   CANCELADO
+  // Estado manual: el usuario lo elige a mano desde "Editar turno". Nunca se
+  // asigna automáticamente (drag & drop, edición de fecha/hora, etc.) — ver
+  // docs/modules/appointments.md, "Reprogramación" queda como decisión de
+  // producto pendiente.
+  REPROGRAMADO
 }
 
 // Patrón de una SerieTurno: SEMANAL usa frecuenciaSemanas (cada cuántas

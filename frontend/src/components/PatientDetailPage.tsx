@@ -25,9 +25,7 @@ import { groupEvolucionesByGrupo } from '../utils/groupEvolucionesByGrupo'
 import { SPECIALTY_COLOR_TOKENS } from '../utils/specialtyColors'
 import type { ClinicalNavRequest, ClinicalNavTarget } from '../utils/clinicalNavTarget'
 import { patientFullName } from '../utils/patient'
-import { todayInTimeZone } from '../utils/timezone'
-import { selectUpcomingSesiones, buildSesionesPlanDocument, buildSesionesPlanFilename } from '../utils/sesionesPlan'
-import { renderSesionesPlanPdf } from '../utils/sesionesPlanPdf'
+import ExportSesionesPlanModal from './ExportSesionesPlanModal'
 
 type PatientDetailPageProps = {
   patientId: number
@@ -81,8 +79,10 @@ export default function PatientDetailPage({
   const [deleting, setDeleting] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
 
-  const [exportingPlan, setExportingPlan] = useState(false)
-  const [exportPlanFeedback, setExportPlanFeedback] = useState<{ type: 'info' | 'error'; message: string } | null>(null)
+  // Modal de filtros de "Exportar plan de sesiones" (ver ExportSesionesPlanModal)
+  // — reusado tal cual desde la tab Turnos y desde el menú "…" del header.
+  const [exportPlanOpen, setExportPlanOpen] = useState(false)
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
 
   const [showNewEvolucionForm, setShowNewEvolucionForm] = useState(false)
   const [newEvolucionText, setNewEvolucionText] = useState('')
@@ -118,6 +118,7 @@ export default function PatientDetailPage({
   const [filtroGrupo, setFiltroGrupo] = useState<'todos' | 'sin-grupo' | number>('todos')
   const [grupoFilterOpen, setGrupoFilterOpen] = useState(false)
   const grupoFilterRef = useRef<HTMLDivElement | null>(null)
+  const headerMenuRef = useRef<HTMLDivElement | null>(null)
 
   // Deep-link "click en alerta clínica → ir al campo de origen" (ver
   // utils/clinicalNavTarget.ts). `token` fuerza a los efectos que lo
@@ -180,6 +181,15 @@ export default function PatientDetailPage({
     document.addEventListener('mousedown', closeOnOutsideClick)
     return () => document.removeEventListener('mousedown', closeOnOutsideClick)
   }, [grupoFilterOpen])
+
+  useEffect(() => {
+    if (!headerMenuOpen) return
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (headerMenuRef.current && !headerMenuRef.current.contains(event.target as Node)) setHeaderMenuOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
+  }, [headerMenuOpen])
 
   // Única lógica de borrado de grupo — la usan tanto GestionarGruposModal
   // (tachito en la lista) como GrupoEvolucionModal (tachito del modal de
@@ -535,62 +545,35 @@ export default function PatientDetailPage({
     )
   }
 
-  const deletePatient = async () => {
+  // Único mecanismo real de baja del modelo actual (`Paciente.activo`, sin
+  // `deletedAt` propio — a diferencia de Turno/Profesional). Cascada ya
+  // existente en el backend: cancela turnos futuros no terminales y bloquea
+  // contenido clínico nuevo mientras esté inactivo (ver docs/modules/patients.md).
+  // "Eliminar paciente" (ocultarlo del listado pero conservarlo, distinto de
+  // esto) queda pendiente — ver informe final para el cambio de modelo que
+  // requeriría (`Paciente.deletedAt`, mismo patrón que `Profesional.deletedAt`).
+  const markPatientInactive = async () => {
     setDeleting(true)
     try {
-      await api.patchPaciente(patient.id, { activo: false })
-      onBack()
-    } catch (deleteError) {
-      setError(getErrorMessage(deleteError, 'No se pudo eliminar el paciente.'))
+      const updated = await api.patchPaciente(patient.id, { activo: false })
+      setPatient(updated)
+      setHeaderMenuOpen(false)
+    } catch (updateError) {
+      setError(getErrorMessage(updateError, 'No se pudo marcar el paciente como inactivo.'))
+    } finally {
       setDeleting(false)
     }
   }
 
-  const requestDeletePatient = () => {
+  const requestMarkPatientInactive = () => {
     onRequestConfirm({
-      title: 'Eliminar paciente',
-      description: 'El paciente dejará de aparecer en la operación diaria. Sus turnos futuros se cancelarán y su historial clínico se conservará.',
-      confirmLabel: 'Eliminar paciente',
+      title: 'Marcar paciente como inactivo',
+      description: 'El paciente pasa a estar inactivo: sus turnos futuros se cancelan automáticamente y no va a poder recibir turnos ni contenido clínico nuevo hasta reactivarlo (desde "Editar paciente"). Su historial se conserva sin cambios.',
+      confirmLabel: 'Marcar inactivo',
       cancelLabel: 'Cancelar',
       destructive: true,
-      onConfirm: () => { void deletePatient() },
+      onConfirm: () => { void markPatientInactive() },
     })
-  }
-
-  // "Exportar plan de sesiones" — íntegramente en el cliente: `turnos` ya es
-  // la lista completa (no cancelada) del paciente, ya scopeada por
-  // consultorio del lado del servidor (GET /api/turnos?pacienteId=...), así
-  // que no hace falta ningún endpoint ni validación nueva — nunca se accede
-  // a datos que esta pantalla no tuviera ya cargados legítimamente. Un solo
-  // dato adicional (nombre del consultorio) se pide on-demand, recién al
-  // exportar, para no sumar un fetch más a la carga inicial del paciente.
-  const exportSesionesPlan = async () => {
-    if (!patient || exportingPlan) return
-    setExportPlanFeedback(null)
-
-    const timeZone = api.getConsultorioTimeZone()
-    const upcoming = selectUpcomingSesiones(turnos, new Date().toISOString())
-    if (upcoming.length === 0) {
-      setExportPlanFeedback({ type: 'info', message: 'Este paciente no tiene próximas sesiones programadas.' })
-      return
-    }
-
-    setExportingPlan(true)
-    try {
-      const consultorio = await api.getConsultorio()
-      const documento = buildSesionesPlanDocument({
-        patientName: patientFullName(patient),
-        consultorioName: consultorio.nombre,
-        sesiones: upcoming,
-        timeZone,
-      })
-      const pdf = renderSesionesPlanPdf(documento)
-      pdf.save(buildSesionesPlanFilename(patientFullName(patient), todayInTimeZone(timeZone)))
-    } catch (exportError) {
-      setExportPlanFeedback({ type: 'error', message: getErrorMessage(exportError, 'No pudimos generar el plan de sesiones.') })
-    } finally {
-      setExportingPlan(false)
-    }
   }
 
   const sortedEvoluciones = [...evoluciones].sort(
@@ -663,7 +646,18 @@ export default function PatientDetailPage({
             </button>
           ) : (
             <div className="evolution-form">
-              <label htmlFor="nueva-evolucion">Nueva evolución</label>
+              <div className="evolution-form-header">
+                <label htmlFor="nueva-evolucion">Nueva evolución</label>
+                <button
+                  type="button"
+                  className="close-button evolution-form-close"
+                  aria-label="Cancelar carga de evolución"
+                  onClick={cancelNewEvolucionForm}
+                  disabled={savingEvolucion}
+                >
+                  &times;
+                </button>
+              </div>
               <RichTextEditor
                 id="nueva-evolucion"
                 html={newEvolucionHtml}
@@ -793,7 +787,15 @@ export default function PatientDetailPage({
               ) : null}
             </div>
             {canWriteClinical ? (
-              <button type="button" className="secondary-button" onClick={() => setGestionarGruposOpen(true)}>Ver diagnósticos</button>
+              <button type="button" className="secondary-button" onClick={() => setGestionarGruposOpen(true)}>
+                <span className="label-full">Ver diagnósticos</span>
+                <span className="filter-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z" />
+                    <circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
+                  </svg>
+                </span>
+              </button>
             ) : null}
           </div>
         </div>
@@ -888,19 +890,9 @@ export default function PatientDetailPage({
     turnos: (
       <>
         <div className="turnos-tab-toolbar">
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => { void exportSesionesPlan() }}
-            disabled={exportingPlan}
-          >
-            {exportingPlan ? 'Generando...' : 'Exportar plan de sesiones'}
+          <button type="button" className="secondary-button turnos-tab-export-button" onClick={() => setExportPlanOpen(true)}>
+            Exportar plan de sesiones
           </button>
-          {exportPlanFeedback ? (
-            <p className={`turnos-export-feedback ${exportPlanFeedback.type === 'error' ? 'turnos-export-feedback--error' : ''}`}>
-              {exportPlanFeedback.message}
-            </p>
-          ) : null}
         </div>
         <PatientAppointmentsTable turnos={turnos} onEditTurno={onEditTurno} />
       </>
@@ -933,7 +925,7 @@ export default function PatientDetailPage({
               {finalizing ? 'Finalizando...' : 'Finalizar atención'}
             </button>
           ) : null}
-          {!activeTurno && onNewTurno ? (
+          {onNewTurno ? (
             <button type="button" className="new-turn-button new-turn-button--row" onClick={() => onNewTurno(patient.id)}>
               Nuevo turno
             </button>
@@ -952,21 +944,42 @@ export default function PatientDetailPage({
               </svg>
             </button>
           ) : null}
-          {canEditAdmin && !activeTurno ? (
-            <button
-              type="button"
-              className="icon-button--danger"
-              aria-label="Eliminar paciente"
-              title="Eliminar paciente"
-              disabled={deleting}
-              onClick={requestDeletePatient}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 7h16" />
-                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                <path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
-              </svg>
-            </button>
+          {canEditAdmin ? (
+            <div className="patient-header-menu-wrapper" ref={headerMenuRef}>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Más opciones"
+                title="Más opciones"
+                aria-expanded={headerMenuOpen}
+                onClick={() => setHeaderMenuOpen((current) => !current)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="5" r="1.6" />
+                  <circle cx="12" cy="12" r="1.6" />
+                  <circle cx="12" cy="19" r="1.6" />
+                </svg>
+              </button>
+              {headerMenuOpen ? (
+                <div className="context-menu patient-header-menu">
+                  <button
+                    type="button"
+                    className="context-menu-item"
+                    onClick={() => { setHeaderMenuOpen(false); setExportPlanOpen(true) }}
+                  >
+                    Exportar Plan de Sesiones
+                  </button>
+                  <button
+                    type="button"
+                    className="context-menu-item context-menu-item--danger"
+                    disabled={deleting}
+                    onClick={() => { setHeaderMenuOpen(false); requestMarkPatientInactive() }}
+                  >
+                    Marcar Inactivo
+                  </button>
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
@@ -979,7 +992,7 @@ export default function PatientDetailPage({
           visual, solo el botón "Finalizar atención" de arriba. */}
       <div className="patient-detail-layout">
         <div className="patient-detail-main patient-detail-card clinical-workspace">
-          <ClinicalTabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} panels={panels} />
+          <ClinicalTabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} panels={panels} mobileMenu />
         </div>
 
         <aside className="patient-detail-aside">
@@ -1017,6 +1030,14 @@ export default function PatientDetailPage({
             setPatient(updated)
             setEditPatientOpen(false)
           }}
+        />
+      ) : null}
+
+      {exportPlanOpen ? (
+        <ExportSesionesPlanModal
+          turnos={turnos}
+          patientName={patientFullName(patient)}
+          onClose={() => setExportPlanOpen(false)}
         />
       ) : null}
     </div>

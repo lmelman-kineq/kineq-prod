@@ -72,6 +72,7 @@ export type TurnoStatus =
   | 'Finalizado'
   | 'Ausente'
   | 'Cancelado'
+  | 'Reprogramado'
 
 export type TurnoFormValue = {
   date: string
@@ -117,7 +118,7 @@ export type NewProfessionalInput = {
   usuarioId?: number
 }
 
-type DropdownName = 'patient' | 'professional' | 'specialty'
+export type DropdownName = 'patient' | 'professional' | 'specialty'
 type DropdownPosition = { top: number; left: number; width: number } | null
 
 type Item = { id: number; displayName: string }
@@ -178,6 +179,11 @@ type TurnoFormFieldsProps = {
   // Selector de Repetición + Cantidad de sesiones: solo tiene sentido en la
   // creación de un turno nuevo (nunca al editar uno ya existente).
   allowRecurrence?: boolean
+  // Campos obligatorios (Paciente/Profesional/Especialidad) que quedaron sin
+  // completar en el último intento de Guardar — App.tsx la recalcula en
+  // cada render a partir del form actual, así que se limpia sola apenas el
+  // usuario completa el campo (nunca hay que "resetearla" a mano acá).
+  invalidFields?: Set<DropdownName>
 }
 
 function addMinutesToTimeOfDay(time: string, minutesToAdd: number): string {
@@ -201,6 +207,7 @@ const statusOptions: TurnoStatus[] = [
   'Finalizado',
   'Ausente',
   'Cancelado',
+  'Reprogramado',
 ]
 
 function pad(value: number) {
@@ -224,6 +231,7 @@ export function TurnoFormFields({
   hideProfessionalField = false,
   compact = false,
   allowRecurrence = false,
+  invalidFields,
 }: TurnoFormFieldsProps) {
   const [activeDropdown, setActiveDropdown] = useState<DropdownName | null>(null)
   const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition>(null)
@@ -273,6 +281,19 @@ export function TurnoFormFields({
     }),
     [],
   )
+
+  // Scroll/focus sin saltos agresivos al primer campo obligatorio faltante,
+  // una sola vez por intento fallido de Guardar (no en cada render — solo
+  // cuando `invalidFields` cambia de verdad, ej. de vacío a con contenido).
+  const invalidFieldsKey = invalidFields ? [...invalidFields].sort().join(',') : ''
+  useEffect(() => {
+    if (!invalidFieldsKey) return
+    const firstInvalid = invalidFieldsKey.split(',')[0] as DropdownName
+    const field = fieldRefs[firstInvalid]?.current
+    field?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    field?.querySelector('input')?.focus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invalidFieldsKey])
 
   useLayoutEffect(() => {
     if (!activeDropdown) return
@@ -589,13 +610,14 @@ export function TurnoFormFields({
         </div>
       ) : null}
 
-      <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''}`}>
+      <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''} ${invalidFields?.has('patient') ? 'field-invalid' : ''}`}>
         {compact ? <PersonFieldIcon className="quick-field-icon" aria-hidden="true" /> : null}
         <label className={compact ? 'sr-only' : undefined} htmlFor={patientInputId}>Paciente</label>
         <div className="dropdown-input-row" ref={patientFieldRef}>
           <input
             id={patientInputId}
             type="text"
+            aria-invalid={invalidFields?.has('patient') || undefined}
             value={activeDropdown === 'patient' ? patientSearch : (selectedPatient?.displayName ?? '')}
             placeholder="Buscar paciente..."
             onFocus={() => {
@@ -668,13 +690,14 @@ export function TurnoFormFields({
       ) : null}
 
       {hideProfessionalField ? null : (
-        <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''}`}>
+        <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''} ${invalidFields?.has('professional') ? 'field-invalid' : ''}`}>
           {compact ? <ProfessionalFieldIcon className="quick-field-icon" aria-hidden="true" /> : null}
           <label className={compact ? 'sr-only' : undefined} htmlFor={professionalInputId}>Profesional</label>
           <div className="dropdown-input-row" ref={professionalFieldRef}>
             <input
               id={professionalInputId}
               type="text"
+              aria-invalid={invalidFields?.has('professional') || undefined}
               value={activeDropdown === 'professional' ? professionalSearch : (selectedProfessional?.displayName ?? '')}
               placeholder="Buscar profesional..."
               onFocus={() => {
@@ -752,7 +775,7 @@ export function TurnoFormFields({
         </div>
       ) : null}
 
-      <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''}`}>
+      <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''} ${invalidFields?.has('specialty') ? 'field-invalid' : ''}`}>
         <label className={compact ? 'sr-only' : undefined} htmlFor={specialtyFieldLabelId}>Especialidad</label>
         <div
           className="dropdown-input-row"
@@ -760,6 +783,7 @@ export function TurnoFormFields({
           role="button"
           tabIndex={disabled ? -1 : 0}
           aria-disabled={disabled}
+          aria-invalid={invalidFields?.has('specialty') || undefined}
           onClick={() => openDropdown('specialty')}
           onKeyDown={(event) => {
             if (!disabled && (event.key === 'Enter' || event.key === ' ')) {
@@ -858,7 +882,7 @@ export function TurnoFormFields({
           </label>
 
           {!value.esSesionConsulta ? (
-            <label>
+            <label className="appointment-field-session-number">
               {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
               <input
                 type="number"
@@ -871,7 +895,7 @@ export function TurnoFormFields({
             </label>
           ) : null}
 
-          <label>
+          <label className="appointment-field-monto">
             Monto
             <div className="turno-monto-field">
               <span className="turno-monto-symbol" aria-hidden="true">$</span>
@@ -888,7 +912,7 @@ export function TurnoFormFields({
             </div>
           </label>
 
-          <label>
+          <label className="appointment-field-estado">
             Estado
             <select
               value={value.status}
@@ -901,7 +925,7 @@ export function TurnoFormFields({
             </select>
           </label>
 
-          <label>
+          <label className="appointment-field-duracion">
             Duración (min)
             <input
               type="number"

@@ -5,6 +5,11 @@ import { GrupoChip } from './EvolutionTable'
 
 type Props = {
   evolucion: Pick<Evolucion, 'contenido' | 'contenidoHtml' | 'imagenes' | 'grupo'>
+  // La card colapsada de EvolutionTable.tsx en mobile ya muestra el chip de
+  // Diagnóstico (columna propia) — al expandir ahí, se omite acá para no
+  // duplicarlo. Desktop (la fila normal no tiene esa columna visible al
+  // expandir) sigue mostrándolo, default `true`.
+  showDiagnostico?: boolean
 }
 
 // Vista de solo lectura del contenido completo de una evolución (detalle
@@ -15,10 +20,10 @@ type Props = {
 // anteriores a esta función) siguen mostrando texto plano, sin cambios.
 // Diagnóstico/Archivos solo se muestran si hay algo que mostrar — nunca un
 // bloque vacío.
-export default function EvolucionContent({ evolucion }: Props) {
+export default function EvolucionContent({ evolucion, showDiagnostico = true }: Props) {
   return (
     <>
-      {evolucion.grupo ? (
+      {showDiagnostico && evolucion.grupo ? (
         <div className="evolution-item-diagnostico">
           <span className="details-label">Diagnóstico</span>
           <GrupoChip grupo={evolucion.grupo} />

@@ -253,10 +253,17 @@ app.patch('/api/usuarios/:usuarioId', (0, auth_1.requireRole)(client_1.RolUsuari
 // PACIENTES
 // Lectura: todos los roles. Alta y edición administrativa: administrador y recepción.
 app.use('/api/pacientes/:pacienteId/foto', pacienteFotoRoutes_1.default);
+// `?estado=todos` (ADMINISTRADOR únicamente, mismo `filtroActivo()` que ya
+// usa Profesional) revela también los pacientes inactivos — para roles sin
+// ese permiso, o sin el query param, el listado sigue siendo solo activos
+// (comportamiento de siempre). "Inactivo" acá es reversible (Paciente.activo,
+// ver "Marcar Inactivo" en PatientDetailPage.tsx) — no confundir con una
+// eliminación: no hay ningún `deletedAt` de Paciente que oculte de forma
+// permanente (ver docs/modules/patients.md).
 app.get('/api/pacientes', async (req, res) => {
     const consultorioId = req.usuario.consultorioId;
     const pacientes = await prisma_1.default.paciente.findMany({
-        where: { consultorioId, activo: true },
+        where: { consultorioId, ...filtroActivo(req) },
         orderBy: [{ nombre: 'asc' }],
     });
     res.json(pacientes);

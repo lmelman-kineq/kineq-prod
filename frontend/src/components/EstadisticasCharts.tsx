@@ -25,6 +25,7 @@ const ESTADO_COLOR: Record<EstadoTurno, string> = {
   FINALIZADO: 'var(--color-success)',
   AUSENTE: 'var(--color-warning)',
   CANCELADO: 'var(--color-danger)',
+  REPROGRAMADO: 'var(--color-text-muted)',
 }
 
 function formatBucketLabel(fecha: string): string {

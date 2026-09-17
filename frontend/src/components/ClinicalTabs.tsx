@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
 import MobileSectionSelect from './MobileSectionSelect'
 
@@ -13,14 +13,68 @@ type ClinicalTabsProps = {
   activeKey: string
   onChange: (key: string) => void
   panels: Record<string, ReactNode>
-  // Reemplaza la fila de tabs por un `MobileSectionSelect` en mobile — opt-in
-  // (default `false`) para no afectar usos con pocas tabs cortas que ya
-  // entran bien (ej. Evoluciones/Ficha inicial/Turnos/Estudios del Paciente),
-  // y sí a los que la spec pidió compactar (Configuración, 5 tabs).
+  // Reemplaza la fila de tabs por un `MobileSectionSelect` (<select> nativo)
+  // en mobile — opt-in, usado por Configuración (5 tabs).
   mobileCollapse?: boolean
+  // Reemplaza la fila de tabs por una barra compacta "nombre de la sección
+  // actual + botón de menú" en mobile — opt-in, usado por el detalle de
+  // Paciente (Evoluciones/Ficha inicial/Estudios/Turnos): a diferencia de
+  // `mobileCollapse`, el nombre de la sección activa queda siempre visible
+  // como texto (no escondido dentro de un <select> cerrado).
+  mobileMenu?: boolean
 }
 
-export default function ClinicalTabs({ tabs, activeKey, onChange, panels, mobileCollapse = false }: ClinicalTabsProps) {
+function MobileTabMenuBar({ tabs, activeKey, onChange }: Pick<ClinicalTabsProps, 'tabs' | 'activeKey' | 'onChange'>) {
+  const [open, setOpen] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const activeTab = tabs.find((tab) => tab.key === activeKey) ?? tabs[0]
+
+  useEffect(() => {
+    if (!open) return
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
+  }, [open])
+
+  return (
+    <div className="mobile-tab-menu-bar" ref={wrapperRef}>
+      <span className="mobile-tab-menu-current">
+        {activeTab?.label}
+        {activeTab?.badge ? <span className="clinical-tab-badge">{activeTab.badge}</span> : null}
+      </span>
+      <button
+        type="button"
+        className="mobile-tab-menu-toggle"
+        aria-label="Cambiar de sección"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+      {open ? (
+        <div className="context-menu mobile-tab-menu-popover">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`context-menu-item ${tab.key === activeKey ? 'context-menu-item--primary' : ''}`}
+              onClick={() => { onChange(tab.key); setOpen(false) }}
+            >
+              {tab.label}
+              {tab.badge ? <span className="clinical-tab-badge">{tab.badge}</span> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+export default function ClinicalTabs({ tabs, activeKey, onChange, panels, mobileCollapse = false, mobileMenu = false }: ClinicalTabsProps) {
   const isMobile = useIsMobile()
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex: number | null = null
@@ -40,6 +94,8 @@ export default function ClinicalTabs({ tabs, activeKey, onChange, panels, mobile
     <div className="clinical-tabs">
       {mobileCollapse && isMobile ? (
         <MobileSectionSelect ariaLabel="Secciones clínicas del paciente" options={tabs} value={activeKey} onChange={onChange} />
+      ) : mobileMenu && isMobile ? (
+        <MobileTabMenuBar tabs={tabs} activeKey={activeKey} onChange={onChange} />
       ) : (
         <div className="clinical-tabs-list" role="tablist" aria-label="Secciones clínicas del paciente">
           {tabs.map((tab, index) => (

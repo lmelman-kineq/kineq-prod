@@ -16,7 +16,8 @@ exports.EstadoTurno = {
     ATENDIENDO: 'ATENDIENDO',
     FINALIZADO: 'FINALIZADO',
     AUSENTE: 'AUSENTE',
-    CANCELADO: 'CANCELADO'
+    CANCELADO: 'CANCELADO',
+    REPROGRAMADO: 'REPROGRAMADO'
 };
 exports.PatronRecurrenciaSerie = {
     SEMANAL: 'SEMANAL',

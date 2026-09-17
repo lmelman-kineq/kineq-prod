@@ -76,15 +76,21 @@ router.post('/login', async (req, res) => {
     // si el email existe, si la contraseña es incorrecta, o si el
     // usuario está inactivo.
     const invalidCredentials = () => res.status(401).json({ error: 'Email o contraseña incorrectos' });
-    const usuario = await prisma_1.default.usuario.findUnique({ where: { email: normalizedEmail } });
-    if (!usuario || !usuario.activo)
-        return invalidCredentials();
-    const valid = await (0, auth_1.verifyPassword)(password, usuario.passwordHash);
-    if (!valid)
-        return invalidCredentials();
-    const token = (0, auth_1.signSessionToken)(usuario.id);
-    (0, auth_1.setSessionCookie)(res, token);
-    res.json(toPublicUsuario(usuario));
+    try {
+        const usuario = await prisma_1.default.usuario.findUnique({ where: { email: normalizedEmail } });
+        if (!usuario || !usuario.activo)
+            return invalidCredentials();
+        const valid = await (0, auth_1.verifyPassword)(password, usuario.passwordHash);
+        if (!valid)
+            return invalidCredentials();
+        const token = (0, auth_1.signSessionToken)(usuario.id);
+        (0, auth_1.setSessionCookie)(res, token);
+        res.json(toPublicUsuario(usuario));
+    }
+    catch (err) {
+        console.error('failed to login', err);
+        res.status(500).json({ error: 'No se pudo iniciar sesión. Volvé a intentar.' });
+    }
 });
 router.post('/logout', (_req, res) => {
     (0, auth_1.clearSessionCookie)(res);

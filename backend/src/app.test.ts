@@ -2183,6 +2183,24 @@ describe('auth, roles y aislamiento por consultorio', () => {
       await prisma.turno.delete({ where: { id: turno.id } })
     })
 
+    it('REPROGRAMADO es un estado manual válido, sin transición automática y sin ser terminal', async () => {
+      const turno = await prisma.turno.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: profesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-08-01T19:00:00.000Z'), duracionMinutos: 60 },
+      })
+
+      const marcado = await request(app).patch(`/api/turnos/${turno.id}`).set('Cookie', cookies.adminA).send({ estado: 'REPROGRAMADO' })
+      expect(marcado.status).toBe(200)
+      expect(marcado.body.estado).toBe('REPROGRAMADO')
+
+      // No es un estado terminal: se puede seguir cambiando (ej. de vuelta a
+      // ASIGNADO), a diferencia de FINALIZADO/CANCELADO/AUSENTE.
+      const vueltaAAsignado = await request(app).patch(`/api/turnos/${turno.id}`).set('Cookie', cookies.adminA).send({ estado: 'ASIGNADO' })
+      expect(vueltaAAsignado.status).toBe(200)
+      expect(vueltaAAsignado.body.estado).toBe('ASIGNADO')
+
+      await prisma.turno.delete({ where: { id: turno.id } })
+    })
+
     it('un turno finalizado/cancelado/ausente sigue editable en campos que no son estado', async () => {
       for (const estado of ['FINALIZADO', 'CANCELADO', 'AUSENTE'] as const) {
         const turno = await prisma.turno.create({
@@ -3577,6 +3595,21 @@ describe('catálogo global/custom, paciente archivado y profesional inactivo/eli
       const res = await request(app).patch(`/api/pacientes/${pacienteId}`).set('Cookie', cookies.admin).send({ activo: true })
       expect(res.status).toBe(200)
       expect(res.body.activo).toBe(true)
+    })
+
+    it('"Marcar Inactivo" oculta el paciente del listado por default, y ?estado=todos lo revela solo para ADMINISTRADOR', async () => {
+      await request(app).patch(`/api/pacientes/${pacienteId}`).set('Cookie', cookies.admin).send({ activo: false })
+
+      const defaultList = await request(app).get('/api/pacientes').set('Cookie', cookies.admin)
+      expect(defaultList.body.map((p: any) => p.id)).not.toContain(pacienteId)
+
+      const todosComoAdmin = await request(app).get('/api/pacientes?estado=todos').set('Cookie', cookies.admin)
+      expect(todosComoAdmin.body.map((p: any) => p.id)).toContain(pacienteId)
+
+      const todosComoProfesional = await request(app).get('/api/pacientes?estado=todos').set('Cookie', cookies.profesionalVinculado)
+      expect(todosComoProfesional.body.map((p: any) => p.id)).not.toContain(pacienteId)
+
+      await request(app).patch(`/api/pacientes/${pacienteId}`).set('Cookie', cookies.admin).send({ activo: true })
     })
   })
 

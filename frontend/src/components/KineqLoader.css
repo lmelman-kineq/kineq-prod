@@ -77,15 +77,15 @@
 }
 
 .kineq-loader--small .kineq-loader__composition {
-  width: 36px;
+  width: 48px;
 }
 
 .kineq-loader--medium .kineq-loader__composition {
-  width: 64px;
+  width: 84px;
 }
 
 .kineq-loader--large .kineq-loader__composition {
-  width: 112px;
+  width: 144px;
 }
 
 @media (prefers-reduced-motion: no-preference) {

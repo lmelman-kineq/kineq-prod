@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as api from '../services/api'
 import type { ObraSocial, Paciente, PacienteInput } from '../types/domain'
 import { toDateInputValue } from '../utils/dateFormat'
@@ -52,6 +52,8 @@ export default function PatientFormModal({ patient, canEditObservaciones, onClos
   const [obrasSociales, setObrasSociales] = useState<ObraSocial[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [nombreInvalid, setNombreInvalid] = useState(false)
+  const nombreInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -63,11 +65,17 @@ export default function PatientFormModal({ patient, canEditObservaciones, onClos
     }
   }, [])
 
-  const update = (patch: Partial<FormState>) => setForm((current) => ({ ...current, ...patch }))
+  const update = (patch: Partial<FormState>) => {
+    if (nombreInvalid && patch.nombreCompleto?.trim()) setNombreInvalid(false)
+    setForm((current) => ({ ...current, ...patch }))
+  }
 
   const submit = async () => {
     if (!form.nombreCompleto.trim()) {
       setError('El nombre completo es obligatorio.')
+      setNombreInvalid(true)
+      nombreInputRef.current?.focus()
+      nombreInputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
       return
     }
 
@@ -117,9 +125,15 @@ export default function PatientFormModal({ patient, canEditObservaciones, onClos
         </div>
 
         <div className="modal-body">
-          <label>
+          <label className={nombreInvalid ? 'field-invalid' : undefined}>
             Nombre completo
-            <input type="text" value={form.nombreCompleto} onChange={(event) => update({ nombreCompleto: event.target.value })} />
+            <input
+              ref={nombreInputRef}
+              type="text"
+              value={form.nombreCompleto}
+              aria-invalid={nombreInvalid}
+              onChange={(event) => update({ nombreCompleto: event.target.value })}
+            />
           </label>
           <label>
             Documento

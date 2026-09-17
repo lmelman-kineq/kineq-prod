@@ -5,6 +5,7 @@ export type EstadoTurno =
   | 'FINALIZADO'
   | 'AUSENTE'
   | 'CANCELADO'
+  | 'REPROGRAMADO'
 
 export type RolUsuario = 'ADMINISTRADOR' | 'PROFESIONAL' | 'RECEPCION' | 'SUPERVISOR'
 

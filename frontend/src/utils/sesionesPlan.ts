@@ -1,4 +1,4 @@
-import type { Turno } from '../types/domain'
+import type { EstadoTurno, Turno } from '../types/domain'
 import { professionalName } from './professional'
 import { utcIsoToZonedParts } from './timezone'
 
@@ -10,20 +10,41 @@ export interface SesionPlanItem {
   especialidadNombre: string
 }
 
+export interface SesionesPlanFilters {
+  /** 'YYYY-MM-DD' en la zona del consultorio, inclusive. Sin límite si falta. */
+  from?: string
+  to?: string
+  /** Nunca vacío al exportar — la UI impide confirmar con 0 estados. */
+  estados: EstadoTurno[]
+  /** `null`/`undefined` = todas las especialidades. */
+  especialidadId?: number | null
+  timeZone: string
+}
+
 /**
- * Próximas sesiones vigentes de un paciente, para "Exportar plan de
- * sesiones" (ver docs/modules/patients.md). Turnos no cancelados cuyo
- * `inicio` (instante UTC real — comparar instantes nunca depende de la zona
- * horaria de quien mira la pantalla, a diferencia de mostrar la fecha) sea
- * posterior o igual a `nowIso`, ordenados cronológicamente. No filtra por
- * `serieId`: un turno individual, de una serie recurrente, o con
- * recurrencia personalizada entran todos por el mismo criterio — el plan
- * es la agenda real, no una regla de recurrencia.
+ * Sesiones de un paciente para "Exportar plan de sesiones" (ver
+ * docs/modules/patients.md), filtradas por rango de fecha / estado(s) /
+ * especialidad elegidos en el modal de exportación — nunca hardcodea
+ * "próximas y no canceladas", eso ahora es la selección inicial del modal,
+ * no una regla fija. Compara por la fecha ya en la zona horaria del
+ * consultorio (no UTC crudo), mismo criterio que el resto de la app. No
+ * filtra por `serieId`: un turno individual, de una serie recurrente, o con
+ * recurrencia personalizada entran todos por el mismo criterio — el plan es
+ * la agenda real, no una regla de recurrencia.
  */
-export function selectUpcomingSesiones(turnos: Turno[], nowIso: string): SesionPlanItem[] {
-  const now = new Date(nowIso).getTime()
+export function selectSesionesPlan(turnos: Turno[], filters: SesionesPlanFilters): SesionPlanItem[] {
+  const { from, to, estados, especialidadId, timeZone } = filters
   return turnos
-    .filter((turno) => turno.estado !== 'CANCELADO' && new Date(turno.inicio).getTime() >= now)
+    .filter((turno) => {
+      if (!estados.includes(turno.estado)) return false
+      if (especialidadId != null && turno.especialidadId !== especialidadId) return false
+      if (from || to) {
+        const { date } = utcIsoToZonedParts(turno.inicio, timeZone)
+        if (from && date < from) return false
+        if (to && date > to) return false
+      }
+      return true
+    })
     .sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime())
     .map((turno) => ({
       numeroSesion: turno.numeroSesion ?? null,

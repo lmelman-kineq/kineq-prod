@@ -6,6 +6,8 @@ The clinical flow MVP (Paciente → Turno → Iniciar atención → Pantalla de 
 
 Login screen, Configuración tables, and the Evoluciones table also got focused UI passes this session (icon-based row actions, responsive tabs, compact non-scrolling table, soft-delete) — see their own bullets below.
 
+**2026-09-10 — Login 500 (prod + tests) fixed.** Root cause was the MariaDB adapter config in `backend/src/prisma.ts`: MySQL 8 uses `caching_sha2_password` and the adapter connected without `allowPublicKeyRetrieval` (and dropped every `DATABASE_URL` query param, so `?sslmode=` was ignored). Fix: `allowPublicKeyRetrieval: true` always, plus `ssl: { rejectUnauthorized: false }` when the URL carries `?sslmode=`/`?ssl=`. Also wrapped `POST /auth/login` in try/catch with `console.error('failed to login', err)` so a DB error is logged instead of a bare 500. All the long-pending Aiven migrations (through `20260906120000_estudio_archivo_multiple`) were also deployed to production in this round — **`docs/database.md` is now authoritative for prod migration state; the per-round "no aplicada a Aiven" notes below are historical and superseded.**
+
 ---
 
 ## Done / Recently implemented

@@ -12,6 +12,7 @@ const ESTADO_TO_STATUS: Record<string, TurnoStatus> = {
   FINALIZADO: 'Finalizado',
   AUSENTE: 'Ausente',
   CANCELADO: 'Cancelado',
+  REPROGRAMADO: 'Reprogramado',
 }
 
 export function mapEstadoToStatus(estado: EstadoTurno | string): TurnoStatus {
@@ -24,9 +25,10 @@ export const STATUS_PRIORITY: Record<TurnoStatus, number> = {
   'En Espera': 0,
   'Atendiendo': 1,
   'Asignado': 2,
-  'Cancelado': 3,
-  'Ausente': 4,
-  'Finalizado': 5,
+  'Reprogramado': 3,
+  'Cancelado': 4,
+  'Ausente': 5,
+  'Finalizado': 6,
 }
 
 export type PriorityComparable = {

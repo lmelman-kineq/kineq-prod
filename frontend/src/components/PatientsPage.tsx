@@ -66,7 +66,7 @@ export default function PatientsPage({ refreshKey, patientSocialWorkById, onOpen
       setError(null)
 
       try {
-        const response = await api.getPacientes()
+        const response = await api.getPacientes(user?.rol === 'ADMINISTRADOR')
         if (!cancelled) {
           setPatients(response)
           setCachedData(PATIENTS_CACHE_KEY, response)
@@ -85,7 +85,7 @@ export default function PatientsPage({ refreshKey, patientSocialWorkById, onOpen
     return () => {
       cancelled = true
     }
-  }, [refreshKey])
+  }, [refreshKey, user?.rol])
 
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {
