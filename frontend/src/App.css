@@ -6729,8 +6729,16 @@ select:disabled {
     border-bottom: none;
   }
 
+  /* Colapsada, la card mobile ahora solo muestra Fecha + un adelanto del
+     Resumen (pedido explícito: "a primera vista sean solo las fechas y muy
+     poquito del resumen") — Profesional y Diagnóstico se sacan de acá y
+     pasan a mostrarse recién al expandir (ver showExpandedRow más abajo en
+     EvolutionTable.tsx, que ahora sí los incluye). */
   .evolution-table .evolution-row td:nth-child(2),
-  .evolution-table .evolution-row td:nth-child(3),
+  .evolution-table .evolution-row td:nth-child(3) {
+    display: none;
+  }
+
   .evolution-table .evolution-row td.evolution-resumen-cell {
     grid-column: 1 / -1;
   }

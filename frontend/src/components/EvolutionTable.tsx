@@ -266,13 +266,19 @@ export default function EvolutionTable({
                             </div>
                           </div>
                         ) : isMobile ? (
-                          // Colapsada, la card mobile trunca el Resumen (ver
-                          // .evolution-resumen-cell en @media 820px) y ya
-                          // muestra el Diagnóstico en su propia columna — al
-                          // expandir se pide el contenido completo (texto
-                          // sin truncar + Archivos), sin repetir el chip de
-                          // Diagnóstico que ya se ve arriba en la card.
-                          <EvolucionContent evolucion={evolucion} showDiagnostico={false} />
+                          // Colapsada, la card mobile ahora solo muestra
+                          // Fecha + un adelanto de 2 líneas del Resumen (ver
+                          // @media 820px) — Profesional y Diagnóstico se
+                          // ocultaron de ahí, así que acá sí hace falta
+                          // mostrar Profesional (Diagnóstico ya lo cubre
+                          // EvolucionContent con showDiagnostico, default).
+                          <>
+                            <div className="evolution-item-diagnostico">
+                              <span className="details-label">Profesional</span>
+                              <span>{professionalName(evolucion.profesional)}</span>
+                            </div>
+                            <EvolucionContent evolucion={evolucion} />
+                          </>
                         ) : (
                           <EvolucionContent evolucion={evolucion} />
                         )}
