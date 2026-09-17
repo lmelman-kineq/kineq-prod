@@ -2800,6 +2800,54 @@ select:disabled {
   left: auto;
 }
 
+/* Botón "Alertas clínicas" del header (mobile) — reemplaza la card fija del
+   aside, oculta en mobile (ver @media 820px), por un ícono+badge que abre
+   el mismo contenido (ClinicalSummaryPanel, sin duplicar ese render) en un
+   popover. Oculto por default (mismo criterio que el resto de los
+   elementos "solo mobile" de este archivo) — se muestra en el breakpoint. */
+.patient-alerts-wrapper {
+  position: relative;
+  display: none;
+}
+
+.patient-alerts-button {
+  position: relative;
+}
+
+.patient-alerts-button--warning {
+  color: var(--color-warning);
+  border-color: color-mix(in srgb, var(--color-warning) 40%, var(--color-border));
+}
+
+.patient-alerts-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-warning);
+  color: #1a1200;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.patient-alerts-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 /* "Turno recurrente — Sesión X de Y" en Datos del turno (ver
    docs/modules/appointments.md, "Detalle del Turno") */
 .turno-serie-badge {
@@ -3777,6 +3825,23 @@ select:disabled {
   border-radius: var(--radius-panel);
   background: var(--color-surface);
   box-shadow: var(--shadow-panel);
+}
+
+/* Tocar la card entera abre "Editar paciente" (ver PatientProfileHeader.tsx)
+   — mismo destino que el lápiz del header, solo para roles que ya pueden
+   editar. Feedback mínimo (cursor + hover/active) para que se note que es
+   tocable sin agregar ruido visual permanente. */
+.patient-profile-header--editable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.patient-profile-header--editable:hover {
+  border-color: var(--color-primary-border);
+}
+
+.patient-profile-header--editable:active {
+  background: var(--color-surface-muted);
 }
 
 .patient-profile-info {
@@ -4942,6 +5007,13 @@ select:disabled {
 }
 
 .mobile-tab-menu-popover {
+  /* `.context-menu` base es `position: fixed` (pensado para anclarse por
+     coordenadas de click, ver App.tsx/TurnosPage.tsx) — acá no hay
+     coordenadas, así que sin este override "top: calc(100% + 6px)" se
+     computaba contra el viewport entero, no contra el botón, y el menú se
+     abría fuera de pantalla (bug real reportado: "lo clickeo y no
+     funciona"). `.mobile-tab-menu-bar` ya es `position: relative`. */
+  position: absolute;
   top: calc(100% + 6px);
   left: auto;
   right: 0;
@@ -5931,7 +6003,10 @@ select:disabled {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  /* Barra superior compacta */
+  /* Barra superior compacta — fija arriba al scrollear, en todas las
+     pantallas (antes solo quedaba en su lugar de siempre y se perdía de
+     vista apenas se bajaba un poco). z-index por debajo de `.modal-overlay`
+     (20) y `.context-menu` (9999), mismo criterio que ya usa el FAB. */
   .mobile-topbar {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr) auto;
@@ -5944,6 +6019,9 @@ select:disabled {
     border-radius: 18px;
     background: var(--color-surface);
     box-shadow: var(--shadow-panel);
+    position: sticky;
+    top: 0;
+    z-index: 15;
   }
 
   .mobile-brand {
@@ -6253,7 +6331,12 @@ select:disabled {
      `.appointment-form-full-row` (sin cambios) — y se reagrupan por `order`
      (mobile-only, el DOM/desktop no se toca) Nro.sesión+Duración y
      Monto+Estado, que es el agrupado pedido para mobile específicamente. */
+  /* Columna 2 (Hora/Duración/Estado) un poco más ancha que la 1 (Fecha/
+     Nro.sesión/Monto) — Fecha no necesita tanto ancho (dd/mm/aaaa + ícono)
+     y se lo estaba quitando a Hora, dos <select> que quedaban tan angostos
+     que no se llegaba a leer el número (bug real reportado: "ni se ven"). */
   .appointment-form {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
     gap: 12px 10px;
   }
 
@@ -6265,11 +6348,13 @@ select:disabled {
     order: 2;
   }
 
-  .appointment-field-monto {
+  /* Estado a la izquierda, Monto a la derecha — al revés del orden del
+     formulario completo de siempre (pedido explícito para mobile). */
+  .appointment-field-estado {
     order: 3;
   }
 
-  .appointment-field-estado {
+  .appointment-field-monto {
     order: 4;
   }
 
@@ -6421,6 +6506,18 @@ select:disabled {
     gap: 16px;
   }
 
+  /* Card fija de "Alertas clínicas" (3 renglones siempre visibles) → botón
+     de header con ícono+badge (ver .patient-alerts-wrapper) que abre el
+     mismo contenido en un popover — solo se toca espacio si hay algo que
+     avisar. */
+  .patient-detail-aside-card {
+    display: none;
+  }
+
+  .patient-alerts-wrapper {
+    display: inline-flex;
+  }
+
   .modal-header-subtitle {
     display: none;
   }
@@ -6432,6 +6529,22 @@ select:disabled {
     width: 100%;
     justify-content: center;
     text-align: center;
+  }
+
+  /* "Editar paciente" (lápiz) del header: en desktop se achica a propósito
+     (ver comentario más arriba) para no dominar visualmente — en mobile
+     queda demasiado finito para un target táctil cómodo, un poco más
+     grande acá sin llegar al tamaño genérico de .icon-button (44px). */
+  .patient-detail-topbar-actions .icon-button,
+  .patient-detail-topbar-actions .icon-button--danger {
+    width: 40px;
+    height: 40px;
+  }
+
+  .patient-detail-topbar-actions .icon-button svg,
+  .patient-detail-topbar-actions .icon-button--danger svg {
+    width: 17px;
+    height: 17px;
   }
 
   .evolution-form-close {
@@ -6622,9 +6735,16 @@ select:disabled {
     grid-column: 1 / -1;
   }
 
+  /* `.turnos-actions-cell` de escritorio fija width:90px (columna de tabla
+     real) — acá la fila ya es un grid (`.evolution-row`), así que esa
+     medida fija dejaba un hueco de sobra entre los íconos y el borde de la
+     card en vez de quedar pegados con el margen normal de la card (mismo
+     defecto ya corregido una vez para `.turnos-table-col-sesion`, ver
+     docs/modules/dashboard.md — acá aplica el mismo criterio). */
   .evolution-table .evolution-row td.turnos-actions-cell {
     grid-column: 2;
     grid-row: 1;
+    width: auto;
     justify-content: flex-end;
   }
 
@@ -6671,9 +6791,31 @@ select:disabled {
     background: var(--color-surface-muted);
   }
 
+  /* El <td colSpan={5}> de la fila expandida es igual el :nth-child(1) de
+     su propia fila — sin este reset heredaba el width:150px pensado para
+     la columna "Fecha" de una fila colapsada (colSpan no exime de nth-
+     child), y el contenido completo de la evolución quedaba apretado en
+     una franja angosta en vez de usar el ancho de la card (bug real
+     reportado: "parece cortada a la mitad... se contrae a una columna"). */
   .evolution-table .evolution-expanded-row td {
     display: block;
+    width: auto;
     padding: 10px 0 0;
+  }
+
+  /* Mismo defecto también en el formulario de edición (Diagnóstico/
+     Archivos/editor de texto/botones): cadena completa de contenedores
+     forzada a 100% para no depender de adivinar cuál heredaba un ancho
+     angosto — bug real reportado ("se contrae a una columna") también acá,
+     no solo en la vista de solo lectura ya corregida arriba. */
+  .evolution-table .evolution-expanded-content,
+  .evolution-table .evolution-edit-form,
+  .evolution-table .evolution-form-fields-row,
+  .evolution-table .evolution-form-fields-row > *,
+  .evolution-table .rich-text-editor {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .config-section-header {
@@ -6945,19 +7087,44 @@ select:disabled {
      el pill "VIE · 4 sep" de abajo; Semana ya tiene el equivalente en
      su franja de 7 días) pero se mantiene en Mes/Año, que no tienen
      otro indicador de qué mes/año se está viendo. */
+  /* "Hoy [‹][›] · Día▾ · Filtro" en una sola línea (antes se apilaba en 2,
+     heredado de la regla de tablet ≤1170px que hace lugar para Semana/Mes/
+     Año — acá se pisa esa regla, mobile compacta en vez de apilar). */
   .schedule-header {
-    gap: 10px;
+    flex-wrap: nowrap;
+    gap: 6px;
     margin-bottom: 12px;
   }
 
   .calendar-nav {
-    gap: 8px;
-    width: 100%;
-    justify-content: center;
+    gap: 4px;
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: flex-start;
   }
 
   .calendar-nav-today {
-    padding: 8px 12px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .schedule-header-actions {
+    width: auto;
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .calendar-view-select select {
+    padding: 8px 22px 8px 10px;
+    font-size: 13px;
+  }
+
+  /* Mismo criterio icon-only que "Filtro" ya usa en otros toolbars mobile
+     (ver .label-full/.label-compact) — el texto "Filtro" se oculta, el
+     ícono solo alcanza y libera el espacio que hacía falta. */
+  .schedule-header-actions .filter-button {
+    padding: 8px 10px;
   }
 
   /* El título (`<h2>`, ej. "Calendario mensual") y la fecha larga (`<p>`,

@@ -42,7 +42,7 @@ export default function ExportSesionesPlanModal({ turnos, patientName, onClose }
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [estadoDropdownOpen, setEstadoDropdownOpen] = useState(false)
-  const [estadoPanelPos, setEstadoPanelPos] = useState<{ top: number; left: number; width: number } | null>(null)
+  const [estadoPanelPos, setEstadoPanelPos] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null)
   const estadoDropdownRef = useRef<HTMLDivElement | null>(null)
   const estadoButtonRef = useRef<HTMLButtonElement | null>(null)
 
@@ -86,7 +86,22 @@ export default function ExportSesionesPlanModal({ turnos, patientName, onClose }
   const toggleEstadoDropdown = () => {
     if (!estadoDropdownOpen) {
       const rect = estadoButtonRef.current?.getBoundingClientRect()
-      if (rect) setEstadoPanelPos({ top: rect.bottom + 6, left: rect.left, width: rect.width })
+      if (rect) {
+        // El botón puede quedar en la mitad inferior de una pantalla chica
+        // (mobile, bottom sheet) — sin este clamp, un panel de altura fija
+        // se extendía más allá del viewport, con parte de la lista
+        // inalcanzable (bug real reportado: "hay que scrollear demasiado,
+        // está cortado"). Nunca menos de 120px (~3 filas) para que siga
+        // siendo usable incluso muy abajo.
+        const viewportMargin = 12
+        const availableBelow = window.innerHeight - rect.bottom - viewportMargin
+        setEstadoPanelPos({
+          top: rect.bottom + 6,
+          left: rect.left,
+          width: rect.width,
+          maxHeight: Math.max(120, Math.min(280, availableBelow)),
+        })
+      }
     }
     setEstadoDropdownOpen((current) => !current)
   }
@@ -194,7 +209,7 @@ export default function ExportSesionesPlanModal({ turnos, patientName, onClose }
                 <div
                   className="filters-panel export-plan-estado-panel"
                   ref={estadoDropdownRef}
-                  style={{ position: 'fixed', top: estadoPanelPos.top, left: estadoPanelPos.left, width: estadoPanelPos.width, right: 'auto' }}
+                  style={{ position: 'fixed', top: estadoPanelPos.top, left: estadoPanelPos.left, width: estadoPanelPos.width, maxHeight: estadoPanelPos.maxHeight, right: 'auto' }}
                 >
                   <div className="filter-group">
                     <label>

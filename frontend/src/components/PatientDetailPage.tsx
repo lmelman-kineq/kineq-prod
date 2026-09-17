@@ -26,6 +26,8 @@ import { SPECIALTY_COLOR_TOKENS } from '../utils/specialtyColors'
 import type { ClinicalNavRequest, ClinicalNavTarget } from '../utils/clinicalNavTarget'
 import { patientFullName } from '../utils/patient'
 import ExportSesionesPlanModal from './ExportSesionesPlanModal'
+import { computeAlertasClinicas } from '../utils/clinicalAlerts'
+import { fichaHasAnyClinicalData } from '../utils/fichaInicial'
 
 type PatientDetailPageProps = {
   patientId: number
@@ -83,6 +85,10 @@ export default function PatientDetailPage({
   // — reusado tal cual desde la tab Turnos y desde el menú "…" del header.
   const [exportPlanOpen, setExportPlanOpen] = useState(false)
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
+  // Botón de Alertas clínicas del header (mobile): reemplaza la card fija
+  // de "Alertas clínicas" del aside, que en mobile ocupaba varias líneas
+  // siempre visibles aunque no hubiera nada que avisar.
+  const [alertsPopoverOpen, setAlertsPopoverOpen] = useState(false)
 
   const [showNewEvolucionForm, setShowNewEvolucionForm] = useState(false)
   const [newEvolucionText, setNewEvolucionText] = useState('')
@@ -119,6 +125,7 @@ export default function PatientDetailPage({
   const [grupoFilterOpen, setGrupoFilterOpen] = useState(false)
   const grupoFilterRef = useRef<HTMLDivElement | null>(null)
   const headerMenuRef = useRef<HTMLDivElement | null>(null)
+  const alertsPopoverRef = useRef<HTMLDivElement | null>(null)
 
   // Deep-link "click en alerta clínica → ir al campo de origen" (ver
   // utils/clinicalNavTarget.ts). `token` fuerza a los efectos que lo
@@ -190,6 +197,15 @@ export default function PatientDetailPage({
     document.addEventListener('mousedown', closeOnOutsideClick)
     return () => document.removeEventListener('mousedown', closeOnOutsideClick)
   }, [headerMenuOpen])
+
+  useEffect(() => {
+    if (!alertsPopoverOpen) return
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (alertsPopoverRef.current && !alertsPopoverRef.current.contains(event.target as Node)) setAlertsPopoverOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
+  }, [alertsPopoverOpen])
 
   // Única lógica de borrado de grupo — la usan tanto GestionarGruposModal
   // (tachito en la lista) como GrupoEvolucionModal (tachito del modal de
@@ -580,6 +596,13 @@ export default function PatientDetailPage({
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
   const hasEvolucionDelTurnoActivo = activeTurno ? evoluciones.some((evolucion) => evolucion.turnoId === activeTurno.id) : false
+  const showNoEvolucionAlert = activeTurno?.status === 'Atendiendo' && !hasEvolucionDelTurnoActivo
+  // Misma fuente de verdad que la card de siempre (ver ClinicalSummaryPanel)
+  // — se recalcula acá también para poder pintar el botón/badge de Alertas
+  // clínicas del header mobile sin duplicar la card entera.
+  const alertasClinicas = computeAlertasClinicas(fichaHook.ficha)
+  const fichaPendiente = !fichaHasAnyClinicalData(fichaHook.ficha, fichaHook.form)
+  const hasAnyAlert = fichaPendiente || alertasClinicas.total > 0 || showNoEvolucionAlert
   // Default de Diagnóstico al abrir "Cargar evolución": el de la evolución
   // más reciente que tenga uno (si la última no tiene, se sigue buscando
   // hacia atrás) — nunca un request nuevo, ya viene en `evoluciones`
@@ -944,6 +967,40 @@ export default function PatientDetailPage({
               </svg>
             </button>
           ) : null}
+          {/* Solo mobile (ver .patient-alerts-wrapper en App.css) — en desktop
+              la card de "Alertas clínicas" del aside sigue siempre visible,
+              este botón sería redundante ahí. */}
+          {canEditClinical ? (
+            <div className="patient-alerts-wrapper" ref={alertsPopoverRef}>
+              <button
+                type="button"
+                className={`icon-button patient-alerts-button ${hasAnyAlert ? 'patient-alerts-button--warning' : ''}`}
+                aria-label="Alertas clínicas"
+                title="Alertas clínicas"
+                aria-expanded={alertsPopoverOpen}
+                onClick={() => setAlertsPopoverOpen((current) => !current)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3l9 16H3l9-16Z" />
+                  <path d="M12 10v4" />
+                  <path d="M12 17.5v.01" />
+                </svg>
+                {alertasClinicas.total > 0 ? <span className="patient-alerts-badge">{alertasClinicas.total}</span> : null}
+              </button>
+              {alertsPopoverOpen ? (
+                <div className="filters-panel patient-alerts-popover">
+                  <ClinicalSummaryPanel
+                    loading={fichaHook.loading}
+                    ficha={fichaHook.ficha}
+                    fichaForm={fichaHook.form}
+                    onGoToFicha={() => { setAlertsPopoverOpen(false); setActiveTab('ficha') }}
+                    onNavigateToTarget={(target) => { setAlertsPopoverOpen(false); navigateToClinicalTarget(target) }}
+                    showNoEvolucionAlert={showNoEvolucionAlert}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {canEditAdmin ? (
             <div className="patient-header-menu-wrapper" ref={headerMenuRef}>
               <button
@@ -996,14 +1053,17 @@ export default function PatientDetailPage({
         </div>
 
         <aside className="patient-detail-aside">
-          {/* Sin badge/contador de alertas acá arriba — redundante con la
-              card de Alertas clínicas de abajo, que ya muestra el detalle
-              completo directamente. */}
+          {/* Sin badge/contador de alertas acá arriba en desktop — redundante
+              con la card de Alertas clínicas de abajo, que ya muestra el
+              detalle completo directamente. En mobile esa card se oculta
+              (ver @media 820px) a favor del botón "Alertas clínicas" del
+              header, que sí necesita este mismo dato para el badge. */}
           <PatientProfileHeader
             patient={patient}
             socialWorkName={socialWorkName}
             canEditPhoto={canEditAdmin}
             onPhotoChanged={(fotoUrl) => setPatient((current) => (current ? { ...current, fotoUrl } : current))}
+            onEditClick={canEditAdmin ? () => setEditPatientOpen(true) : undefined}
           />
 
           {canEditClinical ? (
@@ -1014,7 +1074,7 @@ export default function PatientDetailPage({
                 fichaForm={fichaHook.form}
                 onGoToFicha={() => setActiveTab('ficha')}
                 onNavigateToTarget={navigateToClinicalTarget}
-                showNoEvolucionAlert={activeTurno?.status === 'Atendiendo' && !hasEvolucionDelTurnoActivo}
+                showNoEvolucionAlert={showNoEvolucionAlert}
               />
             </div>
           ) : null}

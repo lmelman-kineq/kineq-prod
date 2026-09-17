@@ -14,13 +14,18 @@ type PatientProfileHeaderProps = {
   socialWorkName?: string | null
   canEditPhoto?: boolean
   onPhotoChanged?: (fotoUrl: string | null) => void
+  // Tocar cualquier parte de la card (nombre/DNI/etc.) abre "Editar
+  // paciente", mismo destino que el lápiz del header — mismo gate de
+  // permisos que ese botón (sin esto, no se ofrece: PatientDetailPage no
+  // lo pasa para roles que no pueden editar datos administrativos).
+  onEditClick?: () => void
 }
 
 function joinFacts(parts: Array<string | null | undefined>) {
   return parts.filter((part): part is string => Boolean(part)).join(' · ')
 }
 
-export default function PatientProfileHeader({ patient, socialWorkName, canEditPhoto, onPhotoChanged }: PatientProfileHeaderProps) {
+export default function PatientProfileHeader({ patient, socialWorkName, canEditPhoto, onPhotoChanged, onEditClick }: PatientProfileHeaderProps) {
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
   // .avatar-edit-popover es position:fixed (ver App.css) — la posición se
   // calcula acá en vez de con CSS relativo al wrapper, mismo mecanismo que
@@ -100,9 +105,22 @@ export default function PatientProfileHeader({ patient, socialWorkName, canEditP
   }
 
   return (
-    <header className="patient-profile-header">
+    <header
+      className={`patient-profile-header ${onEditClick ? 'patient-profile-header--editable' : ''}`}
+      onClick={onEditClick}
+      role={onEditClick ? 'button' : undefined}
+      tabIndex={onEditClick ? 0 : undefined}
+      onKeyDown={onEditClick ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onEditClick()
+        }
+      } : undefined}
+    >
       <div className="patient-header-identity">
-        <div className="avatar-wrapper" ref={avatarWrapperRef}>
+        {/* La foto tiene su propia acción (subir/reemplazar/quitar) —
+            nunca debe también disparar "Editar paciente" al tocarla. */}
+        <div className="avatar-wrapper" ref={avatarWrapperRef} onClick={(event) => event.stopPropagation()}>
           {patient.fotoUrl ? (
             <div className="patient-avatar patient-avatar--xl patient-avatar--photo">
               <AuthorizedImg src={patient.fotoUrl} alt="" />

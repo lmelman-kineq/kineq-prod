@@ -904,7 +904,6 @@ export function TurnoFormFields({
                 className="narrow-input"
                 min={0}
                 step={0.01}
-                placeholder="Opcional"
                 value={value.monto}
                 onChange={(event) => updateValue({ monto: event.target.value })}
                 disabled={disabled}
