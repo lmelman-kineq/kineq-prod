@@ -3905,6 +3905,11 @@ select:disabled {
 .icon-button--danger {
   width: 44px;
   height: 44px;
+  /* Sin esto, en una fila de flex apretada (ej. el topbar de Paciente en
+     mobile, con el pill "Nuevo turno"/"+ Turno" al lado) el shrink por
+     default de flex encogía este botón por debajo de los 44px de arriba —
+     bug real: "Editar paciente" quedaba mucho más finito que el resto. */
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   padding: 0;
@@ -5507,6 +5512,13 @@ select:disabled {
   line-height: 1;
 }
 
+/* Ícono de categoría (Personales/Familiares/Quirúrgicos) — oculto en
+   desktop, donde el texto ya entra sin problema; ver .antecedentes-tipo-
+   categorias @media 820px para el reemplazo en mobile. */
+.antecedentes-categoria-icon {
+  display: none;
+}
+
 .antecedentes-search {
   position: relative;
 }
@@ -6753,8 +6765,17 @@ select:disabled {
     width: auto;
   }
 
+  /* Truncado con "..." pensado para la columna angosta de desktop — en
+     mobile cada <td> ya es su propia fila de ancho completo (bug real:
+     "Lic. Matías López" quedaba cortado a "Lic. Matías L" sin necesidad,
+     sobrándole todo el ancho de la card). Sin tope de ancho ni una sola
+     línea forzada, el valor envuelve en vez de cortarse. */
   .patient-turnos-cell-truncate {
-    max-width: 60%;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    text-align: right;
   }
 
   /* Card de Evolución en mobile: grid en vez del flex "etiqueta: valor" que
@@ -6951,6 +6972,32 @@ select:disabled {
     padding: 8px 8px;
     font-size: 11px;
     white-space: nowrap;
+  }
+
+  /* Personales/Familiares/Quirúrgicos: el texto no entraba sin desbordar
+     el margen derecho de la card (bug real) — en mobile pasa a 3 íconos
+     descriptivos repartiendo el ancho completo en partes iguales, en vez
+     del texto + chevron (ocultos vía .field-label-mobile-hide). Selector
+     propio (`.antecedentes-tipo-categorias`, agregado en el JSX además de
+     la clase compartida `.antecedentes-categorias`) para no tocar los
+     otros dos usos de esas mismas clases (toggle Por fecha/diagnóstico,
+     chips de período en Estadísticas). */
+  .antecedentes-tipo-categorias .antecedentes-categoria-button {
+    flex: 1 1 0;
+    display: flex;
+    justify-content: center;
+    padding: 10px 4px;
+  }
+
+  .antecedentes-tipo-categorias .antecedentes-categoria-icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .evolutions-toolbar-actions .filter-button,
@@ -7216,9 +7263,13 @@ select:disabled {
      `.day-grid-mobile-header-arrow` / `.calendar-period-compact-header`).
      `display: contents` en los dos wrappers deja que Hoy y el <select> de
      Día caigan directo en el flex de `.schedule-header`, sin tocar el
-     layout de escritorio. Semana no cambia: sigue mostrando Hoy + flechas
-     acá, ya que no tiene un label de fecha único para acompañarlas. */
+     layout de escritorio. Semana usa el mismo aplanado pero sin ocultar
+     las flechas (no tiene un label de fecha propio para acompañarlas —
+     ya muestra su franja de 7 días abajo): Hoy + flechas a la izquierda,
+     Día + Filtro (icon-only, ver .label-full/.label-compact) a la
+     derecha, todo en una sola fila. */
   .schedule-header--day,
+  .schedule-header--week,
   .schedule-header--month,
   .schedule-header--year {
     flex-direction: row;
@@ -7226,9 +7277,11 @@ select:disabled {
   }
 
   .schedule-header--day .calendar-nav,
+  .schedule-header--week .calendar-nav,
   .schedule-header--month .calendar-nav,
   .schedule-header--year .calendar-nav,
   .schedule-header--day .schedule-header-actions,
+  .schedule-header--week .schedule-header-actions,
   .schedule-header--month .schedule-header-actions,
   .schedule-header--year .schedule-header-actions {
     display: contents;
@@ -7243,6 +7296,13 @@ select:disabled {
   .schedule-header--day .schedule-filters-wrapper,
   .schedule-header--month .schedule-filters-wrapper,
   .schedule-header--year .schedule-filters-wrapper {
+    margin-left: auto;
+  }
+
+  /* Semana: a diferencia de Día/Mes/Año, acá es el <select> de Día el que
+     se empuja a la derecha (junto con Filtro) en vez de quedarse con Hoy —
+     "Hoy [‹][›]" a la izquierda, "Día▾ Filtro" a la derecha. */
+  .schedule-header--week .calendar-view-select {
     margin-left: auto;
   }
 

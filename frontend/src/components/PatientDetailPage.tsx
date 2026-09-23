@@ -979,7 +979,8 @@ export default function PatientDetailPage({
           ) : null}
           {onNewTurno ? (
             <button type="button" className="new-turn-button new-turn-button--row" onClick={() => onNewTurno(patient.id)}>
-              Nuevo turno
+              <span className="label-full">Nuevo turno</span>
+              <span className="label-compact">+ Turno</span>
             </button>
           ) : null}
           {canEditAdmin ? (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type SVGProps } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactElement, type SVGProps } from 'react'
 import * as api from '../services/api'
 import type { CatalogoClinicoItem, FichaAntecedente, FichaAntecedenteInput } from '../types/domain'
 import { useClinicalCatalogSearch } from '../hooks/useClinicalCatalogSearch'
@@ -20,6 +20,46 @@ function SearchIcon(props: SVGProps<SVGSVGElement>) {
       <path d="m20 20-3.5-3.5" />
     </svg>
   )
+}
+
+// Íconos de categoría para el segmentado en mobile (ver
+// .antecedentes-tipo-categorias en App.css) — reemplazan el texto
+// "Personales"/"Familiares"/"Quirúrgicos", que no entraba en una fila sin
+// desbordar el margen de la card.
+function PersonalesIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M4.5 20c1.4-4 4.2-6 7.5-6s6.1 2 7.5 6" />
+    </svg>
+  )
+}
+
+function FamiliaresIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <circle cx="8.5" cy="7.5" r="3" />
+      <path d="M2.5 20c1.2-3.4 3.4-5 6-5s4.8 1.6 6 5" />
+      <circle cx="17" cy="8.5" r="2.4" />
+      <path d="M14.8 12.2c1.1-.6 2.2-.8 3.2-.4 1.8.7 3 2.4 3.5 4.2" />
+    </svg>
+  )
+}
+
+function QuirurgicosIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <path d="M4 20 15 9" />
+      <path d="M15 9l1.8-4.4c.2-.5.7-.8 1.2-.7l1.8.4-.4 1.8c-.1.5-.4.9-.7 1.2L15 9Z" />
+      <circle cx="6" cy="18" r="1.4" />
+    </svg>
+  )
+}
+
+const CATEGORIA_ICONS: Record<Categoria, (props: SVGProps<SVGSVGElement>) => ReactElement> = {
+  ANTECEDENTE_PERSONAL: PersonalesIcon,
+  ANTECEDENTE_FAMILIAR: FamiliaresIcon,
+  PROCEDIMIENTO_QUIRURGICO: QuirurgicosIcon,
 }
 
 function EditIcon(props: SVGProps<SVGSVGElement>) {
@@ -196,23 +236,29 @@ export default function ClinicalAntecedentesSection({ antecedentes, onAdd, onUpd
           un paso menos para llegar a lo mismo. Sigue seleccionando la
           categoría (para el buscador/lista rápida de abajo), solo que
           ahora también abre el mismo drawer que antes abría "Ver todos". */}
-      <div className="antecedentes-categorias" role="tablist" aria-label="Tipo de antecedente">
-        {CATEGORIAS.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            role="tab"
-            aria-selected={categoria === c.key}
-            className={`antecedentes-categoria-button antecedentes-categoria-button--clickable${categoria === c.key ? ' antecedentes-categoria-button--active' : ''}`}
-            onClick={() => {
-              selectCategoria(c.key)
-              setDrawerOpen(true)
-            }}
-          >
-            {c.label}
-            <span className="antecedentes-categoria-chevron" aria-hidden="true">›</span>
-          </button>
-        ))}
+      <div className="antecedentes-categorias antecedentes-tipo-categorias" role="tablist" aria-label="Tipo de antecedente">
+        {CATEGORIAS.map((c) => {
+          const CategoriaIcon = CATEGORIA_ICONS[c.key]
+          return (
+            <button
+              key={c.key}
+              type="button"
+              role="tab"
+              aria-selected={categoria === c.key}
+              className={`antecedentes-categoria-button antecedentes-categoria-button--clickable${categoria === c.key ? ' antecedentes-categoria-button--active' : ''}`}
+              onClick={() => {
+                selectCategoria(c.key)
+                setDrawerOpen(true)
+              }}
+            >
+              <CategoriaIcon className="antecedentes-categoria-icon" />
+              <span className="field-label-mobile-hide">
+                {c.label}
+                <span className="antecedentes-categoria-chevron" aria-hidden="true">›</span>
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       <div className="antecedentes-search">

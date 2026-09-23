@@ -2670,8 +2670,8 @@ function Dashboard() {
                   </select>
                 </label>
               <div className="schedule-filters-wrapper" ref={filtersRef}>
-                <button className="filter-button" type="button" onClick={() => setFiltersOpen(!filtersOpen)}>
-                  <span>Filtro</span>
+                <button className="filter-button" type="button" aria-label="Filtro" title="Filtro" onClick={() => setFiltersOpen(!filtersOpen)}>
+                  <span className="label-full">Filtro</span>
                   <span className="filter-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                       <path d="M3 4H21L14 11V18L10 20V11L3 4Z" />
