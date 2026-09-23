@@ -6579,6 +6579,26 @@ select:disabled {
     gap: 16px;
   }
 
+  /* Card de datos del paciente (arriba de Evoluciones/Turnos/etc.): el
+     email se saca de la vista para ahorrar una línea (el teléfono alcanza
+     para contacto rápido; el email sigue disponible en "Editar paciente"),
+     el nombre baja un poco de tamaño y la card en general achica su
+     padding — pedido explícito para mobile, sin tocar el layout de
+     escritorio (columna angosta, donde sí entra todo cómodo). */
+  .patient-profile-contact-email,
+  .patient-profile-contact-sep {
+    display: none;
+  }
+
+  .patient-detail-title-row h1 {
+    font-size: 21px;
+  }
+
+  .patient-profile-header {
+    padding: 14px;
+    gap: 12px;
+  }
+
   /* Card fija de "Alertas clínicas" (3 renglones siempre visibles) → botón
      de header con ícono+badge (ver .patient-alerts-wrapper) que abre el
      mismo contenido en un popover — solo se toca espacio si hay algo que
@@ -6657,10 +6677,6 @@ select:disabled {
   .patient-detail-main {
     max-height: none;
     overflow-y: visible;
-  }
-
-  .patient-profile-header {
-    padding: 18px;
   }
 
   .patient-summary-grid {

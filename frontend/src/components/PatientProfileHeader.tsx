@@ -56,7 +56,6 @@ export default function PatientProfileHeader({ patient, socialWorkName, canEditP
     }
   }, [photoMenuOpen])
   const age = calculateAge(patient.fechaNacimiento)
-  const contactLine = joinFacts([patient.email, patient.telefono])
   const metaLine = joinFacts([
     patient.documento ? `DNI ${patient.documento}` : null,
     age !== null ? `${age} años` : null,
@@ -193,7 +192,20 @@ export default function PatientProfileHeader({ patient, socialWorkName, canEditP
               <span className="turnos-status-pill turnos-status-pill--cancelado">Inactivo</span>
             ) : null}
           </div>
-          <p className="patient-profile-contact">{contactLine || 'Sin datos de contacto registrados'}</p>
+          <p className="patient-profile-contact">
+            {patient.email || patient.telefono ? (
+              <>
+                {/* El email se oculta en mobile para ahorrar una línea (ver
+                    .patient-profile-contact-email @media 820px) — sigue
+                    disponible en "Editar paciente". */}
+                {patient.email ? <span className="patient-profile-contact-email">{patient.email}</span> : null}
+                {patient.email && patient.telefono ? <span className="patient-profile-contact-sep" aria-hidden="true"> · </span> : null}
+                {patient.telefono ?? ''}
+              </>
+            ) : (
+              'Sin datos de contacto registrados'
+            )}
+          </p>
           <p className="patient-profile-meta">{metaLine || 'Sin documento ni obra social registrados'}</p>
         </div>
       </div>
