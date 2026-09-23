@@ -6947,14 +6947,16 @@ select:disabled {
     flex-wrap: wrap;
   }
 
-  /* Ver por fecha/diagnóstico + Filtro + Ver diagnósticos, siempre en una
-     sola línea (nunca wrap): copy compacto (.label-compact) en el
-     segmentado, "Filtro" y "Ver diagnósticos" icon-only (.label-full
-     oculto, mismo criterio para los dos) — a los anchos probados
-     (360/390/414/430px) entran sin desbordar ni ocultar ninguna acción. */
+  /* Filtro + Ver diagnósticos, siempre en una sola línea (nunca wrap):
+     "Filtro" y "Ver diagnósticos" icon-only (.label-full oculto, mismo
+     criterio para los dos). El segmentado "Por fecha/Por diagnóstico" se
+     saca del medio directamente (pedido explícito: no hace falta en
+     mobile, y esta fila ya comparte espacio con "+ Cargar evolución" —
+     ver .evolutions-header-row--compact). */
   .evolutions-toolbar {
     flex-wrap: nowrap;
     gap: 6px;
+    margin-bottom: 0;
   }
 
   .evolutions-toolbar-actions {
@@ -6964,14 +6966,30 @@ select:disabled {
   }
 
   .evolutions-toolbar .antecedentes-categorias {
-    min-width: 0;
-    flex-shrink: 1;
+    display: none;
   }
 
-  .evolutions-toolbar .antecedentes-categoria-button {
-    padding: 8px 8px;
-    font-size: 11px;
-    white-space: nowrap;
+  /* "+ Cargar evolución" y la toolbar (ahora solo Filtro/Ver diagnósticos)
+     comparten una sola fila — botón a la izquierda, acciones a la derecha
+     — y se elimina el margen superior del botón, que en mobile solo
+     restaba espacio bajo el header "Evoluciones". Sin el botón acá (form
+     abierto, o el aviso de "sin profesional vinculado"), esta clase
+     modificadora ni se aplica (ver JSX) y la fila sigue apilada. */
+  .evolutions-header-row--compact {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .evolutions-header-row--compact .evolution-load-button {
+    width: auto;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .evolutions-header-row--compact .evolutions-toolbar {
+    margin-left: auto;
   }
 
   /* Personales/Familiares/Quirúrgicos: el texto no entraba sin desbordar

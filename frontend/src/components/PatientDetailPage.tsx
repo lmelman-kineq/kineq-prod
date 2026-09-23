@@ -684,8 +684,76 @@ export default function PatientDetailPage({
   const panels: Record<string, ReactNode> = {
     evoluciones: (
       <>
-        {canWriteClinical ? (
-          !showNewEvolucionForm ? (
+        {canWriteClinical && showNewEvolucionForm ? (
+          <div className="evolution-form">
+            <div className="evolution-form-header">
+              <label htmlFor="nueva-evolucion">Nueva evolución</label>
+              <button
+                type="button"
+                className="close-button evolution-form-close"
+                aria-label="Cancelar carga de evolución"
+                onClick={cancelNewEvolucionForm}
+                disabled={savingEvolucion}
+              >
+                &times;
+              </button>
+            </div>
+            <RichTextEditor
+              id="nueva-evolucion"
+              html={newEvolucionHtml}
+              placeholder="Qué se observó, qué se trabajó, indicaciones y próximos pasos..."
+              onChange={(html, plainText) => {
+                setNewEvolucionHtml(html)
+                setNewEvolucionText(plainText)
+              }}
+              toolbarExtra={
+                <button type="button" className="rich-text-toolbar-plantillas" onClick={() => setPlantillasOpen(true)}>
+                  Plantillas
+                </button>
+              }
+            />
+            <div className="evolution-form-fields-row">
+              <DiagnosticoSelect
+                grupos={grupos}
+                value={nuevaEvolucionGrupoId}
+                onChange={setNuevaEvolucionGrupoId}
+                onCreate={createDiagnosticoInline}
+              />
+              <EvolucionImages
+                items={stagedImages.map((s, i) => ({ key: String(i), url: s.previewUrl, name: s.file.name }))}
+                onAdd={addStagedImages}
+                onRemove={removeStagedImage}
+                error={stagedImagesError}
+              />
+            </div>
+            <div className="evolution-edit-actions">
+              <button type="button" className="secondary-button" onClick={cancelNewEvolucionForm} disabled={savingEvolucion}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={!newEvolucionText.trim() || savingEvolucion}
+                onClick={() => { void submitEvolucion() }}
+              >
+                {savingEvolucion ? 'Guardando...' : 'Guardar evolución'}
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {evolucionError ? <p className="evolution-form-error">{evolucionError}</p> : null}
+
+        {/* "+ Cargar evolución" + la toolbar (Ver por fecha/diagnóstico +
+            Filtro + Ver diagnósticos) comparten fila en mobile (ver
+            .evolutions-header-row--compact @media 820px): botón a la
+            izquierda, Filtro/Ver diagnósticos (icon-only) a la derecha, el
+            segmentado Por fecha/diagnóstico se oculta directamente (ver
+            .evolutions-toolbar .antecedentes-categorias). Sin el botón acá
+            (form abierto, o el aviso de "sin profesional vinculado" en su
+            lugar), la fila sigue apilada como siempre — no tiene sentido
+            forzarla a una línea junto a esos otros contenidos. */}
+        <div className={`evolutions-header-row${canWriteClinical && !showNewEvolucionForm ? ' evolutions-header-row--compact' : ''}`}>
+          {canWriteClinical && !showNewEvolucionForm ? (
             <button
               type="button"
               className="secondary-button evolution-load-button"
@@ -696,91 +764,33 @@ export default function PatientDetailPage({
             >
               + Cargar evolución
             </button>
-          ) : (
-            <div className="evolution-form">
-              <div className="evolution-form-header">
-                <label htmlFor="nueva-evolucion">Nueva evolución</label>
-                <button
-                  type="button"
-                  className="close-button evolution-form-close"
-                  aria-label="Cancelar carga de evolución"
-                  onClick={cancelNewEvolucionForm}
-                  disabled={savingEvolucion}
-                >
-                  &times;
-                </button>
-              </div>
-              <RichTextEditor
-                id="nueva-evolucion"
-                html={newEvolucionHtml}
-                placeholder="Qué se observó, qué se trabajó, indicaciones y próximos pasos..."
-                onChange={(html, plainText) => {
-                  setNewEvolucionHtml(html)
-                  setNewEvolucionText(plainText)
-                }}
-                toolbarExtra={
-                  <button type="button" className="rich-text-toolbar-plantillas" onClick={() => setPlantillasOpen(true)}>
-                    Plantillas
-                  </button>
-                }
-              />
-              <div className="evolution-form-fields-row">
-                <DiagnosticoSelect
-                  grupos={grupos}
-                  value={nuevaEvolucionGrupoId}
-                  onChange={setNuevaEvolucionGrupoId}
-                  onCreate={createDiagnosticoInline}
-                />
-                <EvolucionImages
-                  items={stagedImages.map((s, i) => ({ key: String(i), url: s.previewUrl, name: s.file.name }))}
-                  onAdd={addStagedImages}
-                  onRemove={removeStagedImage}
-                  error={stagedImagesError}
-                />
-              </div>
-              <div className="evolution-edit-actions">
-                <button type="button" className="secondary-button" onClick={cancelNewEvolucionForm} disabled={savingEvolucion}>
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={!newEvolucionText.trim() || savingEvolucion}
-                  onClick={() => { void submitEvolucion() }}
-                >
-                  {savingEvolucion ? 'Guardando...' : 'Guardar evolución'}
-                </button>
-              </div>
-            </div>
-          )
-        ) : canEditClinical ? (
-          <p className="patient-detail-note">
-            Tu usuario no está vinculado a un profesional. Un administrador debe completar el vínculo para registrar información clínica.
-          </p>
-        ) : null}
-        {evolucionError ? <p className="evolution-form-error">{evolucionError}</p> : null}
+          ) : !canWriteClinical && canEditClinical ? (
+            <p className="patient-detail-note">
+              Tu usuario no está vinculado a un profesional. Un administrador debe completar el vínculo para registrar información clínica.
+            </p>
+          ) : null}
 
-        <div className="evolutions-toolbar">
-          <div className="antecedentes-categorias" role="tablist" aria-label="Vista de evoluciones">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={vistaEvoluciones === 'fecha'}
-              className={`antecedentes-categoria-button${vistaEvoluciones === 'fecha' ? ' antecedentes-categoria-button--active' : ''}`}
-              onClick={() => setVistaEvoluciones('fecha')}
-            >
-              <span className="label-full">Ver por fecha</span>
-              <span className="label-compact">Por fecha</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={vistaEvoluciones === 'grupo'}
-              className={`antecedentes-categoria-button${vistaEvoluciones === 'grupo' ? ' antecedentes-categoria-button--active' : ''}`}
-              onClick={() => setVistaEvoluciones('grupo')}
-            >
-              <span className="label-full">Ver por diagnóstico</span>
-              <span className="label-compact">Por diagnóstico</span>
+          <div className="evolutions-toolbar">
+            <div className="antecedentes-categorias" role="tablist" aria-label="Vista de evoluciones">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={vistaEvoluciones === 'fecha'}
+                className={`antecedentes-categoria-button${vistaEvoluciones === 'fecha' ? ' antecedentes-categoria-button--active' : ''}`}
+                onClick={() => setVistaEvoluciones('fecha')}
+              >
+                <span className="label-full">Ver por fecha</span>
+                <span className="label-compact">Por fecha</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={vistaEvoluciones === 'grupo'}
+                className={`antecedentes-categoria-button${vistaEvoluciones === 'grupo' ? ' antecedentes-categoria-button--active' : ''}`}
+                onClick={() => setVistaEvoluciones('grupo')}
+              >
+                <span className="label-full">Ver por diagnóstico</span>
+                <span className="label-compact">Por diagnóstico</span>
             </button>
           </div>
           <div className="evolutions-toolbar-actions">
@@ -849,6 +859,7 @@ export default function PatientDetailPage({
                 </span>
               </button>
             ) : null}
+          </div>
           </div>
         </div>
 
