@@ -66,6 +66,7 @@ export default function PatientDetailPage({
   const { user } = useAuth()
   const canEditClinical = user?.rol === 'ADMINISTRADOR' || user?.rol === 'PROFESIONAL'
   const canEditAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'RECEPCION'
+  const isAdmin = user?.rol === 'ADMINISTRADOR'
   // Autoría clínica: además del rol, hace falta un profesional vinculado —
   // el backend vuelve a exigir esto en cada escritura, acá solo evitamos
   // ofrecer acciones que el servidor va a rechazar.
@@ -592,6 +593,34 @@ export default function PatientDetailPage({
     })
   }
 
+  // Eliminación definitiva (hard delete) — distinta de "Marcar Inactivo" de
+  // arriba: borra físicamente al paciente y todo su historial clínico
+  // (turnos, evoluciones, ficha inicial), sin conservar nada. Solo
+  // ADMINISTRADOR (ver `isAdmin`, gate propio del botón). Vuelve al listado
+  // de Pacientes al confirmar, porque el registro deja de existir.
+  const deletePatientPermanently = async () => {
+    setDeleting(true)
+    try {
+      await api.deletePaciente(patient.id)
+      onBack()
+    } catch (deleteError) {
+      setError(getErrorMessage(deleteError, 'No se pudo eliminar el paciente.'))
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const requestDeletePatientPermanently = () => {
+    onRequestConfirm({
+      title: 'Eliminar paciente definitivamente',
+      description: `Esta acción borra a ${patientFullName(patient)} y todo su historial clínico (turnos, evoluciones, ficha inicial, estudios) de forma permanente. No se puede deshacer. Si solo querés que deje de recibir turnos nuevos, usá "Marcar Inactivo" en su lugar.`,
+      confirmLabel: 'Eliminar definitivamente',
+      cancelLabel: 'Cancelar',
+      destructive: true,
+      onConfirm: () => { void deletePatientPermanently() },
+    })
+  }
+
   const sortedEvoluciones = [...evoluciones].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
@@ -988,16 +1017,32 @@ export default function PatientDetailPage({
                 {alertasClinicas.total > 0 ? <span className="patient-alerts-badge">{alertasClinicas.total}</span> : null}
               </button>
               {alertsPopoverOpen ? (
-                <div className="filters-panel patient-alerts-popover">
-                  <ClinicalSummaryPanel
-                    loading={fichaHook.loading}
-                    ficha={fichaHook.ficha}
-                    fichaForm={fichaHook.form}
-                    onGoToFicha={() => { setAlertsPopoverOpen(false); setActiveTab('ficha') }}
-                    onNavigateToTarget={(target) => { setAlertsPopoverOpen(false); navigateToClinicalTarget(target) }}
-                    showNoEvolucionAlert={showNoEvolucionAlert}
-                  />
-                </div>
+                <>
+                  <div className="popover-backdrop" onClick={() => setAlertsPopoverOpen(false)} />
+                  <div className="filters-panel patient-alerts-popover">
+                    <div className="patient-alerts-popover-header">
+                      <strong>Alertas clínicas</strong>
+                      <button
+                        type="button"
+                        className="modal-icon-button"
+                        aria-label="Cerrar"
+                        onClick={() => setAlertsPopoverOpen(false)}
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M6 6l12 12M18 6L6 18" />
+                        </svg>
+                      </button>
+                    </div>
+                    <ClinicalSummaryPanel
+                      loading={fichaHook.loading}
+                      ficha={fichaHook.ficha}
+                      fichaForm={fichaHook.form}
+                      onGoToFicha={() => { setAlertsPopoverOpen(false); setActiveTab('ficha') }}
+                      onNavigateToTarget={(target) => { setAlertsPopoverOpen(false); navigateToClinicalTarget(target) }}
+                      showNoEvolucionAlert={showNoEvolucionAlert}
+                    />
+                  </div>
+                </>
               ) : null}
             </div>
           ) : null}
@@ -1034,6 +1079,16 @@ export default function PatientDetailPage({
                   >
                     Marcar Inactivo
                   </button>
+                  {isAdmin ? (
+                    <button
+                      type="button"
+                      className="context-menu-item context-menu-item--danger"
+                      disabled={deleting}
+                      onClick={() => { setHeaderMenuOpen(false); requestDeletePatientPermanently() }}
+                    >
+                      Eliminar definitivamente
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
             </div>

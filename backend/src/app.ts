@@ -13,6 +13,7 @@ import { estudioParaCliente, fichaParaCliente } from './estudioSerializer'
 import { pacienteParaCliente } from './pacienteSerializer'
 import { evolucionParaCliente } from './evolucionImagenSerializer'
 import { sanitizeRichText, stripToPlainText } from './sanitizeRichText'
+import { deleteFromBlob } from './blobStorage'
 import {
   ADMIN_DATA_ROLES,
   CLINICAL_ROLES,
@@ -408,6 +409,75 @@ app.patch(
     }
   },
 )
+
+// Eliminación definitiva (hard delete) — distinta de "Marcar inactivo"
+// (baja lógica, activo:false, reversible): esto borra físicamente al
+// paciente y todo su historial clínico asociado (turnos, evoluciones + sus
+// imágenes, ficha inicial + antecedentes/alergias/medicación/estudios,
+// diagnósticos). Irreversible, sin conservar historial — a propósito
+// distinto del patrón "bloquear si tiene registros" de profesionales, que
+// no tendría sentido acá (casi todo paciente tiene turnos/evoluciones, así
+// que nunca se podría borrar nada). Solo ADMINISTRADOR: ni siquiera los
+// roles que pueden marcar inactivo llegan a esto. Los pathnames de blob
+// (fotos de evoluciones/estudios/paciente) se juntan antes de borrar las
+// filas y se limpian del storage después de que la transacción confirme;
+// deleteFromBlob nunca tira si el archivo ya no existe.
+app.delete('/api/pacientes/:pacienteId', requireRole(RolUsuario.ADMINISTRADOR), async (req, res) => {
+  const consultorioId = req.usuario!.consultorioId
+  const pacienteId = Number(req.params.pacienteId)
+  if (Number.isNaN(pacienteId)) return res.status(400).json({ error: 'invalid id' })
+
+  try {
+    const paciente = await prisma.paciente.findFirst({ where: { id: pacienteId, consultorioId } })
+    if (!paciente) return res.status(404).json({ error: 'paciente not found' })
+
+    const blobPathnames: string[] = []
+    if (paciente.fotoPathname) blobPathnames.push(paciente.fotoPathname)
+
+    await prisma.$transaction(async (tx) => {
+      const fichaInicial = await tx.fichaInicial.findUnique({ where: { pacienteId }, select: { id: true } })
+      if (fichaInicial) {
+        const estudios = await tx.fichaEstudioComplementario.findMany({
+          where: { fichaInicialId: fichaInicial.id },
+          select: { archivos: { select: { pathname: true } } },
+        })
+        for (const estudio of estudios) {
+          for (const archivo of estudio.archivos) blobPathnames.push(archivo.pathname)
+        }
+        // FichaAlertaCampo y EstudioArchivo tienen onDelete: Cascade contra
+        // fichaInicialId/estudioId respectivamente — se van solos al borrar
+        // FichaEstudioComplementario/FichaInicial, sin deleteMany propio.
+        await tx.fichaAntecedente.deleteMany({ where: { fichaInicialId: fichaInicial.id } })
+        await tx.fichaAlergia.deleteMany({ where: { fichaInicialId: fichaInicial.id } })
+        await tx.fichaMedicacion.deleteMany({ where: { fichaInicialId: fichaInicial.id } })
+        await tx.fichaSeccionEstado.deleteMany({ where: { fichaInicialId: fichaInicial.id } })
+        await tx.fichaEstudioComplementario.deleteMany({ where: { fichaInicialId: fichaInicial.id } })
+        await tx.fichaInicial.delete({ where: { id: fichaInicial.id } })
+      }
+
+      const evoluciones = await tx.evolucion.findMany({
+        where: { pacienteId },
+        select: { imagenes: { select: { pathname: true } } },
+      })
+      for (const evolucion of evoluciones) {
+        for (const imagen of evolucion.imagenes) blobPathnames.push(imagen.pathname)
+      }
+      // EvolucionImagen tiene onDelete: Cascade contra evolucionId — se va
+      // sola al borrar la Evolucion, sin deleteMany propio.
+      await tx.evolucion.deleteMany({ where: { pacienteId } })
+
+      await tx.grupoEvolucion.deleteMany({ where: { pacienteId } })
+      await tx.turno.deleteMany({ where: { pacienteId } })
+      await tx.paciente.delete({ where: { id: pacienteId } })
+    })
+
+    await Promise.all(blobPathnames.map((pathname) => deleteFromBlob(pathname)))
+
+    res.status(204).end()
+  } catch (err) {
+    res.status(500).json({ error: 'failed to delete paciente' })
+  }
+})
 
 // PROFESIONALES
 // Lectura: todos los roles. Alta y edición: solo administrador.

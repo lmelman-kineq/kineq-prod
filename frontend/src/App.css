@@ -856,6 +856,21 @@ body,
   place-items: center;
   overflow-x: hidden;
   background: var(--color-overlay);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Backdrop de popovers livianos (ej. Alertas clínicas del header de
+   paciente) que no usan `.modal-overlay` — mismo desenfoque, para que se
+   note que algo se abrió y quede claro dónde termina el popover y empieza
+   el resto de la pantalla (antes no había ningún límite visual). */
+.popover-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  background: var(--color-overlay);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .modal-card {
@@ -2846,6 +2861,18 @@ select:disabled {
   max-width: calc(100vw - 32px);
   max-height: 70vh;
   overflow-y: auto;
+}
+
+.patient-alerts-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.patient-alerts-popover-header strong {
+  font-size: 15px;
 }
 
 /* "Turno recurrente — Sesión X de Y" en Datos del turno (ver
@@ -6340,6 +6367,22 @@ select:disabled {
     gap: 12px 10px;
   }
 
+  /* `.narrow-input` trae min-width:140px (pensado para desktop, con más
+     ancho de columna disponible) — en las columnas angostas de mobile eso
+     empujaba el campo más allá de su celda del grid, sacándolo del borde
+     de la pantalla (bug real: "Monto" quedaba cortado). Sin mínimo fijo,
+     el input ya ocupa el 100% de su columna vía la regla general de
+     .modal-body input de arriba. */
+  .modal-body .appointment-field-monto input.narrow-input,
+  .modal-body .appointment-field-session-number input.narrow-input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .turno-monto-field {
+    min-width: 0;
+  }
+
   .appointment-field-session-number {
     order: 1;
   }
@@ -6356,6 +6399,24 @@ select:disabled {
 
   .appointment-field-monto {
     order: 4;
+  }
+
+  /* Nuevo/Editar turno en mobile: el placeholder (buscadores) o el valor ya
+     visible en el campo (hora, importe, estado seleccionado) alcanza para
+     reconocerlo — el label de texto de arriba se vuelve redundante y solo
+     resta espacio vertical. Mismo criterio visualmente-oculto que .sr-only
+     (nunca display:none, que lo sacaría del árbol de accesibilidad): sigue
+     anunciándose a lectores de pantalla. */
+  .field-label-mobile-hide {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .modal-header-icon {
@@ -6533,18 +6594,19 @@ select:disabled {
 
   /* "Editar paciente" (lápiz) del header: en desktop se achica a propósito
      (ver comentario más arriba) para no dominar visualmente — en mobile
-     queda demasiado finito para un target táctil cómodo, un poco más
-     grande acá sin llegar al tamaño genérico de .icon-button (44px). */
+     queda demasiado finito para un target táctil cómodo. Vuelve al tamaño
+     genérico de .icon-button (44px), igual que el botón de Alertas
+     clínicas de al lado, para que ambos queden uniformes. */
   .patient-detail-topbar-actions .icon-button,
   .patient-detail-topbar-actions .icon-button--danger {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
 
   .patient-detail-topbar-actions .icon-button svg,
   .patient-detail-topbar-actions .icon-button--danger svg {
-    width: 17px;
-    height: 17px;
+    width: 19px;
+    height: 19px;
   }
 
   .evolution-form-close {
@@ -7015,7 +7077,8 @@ select:disabled {
 .sheet-drag-handle,
 .week-day-strip,
 .day-grid-mobile-header,
-.calendar-period-compact-label {
+.calendar-period-compact-label,
+.calendar-period-compact-header {
   display: none;
 }
 
@@ -7147,6 +7210,42 @@ select:disabled {
     display: none;
   }
 
+  /* Día/Mes/Año: Hoy + Día + Filtro comparten una sola fila arriba (Hoy y
+     Día a la izquierda, Filtro a la derecha); las flechas de período se
+     muestran junto al label de fecha en vez de acá (ver
+     `.day-grid-mobile-header-arrow` / `.calendar-period-compact-header`).
+     `display: contents` en los dos wrappers deja que Hoy y el <select> de
+     Día caigan directo en el flex de `.schedule-header`, sin tocar el
+     layout de escritorio. Semana no cambia: sigue mostrando Hoy + flechas
+     acá, ya que no tiene un label de fecha único para acompañarlas. */
+  .schedule-header--day,
+  .schedule-header--month,
+  .schedule-header--year {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .schedule-header--day .calendar-nav,
+  .schedule-header--month .calendar-nav,
+  .schedule-header--year .calendar-nav,
+  .schedule-header--day .schedule-header-actions,
+  .schedule-header--month .schedule-header-actions,
+  .schedule-header--year .schedule-header-actions {
+    display: contents;
+  }
+
+  .schedule-header--day .calendar-nav-arrows,
+  .schedule-header--month .calendar-nav-arrows,
+  .schedule-header--year .calendar-nav-arrows {
+    display: none;
+  }
+
+  .schedule-header--day .schedule-filters-wrapper,
+  .schedule-header--month .schedule-filters-wrapper,
+  .schedule-header--year .schedule-filters-wrapper {
+    margin-left: auto;
+  }
+
   /* Label compacto centrado arriba del cuerpo del calendario — Mes ("Sep
      2026") y Año ("2026"). Día usa su propio bloque más rico
      (`.day-grid-mobile-header`, con el gutter de horas alineado abajo);
@@ -7154,21 +7253,44 @@ select:disabled {
      este label genérico. */
   .calendar-period-compact-label {
     display: block;
-    margin: 0 0 8px;
+    margin: 0;
     color: var(--color-text-muted);
     font-size: 13px;
     font-weight: 600;
     text-align: center;
   }
 
+  /* Flechas de período a cada lado del label compacto (Mes/Año) — mismo
+     criterio que `.day-grid-mobile-header` para Día: las flechas viven
+     junto a la fecha en vez de la fila de Hoy/Día/Filtro. */
+  .calendar-period-compact-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 0 0 8px;
+  }
+
   /* Header "VIE / 4 sep" arriba del timeline de Día — mismo bloque que ya
      usa el header de columna de Semana (`.week-day-header`), en la misma
-     grilla de 2 columnas (gutter de horas + día) que `.day-grid`, para que
-     quede alineado con el eje horario de abajo. */
+     grilla de 3 columnas (flecha, día, flecha) que `.day-grid`, con la
+     primera columna alineada con el eje horario de abajo. */
   .day-grid-mobile-header {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    align-items: center;
     margin-bottom: 4px;
+  }
+
+  .day-grid-mobile-header-arrow {
+    width: 36px;
+    height: 36px;
+    font-size: 13px;
+    justify-self: center;
+  }
+
+  .day-grid-mobile-header-arrow:last-child {
+    justify-self: end;
   }
 
   /* --- Bottom sheets: Nuevo turno / Editar turno / Recurrencia --- */

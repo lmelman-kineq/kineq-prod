@@ -8,6 +8,7 @@ import ProfesionalFormModal from './ProfesionalFormModal'
 import KineqLoader from './KineqLoader'
 import { useAuth } from '../auth/AuthContext'
 import { professionalFullName } from '../utils/professional'
+import { normalizeForSearch } from '../utils/search'
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message
@@ -69,9 +70,9 @@ export default function ConfiguracionProfesionales({ onRequestConfirm, onProfesi
   )
 
   const visibleProfesionales = useMemo(() => {
-    const term = search.trim().toLowerCase()
+    const term = normalizeForSearch(search.trim())
     if (!term) return profesionales
-    return profesionales.filter((profesional) => professionalFullName(profesional).toLowerCase().includes(term))
+    return profesionales.filter((profesional) => normalizeForSearch(professionalFullName(profesional)).includes(term))
   }, [profesionales, search])
 
   const openCreate = () => {

@@ -2775,14 +2775,15 @@ function Dashboard() {
             // Semana (`.week-day-header`), reemplazando el título "Calendario
             // del día" + la fecha larga que se ocultan en mobile (ver
             // .schedule-header--day).
-            <div className="day-grid-mobile-header" aria-hidden="true">
-              <span className="day-grid-mobile-header-spacer" />
-              <div className="week-day-header week-day-header--active">
+            <div className="day-grid-mobile-header">
+              <button type="button" className="small-button day-grid-mobile-header-arrow" aria-label="Período anterior" onClick={goToPreviousPeriod}>&#9664;</button>
+              <div className="week-day-header week-day-header--active" aria-hidden="true">
                 <span className="week-day-header-name">
                   {WEEKDAY_HEADER_LABELS[new Date(`${selectedDate}T00:00:00Z`).getUTCDay() === 0 ? 6 : new Date(`${selectedDate}T00:00:00Z`).getUTCDay() - 1]}
                 </span>
                 <span className="week-day-header-date">{formatShortDate(selectedDate)}</span>
               </div>
+              <button type="button" className="small-button day-grid-mobile-header-arrow" aria-label="Período siguiente" onClick={goToNextPeriod}>&#9654;</button>
             </div>
           ) : null}
 
@@ -2792,14 +2793,18 @@ function Dashboard() {
             // en mobile para las 4 vistas (.calendar-nav-title). Mes: "Sep
             // 2026". Año: "2026". Día y Semana ya tienen su propio label
             // (arriba / franja de 7 días) y no lo necesitan.
-            <p className="calendar-period-compact-label" aria-hidden="true">
-              {calendarView === 'month'
-                ? (() => {
-                    const shortMonth = MONTH_NAMES_SHORT[Number(selectedDate.split('-')[1]) - 1]
-                    return `${shortMonth[0].toUpperCase()}${shortMonth.slice(1)} ${selectedDate.split('-')[0]}`
-                  })()
-                : selectedDate.split('-')[0]}
-            </p>
+            <div className="calendar-period-compact-header">
+              <button type="button" className="small-button day-grid-mobile-header-arrow" aria-label="Período anterior" onClick={goToPreviousPeriod}>&#9664;</button>
+              <p className="calendar-period-compact-label" aria-hidden="true">
+                {calendarView === 'month'
+                  ? (() => {
+                      const shortMonth = MONTH_NAMES_SHORT[Number(selectedDate.split('-')[1]) - 1]
+                      return `${shortMonth[0].toUpperCase()}${shortMonth.slice(1)} ${selectedDate.split('-')[0]}`
+                    })()
+                  : selectedDate.split('-')[0]}
+              </p>
+              <button type="button" className="small-button day-grid-mobile-header-arrow" aria-label="Período siguiente" onClick={goToNextPeriod}>&#9654;</button>
+            </div>
           ) : null}
 
           {calendarView === 'day' ? (

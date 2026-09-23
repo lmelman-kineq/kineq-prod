@@ -4,6 +4,7 @@ import DiagnosticoSelect from './DiagnosticoSelect'
 import type { GrupoEvolucion } from '../types/domain'
 import { weekdayLabel, monthlyRecurrenceLabel, customRecurrenceSummary, type RecurrenceFrequency, type CustomRecurrenceConfig } from '../utils/recurrence'
 import CustomRecurrenceModal from './CustomRecurrenceModal'
+import { normalizeForSearch } from '../utils/search'
 
 // Íconos chicos para las filas compactas del quick-create (alta rápida desde
 // Home) — mismo estilo trazo-simple que el resto de Kineq (viewBox 24x24,
@@ -313,10 +314,18 @@ export function TurnoFormFields({
     updatePosition()
     window.addEventListener('resize', updatePosition)
     window.addEventListener('scroll', updatePosition, true)
+    // En mobile (teclado on-screen), abrir/cerrar el teclado o autoscrollear
+    // el input enfocado a la vista cambia el visual viewport sin disparar
+    // 'resize'/'scroll' en window — dejaba el dropdown (position: fixed)
+    // pegado a una posición vieja. visualViewport sí notifica esos cambios.
+    window.visualViewport?.addEventListener('resize', updatePosition)
+    window.visualViewport?.addEventListener('scroll', updatePosition)
 
     return () => {
       window.removeEventListener('resize', updatePosition)
       window.removeEventListener('scroll', updatePosition, true)
+      window.visualViewport?.removeEventListener('resize', updatePosition)
+      window.visualViewport?.removeEventListener('scroll', updatePosition)
     }
   }, [activeDropdown, fieldRefs])
 
@@ -343,12 +352,12 @@ export function TurnoFormFields({
   }, [activeDropdown, fieldRefs])
 
   const filteredPatients = useMemo(
-    () => patients.filter((patient) => patient.displayName.toLowerCase().includes(patientSearch.toLowerCase())),
+    () => patients.filter((patient) => normalizeForSearch(patient.displayName).includes(normalizeForSearch(patientSearch))),
     [patientSearch, patients],
   )
 
   const filteredProfessionals = useMemo(
-    () => professionals.filter((professional) => professional.displayName.toLowerCase().includes(professionalSearch.toLowerCase())),
+    () => professionals.filter((professional) => normalizeForSearch(professional.displayName).includes(normalizeForSearch(professionalSearch))),
     [professionalSearch, professionals],
   )
 
@@ -519,7 +528,7 @@ export function TurnoFormFields({
       ) : (
         <>
           <label>
-            Fecha
+            <span className="field-label-mobile-hide">Fecha</span>
             <DateInput
               className="narrow-input"
               value={value.date}
@@ -529,7 +538,7 @@ export function TurnoFormFields({
           </label>
 
           <label>
-            Hora
+            <span className="field-label-mobile-hide">Hora</span>
             <div className="time-selects">
               <select
                 value={selectedHour}
@@ -558,7 +567,7 @@ export function TurnoFormFields({
       {allowRecurrence && !value.esSesionConsulta ? (
         <div className={`quick-recurrence-row ${compact ? '' : 'quick-recurrence-row--full'}`}>
           {compact ? <RepeatFieldIcon className="quick-field-icon" aria-hidden="true" /> : null}
-          <label className={compact ? 'sr-only' : undefined} htmlFor={repeatSelectId}>Repetición</label>
+          <label className={compact ? 'sr-only' : 'field-label-mobile-hide'} htmlFor={repeatSelectId}>Repetición</label>
           <select
             id={repeatSelectId}
             className="quick-repeat-select"
@@ -612,7 +621,7 @@ export function TurnoFormFields({
 
       <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''} ${invalidFields?.has('patient') ? 'field-invalid' : ''}`}>
         {compact ? <PersonFieldIcon className="quick-field-icon" aria-hidden="true" /> : null}
-        <label className={compact ? 'sr-only' : undefined} htmlFor={patientInputId}>Paciente</label>
+        <label className={compact ? 'sr-only' : 'field-label-mobile-hide'} htmlFor={patientInputId}>Paciente</label>
         <div className="dropdown-input-row" ref={patientFieldRef}>
           <input
             id={patientInputId}
@@ -692,7 +701,7 @@ export function TurnoFormFields({
       {hideProfessionalField ? null : (
         <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''} ${invalidFields?.has('professional') ? 'field-invalid' : ''}`}>
           {compact ? <ProfessionalFieldIcon className="quick-field-icon" aria-hidden="true" /> : null}
-          <label className={compact ? 'sr-only' : undefined} htmlFor={professionalInputId}>Profesional</label>
+          <label className={compact ? 'sr-only' : 'field-label-mobile-hide'} htmlFor={professionalInputId}>Profesional</label>
           <div className="dropdown-input-row" ref={professionalFieldRef}>
             <input
               id={professionalInputId}
@@ -776,7 +785,7 @@ export function TurnoFormFields({
       ) : null}
 
       <div className={`dropdown-field ${compact ? 'dropdown-field--compact' : ''} ${invalidFields?.has('specialty') ? 'field-invalid' : ''}`}>
-        <label className={compact ? 'sr-only' : undefined} htmlFor={specialtyFieldLabelId}>Especialidad</label>
+        <label className={compact ? 'sr-only' : 'field-label-mobile-hide'} htmlFor={specialtyFieldLabelId}>Especialidad</label>
         <div
           className="dropdown-input-row"
           ref={specialtyFieldRef}
@@ -883,7 +892,9 @@ export function TurnoFormFields({
 
           {!value.esSesionConsulta ? (
             <label className="appointment-field-session-number">
-              {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
+              <span className="field-label-mobile-hide">
+                {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
+              </span>
               <input
                 type="number"
                 className="narrow-input"
@@ -896,7 +907,7 @@ export function TurnoFormFields({
           ) : null}
 
           <label className="appointment-field-monto">
-            Monto
+            <span className="field-label-mobile-hide">Monto</span>
             <div className="turno-monto-field">
               <span className="turno-monto-symbol" aria-hidden="true">$</span>
               <input
@@ -904,6 +915,7 @@ export function TurnoFormFields({
                 className="narrow-input"
                 min={0}
                 step={0.01}
+                placeholder="0"
                 value={value.monto}
                 onChange={(event) => updateValue({ monto: event.target.value })}
                 disabled={disabled}
@@ -912,7 +924,7 @@ export function TurnoFormFields({
           </label>
 
           <label className="appointment-field-estado">
-            Estado
+            <span className="field-label-mobile-hide">Estado</span>
             <select
               value={value.status}
               onChange={(event) => updateValue({ status: event.target.value as TurnoStatus })}
@@ -925,7 +937,7 @@ export function TurnoFormFields({
           </label>
 
           <label className="appointment-field-duracion">
-            Duración (min)
+            <span className="field-label-mobile-hide">Duración (min)</span>
             <input
               type="number"
               min={15}

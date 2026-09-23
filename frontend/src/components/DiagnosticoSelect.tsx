@@ -39,9 +39,15 @@ export default function DiagnosticoSelect({ grupos, value, onChange, onCreate, d
     updatePosition()
     window.addEventListener('resize', updatePosition)
     window.addEventListener('scroll', updatePosition, true)
+    // Ver mismo fix en FormFields.tsx: el teclado on-screen en mobile mueve
+    // el visual viewport sin disparar 'resize'/'scroll' en window.
+    window.visualViewport?.addEventListener('resize', updatePosition)
+    window.visualViewport?.addEventListener('scroll', updatePosition)
     return () => {
       window.removeEventListener('resize', updatePosition)
       window.removeEventListener('scroll', updatePosition, true)
+      window.visualViewport?.removeEventListener('resize', updatePosition)
+      window.visualViewport?.removeEventListener('scroll', updatePosition)
     }
   }, [open])
 
@@ -89,7 +95,7 @@ export default function DiagnosticoSelect({ grupos, value, onChange, onCreate, d
 
   return (
     <div className="dropdown-field">
-      <label className="dropdown-field-label">Diagnóstico</label>
+      <label className="dropdown-field-label field-label-mobile-hide">Diagnóstico</label>
       <div
         className="dropdown-input-row"
         ref={fieldRef}

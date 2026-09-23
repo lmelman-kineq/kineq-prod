@@ -303,6 +303,10 @@ export function patchPaciente(pacienteId: number, data: PacienteInput): Promise<
   })
 }
 
+export function deletePaciente(pacienteId: number): Promise<void> {
+  return request(`/api/pacientes/${pacienteId}`, { method: 'DELETE' })
+}
+
 // `incluirInactivos` solo tiene efecto para un usuario ADMINISTRADOR (lo
 // valida el backend); el resto de la app lo deja en false para no listar
 // profesionales/especialidades/obras sociales dadas de baja.

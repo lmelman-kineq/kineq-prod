@@ -6,6 +6,7 @@ import PatientFormModal from './PatientFormModal'
 import { SkeletonTableRows } from './Skeleton'
 import { getCachedData, setCachedData } from '../utils/dataCache'
 import { patientFullName } from '../utils/patient'
+import { normalizeForSearch } from '../utils/search'
 
 const PATIENTS_CACHE_KEY = 'patients-page-list'
 
@@ -129,11 +130,11 @@ export default function PatientsPage({ refreshKey, patientSocialWorkById, onOpen
   }
 
   const visiblePatients = useMemo(() => {
-    const term = search.trim().toLowerCase()
+    const term = normalizeForSearch(search.trim())
 
     const filtered = patients.filter((patient) => {
-      const fullName = patientFullName(patient).toLowerCase()
-      const matchesSearch = !term || fullName.includes(term) || (patient.documento ?? '').toLowerCase().includes(term)
+      const fullName = normalizeForSearch(patientFullName(patient))
+      const matchesSearch = !term || fullName.includes(term) || normalizeForSearch(patient.documento ?? '').includes(term)
       if (!matchesSearch) return false
 
       const statusLabel = patient.activo ? 'Activo' : 'Inactivo'

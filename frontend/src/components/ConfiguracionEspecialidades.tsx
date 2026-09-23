@@ -6,6 +6,7 @@ import ConfigSectionHeader from './ConfigSectionHeader'
 import ConfigRowActions from './ConfigRowActions'
 import EspecialidadFormModal from './EspecialidadFormModal'
 import KineqLoader from './KineqLoader'
+import { normalizeForSearch } from '../utils/search'
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) return error.message
@@ -49,9 +50,9 @@ export default function ConfiguracionEspecialidades({ onRequestConfirm }: Config
   }, [refreshKey, mostrarOcultas])
 
   const visibleEspecialidades = useMemo(() => {
-    const term = search.trim().toLowerCase()
+    const term = normalizeForSearch(search.trim())
     if (!term) return especialidades
-    return especialidades.filter((especialidad) => especialidad.nombre.toLowerCase().includes(term))
+    return especialidades.filter((especialidad) => normalizeForSearch(especialidad.nombre).includes(term))
   }, [especialidades, search])
 
   const openCreate = () => {

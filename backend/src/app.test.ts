@@ -3613,6 +3613,68 @@ describe('catálogo global/custom, paciente archivado y profesional inactivo/eli
     })
   })
 
+  describe('eliminación definitiva (hard delete) de paciente', () => {
+    // Paciente propio (con turno, evolución y ficha inicial) para no tocar
+    // `pacienteId`/`turnoFuturoId` de los tests de arriba, que siguen
+    // vivos en describes hermanos de este mismo bloque.
+    async function crearPacienteConHistorial() {
+      const paciente = await prisma.paciente.create({ data: { consultorioId, nombre: 'Paciente', apellido: `HardDelete${RUN_ID}` } })
+      const turno = await prisma.turno.create({
+        data: {
+          consultorioId, pacienteId: paciente.id, profesionalId: profesionalConHistorialId, especialidadId: especialidadGlobalId,
+          inicio: new Date(Date.now() + 60 * 60 * 1000), duracionMinutos: 60,
+        },
+      })
+      const evolucion = await prisma.evolucion.create({
+        data: { consultorioId, pacienteId: paciente.id, profesionalId: profesionalConHistorialId, turnoId: turno.id, contenido: 'Evolución de prueba' },
+      })
+      const fichaInicial = await prisma.fichaInicial.create({ data: { consultorioId, pacienteId: paciente.id, motivoConsulta: 'Dolor lumbar' } })
+      return { pacienteId: paciente.id, turnoId: turno.id, evolucionId: evolucion.id, fichaInicialId: fichaInicial.id }
+    }
+
+    it('un rol no administrador no puede eliminar definitivamente (403) y el paciente sigue existiendo', async () => {
+      const { pacienteId: id } = await crearPacienteConHistorial()
+
+      const res = await request(app).delete(`/api/pacientes/${id}`).set('Cookie', cookies.profesionalVinculado)
+      expect(res.status).toBe(403)
+      expect(await prisma.paciente.findUnique({ where: { id } })).not.toBeNull()
+
+      await prisma.evolucion.deleteMany({ where: { pacienteId: id } })
+      await prisma.fichaInicial.deleteMany({ where: { pacienteId: id } })
+      await prisma.turno.deleteMany({ where: { pacienteId: id } })
+      await prisma.paciente.delete({ where: { id } })
+    })
+
+    it('un administrador de otro consultorio no puede eliminarlo (404, sin filtrar existencia)', async () => {
+      const { pacienteId: id, turnoId, evolucionId, fichaInicialId } = await crearPacienteConHistorial()
+
+      const res = await request(app).delete(`/api/pacientes/${id}`).set('Cookie', cookies.otherAdmin)
+      expect(res.status).toBe(404)
+      expect(await prisma.paciente.findUnique({ where: { id } })).not.toBeNull()
+
+      await prisma.evolucion.delete({ where: { id: evolucionId } })
+      await prisma.fichaInicial.delete({ where: { id: fichaInicialId } })
+      await prisma.turno.delete({ where: { id: turnoId } })
+      await prisma.paciente.delete({ where: { id } })
+    })
+
+    it('un administrador elimina definitivamente al paciente y cascadea turnos, evoluciones y ficha inicial', async () => {
+      const { pacienteId: id, turnoId, evolucionId, fichaInicialId } = await crearPacienteConHistorial()
+
+      const res = await request(app).delete(`/api/pacientes/${id}`).set('Cookie', cookies.admin)
+      expect(res.status).toBe(204)
+
+      expect(await prisma.paciente.findUnique({ where: { id } })).toBeNull()
+      expect(await prisma.turno.findUnique({ where: { id: turnoId } })).toBeNull()
+      expect(await prisma.evolucion.findUnique({ where: { id: evolucionId } })).toBeNull()
+      expect(await prisma.fichaInicial.findUnique({ where: { id: fichaInicialId } })).toBeNull()
+
+      // El paciente archivado de los tests de arriba no se vio afectado.
+      expect(await prisma.paciente.findUnique({ where: { id: pacienteId } })).not.toBeNull()
+      expect(await prisma.turno.findUnique({ where: { id: turnoFuturoId } })).not.toBeNull()
+    })
+  })
+
   describe('profesional inactivo y eliminado', () => {
     it('archivar (eliminar) un profesional con historial lo saca del listado pero conserva turnos y evoluciones', async () => {
       const res = await request(app).post(`/api/profesionales/${profesionalConHistorialId}/archivar`).set('Cookie', cookies.admin)
