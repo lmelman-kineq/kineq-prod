@@ -32,8 +32,14 @@ export default function DiagnosticoSelect({ grupos, value, onChange, onCreate, d
     const updatePosition = () => {
       const field = fieldRef.current
       if (!field) return
+      // Ver mismo fix en FormFields.tsx: sumar el offset del visual viewport,
+      // que `position: fixed` no sigue en iOS Safari cuando el teclado
+      // desplaza la página para mostrar el campo enfocado.
+      const viewport = window.visualViewport
+      const offsetTop = viewport?.offsetTop ?? 0
+      const offsetLeft = viewport?.offsetLeft ?? 0
       const rect = field.getBoundingClientRect()
-      setPosition({ top: rect.bottom + 8, left: rect.left, width: rect.width })
+      setPosition({ top: rect.bottom + 8 + offsetTop, left: rect.left + offsetLeft, width: rect.width })
     }
 
     updatePosition()

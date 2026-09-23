@@ -303,10 +303,19 @@ export function TurnoFormFields({
       const field = fieldRefs[activeDropdown].current
       if (!field) return
 
+      // `getBoundingClientRect` da coordenadas relativas al visual viewport,
+      // pero `position: fixed` en iOS Safari sigue anclado al layout
+      // viewport (no se mueve con el pan que el teclado le aplica al visual
+      // viewport) — sin sumar este offset, el dropdown quedaba pegado a una
+      // posición vieja (bug real reportado en iPhone: "se va para arriba").
+      const viewport = window.visualViewport
+      const offsetTop = viewport?.offsetTop ?? 0
+      const offsetLeft = viewport?.offsetLeft ?? 0
+
       const rect = field.getBoundingClientRect()
       setDropdownPosition({
-        top: rect.bottom + 8,
-        left: rect.left,
+        top: rect.bottom + 8 + offsetTop,
+        left: rect.left + offsetLeft,
         width: rect.width,
       })
     }
