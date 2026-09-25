@@ -14,18 +14,19 @@ type PatientProfileHeaderProps = {
   socialWorkName?: string | null
   canEditPhoto?: boolean
   onPhotoChanged?: (fotoUrl: string | null) => void
-  // Tocar cualquier parte de la card (nombre/DNI/etc.) abre "Editar
-  // paciente", mismo destino que el lápiz del header — mismo gate de
-  // permisos que ese botón (sin esto, no se ofrece: PatientDetailPage no
-  // lo pasa para roles que no pueden editar datos administrativos).
-  onEditClick?: () => void
+  // Tocar cualquier parte de la card (nombre/DNI/etc.) abre "Ver Datos del
+  // Paciente" (solo lectura, con su propio lápiz interno hacia "Editar
+  // paciente") — mismo gate de permisos que el lápiz del header (sin esto,
+  // no se ofrece: PatientDetailPage no lo pasa para roles que no pueden
+  // editar datos administrativos).
+  onCardClick?: () => void
 }
 
 function joinFacts(parts: Array<string | null | undefined>) {
   return parts.filter((part): part is string => Boolean(part)).join(' · ')
 }
 
-export default function PatientProfileHeader({ patient, socialWorkName, canEditPhoto, onPhotoChanged, onEditClick }: PatientProfileHeaderProps) {
+export default function PatientProfileHeader({ patient, socialWorkName, canEditPhoto, onPhotoChanged, onCardClick }: PatientProfileHeaderProps) {
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false)
   // .avatar-edit-popover es position:fixed (ver App.css) — la posición se
   // calcula acá en vez de con CSS relativo al wrapper, mismo mecanismo que
@@ -105,14 +106,14 @@ export default function PatientProfileHeader({ patient, socialWorkName, canEditP
 
   return (
     <header
-      className={`patient-profile-header ${onEditClick ? 'patient-profile-header--editable' : ''}`}
-      onClick={onEditClick}
-      role={onEditClick ? 'button' : undefined}
-      tabIndex={onEditClick ? 0 : undefined}
-      onKeyDown={onEditClick ? (event) => {
+      className={`patient-profile-header ${onCardClick ? 'patient-profile-header--editable' : ''}`}
+      onClick={onCardClick}
+      role={onCardClick ? 'button' : undefined}
+      tabIndex={onCardClick ? 0 : undefined}
+      onKeyDown={onCardClick ? (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault()
-          onEditClick()
+          onCardClick()
         }
       } : undefined}
     >

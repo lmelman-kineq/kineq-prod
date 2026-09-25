@@ -1113,6 +1113,7 @@ export function TurnoFormFields({
     {customModalOpen ? (
       <CustomRecurrenceModal
         startDate={value.date}
+        startTime={value.time}
         initialConfig={value.customRecurrence}
         initialCount={value.recurrenceCount}
         onCancel={() => setCustomModalOpen(false)}

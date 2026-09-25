@@ -19,6 +19,8 @@ import TurnoFormFields, {
 import TurnosPage, { type TurnosPageItem } from './components/TurnosPage'
 import PatientsPage from './components/PatientsPage'
 import PatientDetailPage from './components/PatientDetailPage'
+import PatientViewModal from './components/PatientViewModal'
+import PatientFormModal from './components/PatientFormModal'
 import AuthorizedImg from './components/AuthorizedImg'
 import ConfiguracionPage from './components/ConfiguracionPage'
 import EstadisticasPage from './components/EstadisticasPage'
@@ -704,6 +706,11 @@ function Dashboard() {
   const [patientSocialWorkById, setPatientSocialWorkById] = useState<Record<number, string | null>>({})
   const [turnosPageRefreshKey, setTurnosPageRefreshKey] = useState(0)
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null)
+  // "Ver Datos del Paciente" (solo lectura, con lápiz interno hacia
+  // "Editar paciente") desde el menú de acciones de un turno — no navega a
+  // Historia Clínica, se resuelve en un modal sobre la pantalla actual.
+  const [viewPatientId, setViewPatientId] = useState<number | null>(null)
+  const [editPatientFromMenu, setEditPatientFromMenu] = useState<Paciente | null>(null)
   const [attentionTurno, setAttentionTurno] = useState<Turno | null>(null)
   // A dónde volver desde Atención: la pantalla real desde la que se entró
   // (Inicio o Turnos, hoy los dos únicos orígenes posibles), en vez de
@@ -3338,6 +3345,18 @@ function Dashboard() {
                   className="context-menu-item"
                   onClick={() => {
                     setContextMenu(null)
+                    setViewPatientId(menuTurno.patientId)
+                  }}
+                >
+                  Ver Datos del Paciente
+                </button>
+              ) : null}
+              {menuTurno ? (
+                <button
+                  type="button"
+                  className="context-menu-item"
+                  onClick={() => {
+                    setContextMenu(null)
                     openTurnoDetails(menuTurno)
                   }}
                 >
@@ -3366,6 +3385,28 @@ function Dashboard() {
             </div>
           )
         })() : null}
+
+        {viewPatientId !== null ? (
+          <PatientViewModal
+            patientId={viewPatientId}
+            canEditObservaciones={user?.rol === 'ADMINISTRADOR'}
+            canEdit={user?.rol === 'ADMINISTRADOR' || user?.rol === 'RECEPCION'}
+            onClose={() => setViewPatientId(null)}
+            onEdit={(patient) => {
+              setViewPatientId(null)
+              setEditPatientFromMenu(patient)
+            }}
+          />
+        ) : null}
+
+        {editPatientFromMenu ? (
+          <PatientFormModal
+            patient={editPatientFromMenu}
+            canEditObservaciones={user?.rol === 'ADMINISTRADOR'}
+            onClose={() => setEditPatientFromMenu(null)}
+            onSaved={() => setEditPatientFromMenu(null)}
+          />
+        ) : null}
 
         {confirmDialog ? (
           <div className="modal-overlay confirm-dialog-overlay">

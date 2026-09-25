@@ -201,6 +201,38 @@ describe('buildCustomSerieFechasInicio', () => {
       '2026-09-11T13:00:00.000Z',
     ])
   })
+
+  // Caso real de consultorio: "lunes a las 9, viernes a las 15" en el mismo
+  // pack — cada ocurrencia usa el horario de SU día en vez del horario
+  // único ('10:00', que acá no debería aparecer en ningún resultado).
+  it('con horariosPorDia, cada ocurrencia usa el horario de su propio día de semana', () => {
+    const fechas = buildCustomSerieFechasInicio(
+      '2026-09-04',
+      '10:00',
+      { intervalo: 1, unidad: 'SEMANA', diasSemana: [1, 5], horariosPorDia: { 1: '09:00', 5: '15:00' } },
+      3,
+      'America/Argentina/Buenos_Aires',
+    )
+    expect(fechas).toEqual([
+      '2026-09-04T18:00:00.000Z', // viernes 15:00 ART
+      '2026-09-07T12:00:00.000Z', // lunes 09:00 ART
+      '2026-09-11T18:00:00.000Z', // viernes 15:00 ART
+    ])
+  })
+
+  it('con horariosPorDia incompleto, el día sin horario propio cae al horario único', () => {
+    const fechas = buildCustomSerieFechasInicio(
+      '2026-09-04',
+      '10:00',
+      { intervalo: 1, unidad: 'SEMANA', diasSemana: [1, 5], horariosPorDia: { 5: '15:00' } },
+      2,
+      'America/Argentina/Buenos_Aires',
+    )
+    expect(fechas).toEqual([
+      '2026-09-04T18:00:00.000Z', // viernes 15:00 ART (horario propio)
+      '2026-09-07T13:00:00.000Z', // lunes 10:00 ART (horario único, sin entrada propia)
+    ])
+  })
 })
 
 describe('customRecurrenceSummary', () => {
@@ -212,6 +244,12 @@ describe('customRecurrenceSummary', () => {
   it('semana con uno o más días, en orden L-D sin importar el orden de entrada', () => {
     expect(customRecurrenceSummary({ intervalo: 1, unidad: 'SEMANA', diasSemana: [5, 1] })).toBe('Cada semana, lunes y viernes')
     expect(customRecurrenceSummary({ intervalo: 2, unidad: 'SEMANA', diasSemana: [4, 2] })).toBe('Cada 2 semanas, martes y jueves')
+  })
+
+  it('semana con horariosPorDia muestra el horario de cada día', () => {
+    expect(
+      customRecurrenceSummary({ intervalo: 1, unidad: 'SEMANA', diasSemana: [4, 6], horariosPorDia: { 4: '10:00', 6: '15:00' } }),
+    ).toBe('Cada semana, jueves 10:00 y sábado 15:00')
   })
 
   it('mes y año', () => {

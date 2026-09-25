@@ -3,6 +3,9 @@ import { WEEKDAYS_MONDAY_FIRST, weekdayShortLabel, weekdayFullLabel, type Custom
 
 type CustomRecurrenceModalProps = {
   startDate: string
+  // Horario único del formulario ("Hora") — precarga cada día al activar
+  // "Horario distinto por día" (ver `horarioPorDia` más abajo).
+  startTime: string
   initialConfig: CustomRecurrenceConfig | null
   initialCount: number
   onCancel: () => void
@@ -24,7 +27,7 @@ const UNIT_LABELS: Record<CustomRecurrenceUnit, [string, string]> = {
  * "Listo" solo valida y devuelve la configuración al quick-create — no crea
  * turnos todavía, eso pasa recién en "Guardar turno".
  */
-export default function CustomRecurrenceModal({ startDate, initialConfig, initialCount, onCancel, onConfirm }: CustomRecurrenceModalProps) {
+export default function CustomRecurrenceModal({ startDate, startTime, initialConfig, initialCount, onCancel, onConfirm }: CustomRecurrenceModalProps) {
   const startWeekday = new Date(`${startDate}T00:00:00Z`).getUTCDay()
   // `'' ` es un estado transitorio válido mientras se escribe (permite
   // borrar el campo para reemplazarlo) — nunca se persiste así: `canConfirm`
@@ -34,6 +37,15 @@ export default function CustomRecurrenceModal({ startDate, initialConfig, initia
   const [unidad, setUnidad] = useState<CustomRecurrenceUnit>(initialConfig?.unidad ?? 'SEMANA')
   const [diasSemana, setDiasSemana] = useState<number[]>(initialConfig?.diasSemana?.length ? initialConfig.diasSemana : [startWeekday])
   const [cantidad, setCantidad] = useState<number | ''>(Math.max(2, initialCount || 2))
+
+  // Caso real de consultorio: "jueves a las 10, sábados a las 15" — un
+  // horario propio por día en vez del horario único de "Hora" para todos.
+  // Colapsado por default (el caso común, un solo horario, no se toca) —
+  // se abre solo si ya venía configurado así al editar.
+  const [horarioPorDia, setHorarioPorDia] = useState(Boolean(initialConfig?.horariosPorDia))
+  const [horarios, setHorarios] = useState<Partial<Record<number, string>>>(
+    () => initialConfig?.horariosPorDia ?? Object.fromEntries(diasSemana.map((d) => [d, startTime])),
+  )
 
   const modalRef = useRef<HTMLDivElement | null>(null)
 
@@ -61,11 +73,19 @@ export default function CustomRecurrenceModal({ startDate, initialConfig, initia
       }
       return [...current, weekday]
     })
+    // Un día recién agregado arranca con el horario único de siempre — el
+    // usuario lo ajusta desde ahí si lo necesita distinto.
+    setHorarios((current) => (weekday in current ? current : { ...current, [weekday]: startTime }))
+  }
+
+  const setHorarioDelDia = (weekday: number, horario: string) => {
+    setHorarios((current) => ({ ...current, [weekday]: horario }))
   }
 
   const canConfirm = intervalo !== '' && Number.isInteger(intervalo) && intervalo >= 1
     && cantidad !== '' && Number.isInteger(cantidad) && cantidad >= 2 && cantidad <= 60
     && (unidad !== 'SEMANA' || diasSemana.length >= 1)
+    && (unidad !== 'SEMANA' || !horarioPorDia || diasSemana.every((d) => Boolean(horarios[d])))
 
   const handleConfirm = () => {
     if (!canConfirm) return
@@ -75,7 +95,14 @@ export default function CustomRecurrenceModal({ startDate, initialConfig, initia
     const intervaloValido = Number(intervalo)
     const cantidadValida = Number(cantidad)
     onConfirm(
-      unidad === 'SEMANA' ? { intervalo: intervaloValido, unidad, diasSemana } : { intervalo: intervaloValido, unidad },
+      unidad === 'SEMANA'
+        ? {
+            intervalo: intervaloValido,
+            unidad,
+            diasSemana,
+            ...(horarioPorDia ? { horariosPorDia: Object.fromEntries(diasSemana.map((d) => [d, horarios[d] ?? startTime])) } : {}),
+          }
+        : { intervalo: intervaloValido, unidad },
       cantidadValida,
     )
   }
@@ -131,6 +158,34 @@ export default function CustomRecurrenceModal({ startDate, initialConfig, initia
                   </button>
                 ))}
               </div>
+
+              {/* Colapsado por default — el caso común (un solo horario
+                  para todos los días) no cambia en nada. Pensado para el
+                  caso real "jueves a las 10, sábados a las 15": un solo
+                  pack de sesiones en vez de armar dos series sueltas. */}
+              <label className="checkbox-field custom-recurrence-horario-toggle">
+                <input
+                  type="checkbox"
+                  checked={horarioPorDia}
+                  onChange={(event) => setHorarioPorDia(event.target.checked)}
+                />
+                Horario distinto por día
+              </label>
+
+              {horarioPorDia ? (
+                <div className="custom-recurrence-horarios-por-dia">
+                  {[...diasSemana].sort((a, b) => WEEKDAYS_MONDAY_FIRST.indexOf(a) - WEEKDAYS_MONDAY_FIRST.indexOf(b)).map((weekday) => (
+                    <label key={weekday} className="custom-recurrence-horario-dia-row">
+                      <span>{weekdayFullLabel(weekday)}</span>
+                      <input
+                        type="time"
+                        value={horarios[weekday] ?? startTime}
+                        onChange={(event) => setHorarioDelDia(weekday, event.target.value)}
+                      />
+                    </label>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 

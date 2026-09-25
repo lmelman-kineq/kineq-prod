@@ -18,6 +18,7 @@ import InitialAssessmentPanel from './InitialAssessmentPanel'
 import PatientAppointmentsTable from './PatientAppointmentsTable'
 import FichaEstudiosTab from './FichaEstudiosTab'
 import PatientFormModal from './PatientFormModal'
+import PatientViewModal from './PatientViewModal'
 import RichTextEditor from './RichTextEditor'
 import KineqLoader from './KineqLoader'
 import { useFichaInicial } from '../hooks/useFichaInicial'
@@ -79,6 +80,7 @@ export default function PatientDetailPage({
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(() => (canEditClinical ? 'evoluciones' : 'turnos'))
   const [editPatientOpen, setEditPatientOpen] = useState(false)
+  const [viewPatientOpen, setViewPatientOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
 
@@ -1079,6 +1081,13 @@ export default function PatientDetailPage({
                   <button
                     type="button"
                     className="context-menu-item"
+                    onClick={() => { setHeaderMenuOpen(false); setViewPatientOpen(true) }}
+                  >
+                    Ver Datos del Paciente
+                  </button>
+                  <button
+                    type="button"
+                    className="context-menu-item"
                     onClick={() => { setHeaderMenuOpen(false); setExportPlanOpen(true) }}
                   >
                     Exportar Plan de Sesiones
@@ -1130,7 +1139,7 @@ export default function PatientDetailPage({
             socialWorkName={socialWorkName}
             canEditPhoto={canEditAdmin}
             onPhotoChanged={(fotoUrl) => setPatient((current) => (current ? { ...current, fotoUrl } : current))}
-            onEditClick={canEditAdmin ? () => setEditPatientOpen(true) : undefined}
+            onCardClick={canEditAdmin ? () => setViewPatientOpen(true) : undefined}
           />
 
           {canEditClinical ? (
@@ -1147,6 +1156,19 @@ export default function PatientDetailPage({
           ) : null}
         </aside>
       </div>
+
+      {viewPatientOpen ? (
+        <PatientViewModal
+          patientId={patient.id}
+          canEditObservaciones={user?.rol === 'ADMINISTRADOR'}
+          canEdit={canEditAdmin}
+          onClose={() => setViewPatientOpen(false)}
+          onEdit={() => {
+            setViewPatientOpen(false)
+            setEditPatientOpen(true)
+          }}
+        />
+      ) : null}
 
       {editPatientOpen ? (
         <PatientFormModal

@@ -1478,6 +1478,38 @@ body,
   color: var(--color-on-primary);
 }
 
+/* "Horario distinto por día" (ver CustomRecurrenceModal) — colapsado por
+   default, un poco de aire respecto de los chips de arriba. */
+.custom-recurrence-horario-toggle {
+  margin-top: 4px;
+}
+
+.custom-recurrence-horarios-por-dia {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-surface-muted);
+}
+
+/* Selector de 2 clases a propósito — `.modal-body label` (0,1,1) le gana a
+   una sola clase (0,1,0) y pisaría el `display:flex` de acá con su propio
+   `display:grid`. */
+.custom-recurrence-horarios-por-dia .custom-recurrence-horario-dia-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.custom-recurrence-horarios-por-dia .custom-recurrence-horario-dia-row input[type="time"] {
+  width: auto;
+}
+
 /* Botón "editar" junto al selector de Repetición, solo visible cuando ya hay
    una recurrencia personalizada configurada (reabre el modal con los
    valores guardados — ver docs/modules/appointments.md, "Reabrir Personalizado"). */

@@ -18,6 +18,13 @@ export type CustomRecurrenceConfig = {
   intervalo: number
   unidad: CustomRecurrenceUnit
   diasSemana?: number[]
+  // Caso real de consultorio: "jueves a las 10, sábados a las 15" — un solo
+  // pack de sesiones con horario propio por día en vez de un horario único
+  // para todos (ver "Hora" del formulario). Opcional y solo con sentido
+  // junto a `diasSemana` (unidad SEMANA): sin esto, cada ocurrencia sigue
+  // usando el horario único de siempre (ver buildCustomSerieFechasInicio).
+  // Claves = weekday (0=domingo..6=sábado) como string (índice de objeto).
+  horariosPorDia?: Partial<Record<number, string>>
 }
 
 const WEEKDAY_LABELS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
@@ -241,9 +248,17 @@ export function generateCustomRecurrenceDates(startDateStr: string, config: Cust
   }
 }
 
-/** Igual que `buildSerieFechasInicio`, para una configuración "Personalizado...". */
+/**
+ * Igual que `buildSerieFechasInicio`, para una configuración "Personalizado...".
+ * Con `horariosPorDia` (ver CustomRecurrenceConfig), cada ocurrencia usa el
+ * horario de SU día de semana en vez de `timeStr` para todas — así "jueves
+ * 10:00, sábados 15:00" queda en un solo pack en vez de dos series sueltas.
+ */
 export function buildCustomSerieFechasInicio(startDateStr: string, timeStr: string, config: CustomRecurrenceConfig, cantidad: number, timeZone: string): string[] {
-  return generateCustomRecurrenceDates(startDateStr, config, cantidad).map((date) => zonedTimeToUtcIso(date, timeStr, timeZone))
+  return generateCustomRecurrenceDates(startDateStr, config, cantidad).map((date) => {
+    const horarioDelDia = config.horariosPorDia?.[weekdayOfDateString(date)]
+    return zonedTimeToUtcIso(date, horarioDelDia || timeStr, timeZone)
+  })
 }
 
 /** "a y b" / "a, b y c" — join al estilo español, usado en el resumen de recurrencia. */
@@ -263,9 +278,16 @@ export function customRecurrenceSummary(config: CustomRecurrenceConfig): string 
   if (unidad === 'MES') return intervalo === 1 ? 'Cada mes' : `Cada ${intervalo} meses`
   if (unidad === 'ANIO') return intervalo === 1 ? 'Cada año' : `Cada ${intervalo} años`
 
-  const sortedNames = [...(config.diasSemana ?? [])]
-    .sort((a, b) => mondayFirstIndex(a) - mondayFirstIndex(b))
-    .map((weekday) => WEEKDAY_LABELS[weekday])
+  const sortedDays = [...(config.diasSemana ?? [])].sort((a, b) => mondayFirstIndex(a) - mondayFirstIndex(b))
+  // Con horario por día, el resumen lo muestra explícito (ej. "jueves 10:00
+  // y sábados 15:00") — sin esto, dos días con horarios distintos se verían
+  // idénticos a un pack de horario único, ocultando la diferencia real.
+  const sortedNames = config.horariosPorDia
+    ? sortedDays.map((weekday) => {
+        const horario = config.horariosPorDia?.[weekday]
+        return horario ? `${WEEKDAY_LABELS[weekday]} ${horario}` : WEEKDAY_LABELS[weekday]
+      })
+    : sortedDays.map((weekday) => WEEKDAY_LABELS[weekday])
   const diasTexto = joinSpanishList(sortedNames)
   return intervalo === 1 ? `Cada semana, ${diasTexto}` : `Cada ${intervalo} semanas, ${diasTexto}`
 }
