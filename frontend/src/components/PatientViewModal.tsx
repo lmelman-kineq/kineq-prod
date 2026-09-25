@@ -88,46 +88,46 @@ export default function PatientViewModal({ patientId, canEditObservaciones, canE
           ) : error ? (
             <p className="evolution-form-error">{error}</p>
           ) : patient ? (
-            <div className="details-body">
-              <div>
+            <div className="details-body patient-view-body">
+              <div className="patient-view-field patient-view-field--nombre">
                 <p className="details-label">Nombre completo</p>
                 <p>{patientFullName(patient)}</p>
               </div>
-              <div>
+              <div className="patient-view-field patient-view-field--documento">
                 <p className="details-label">Documento</p>
                 <p>{patient.documento || '—'}</p>
               </div>
-              <div>
+              <div className="patient-view-field patient-view-field--fecha">
                 <p className="details-label">Fecha de nacimiento</p>
                 <p>{patient.fechaNacimiento ? `${formatDateOnly(patient.fechaNacimiento)}${age !== null ? ` (${age} años)` : ''}` : '—'}</p>
               </div>
-              <div>
+              <div className="patient-view-field patient-view-field--email">
                 <p className="details-label">Email</p>
                 <p>{patient.email || '—'}</p>
               </div>
-              <div>
+              <div className="patient-view-field patient-view-field--telefono">
                 <p className="details-label">Teléfono</p>
                 <p>{patient.telefono || '—'}</p>
               </div>
-              <div>
+              <div className="patient-view-field patient-view-field--direccion">
                 <p className="details-label">Dirección</p>
                 <p>{patient.direccion || '—'}</p>
               </div>
-              <div>
+              <div className="patient-view-field patient-view-field--obra-social">
                 <p className="details-label">Obra social</p>
                 <p>{patient.obraSocial?.nombre ?? 'Particular'}</p>
               </div>
-              <div>
+              <div className="patient-view-field patient-view-field--afiliado">
                 <p className="details-label">Número de afiliado</p>
                 <p>{patient.numeroAfiliado || '—'}</p>
               </div>
               {canEditObservaciones ? (
-                <div>
+                <div className="patient-view-field patient-view-field--observaciones">
                   <p className="details-label">Observaciones</p>
                   <p>{patient.observaciones || '—'}</p>
                 </div>
               ) : null}
-              <div>
+              <div className="patient-view-field patient-view-field--estado">
                 <p className="details-label">Estado</p>
                 <p>{patient.activo ? 'Activo' : 'Inactivo'}</p>
               </div>

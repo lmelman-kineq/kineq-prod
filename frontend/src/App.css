@@ -6631,6 +6631,58 @@ select:disabled {
     gap: 12px;
   }
 
+  /* "Ver Datos del Paciente" (PatientViewModal): en mobile, Nombre/Email/
+     Fecha de nacimiento/Observaciones quedan solos en su propia línea
+     (valores largos que no comparten bien fila con nada) y el resto se
+     repareja distinto — Documento+Teléfono, Dirección+Estado, Obra
+     social+Número de afiliado — en vez del pareo por orden de aparición
+     que usa desktop. Reordena vía `order` en el mismo grid de 2 columnas
+     (`.details-body`, sin togarlo): no hace falta duplicar el DOM, cada
+     "solo en su línea" además pasa a ocupar las 2 columnas. */
+  .patient-view-field--nombre {
+    order: 1;
+    grid-column: 1 / -1;
+  }
+
+  .patient-view-field--email {
+    order: 2;
+    grid-column: 1 / -1;
+  }
+
+  .patient-view-field--documento {
+    order: 3;
+  }
+
+  .patient-view-field--telefono {
+    order: 4;
+  }
+
+  .patient-view-field--fecha {
+    order: 5;
+    grid-column: 1 / -1;
+  }
+
+  .patient-view-field--direccion {
+    order: 6;
+  }
+
+  .patient-view-field--estado {
+    order: 7;
+  }
+
+  .patient-view-field--obra-social {
+    order: 8;
+  }
+
+  .patient-view-field--afiliado {
+    order: 9;
+  }
+
+  .patient-view-field--observaciones {
+    order: 10;
+    grid-column: 1 / -1;
+  }
+
   /* Card fija de "Alertas clínicas" (3 renglones siempre visibles) → botón
      de header con ícono+badge (ver .patient-alerts-wrapper) que abre el
      mismo contenido en un popover — solo se toca espacio si hay algo que
