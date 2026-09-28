@@ -2118,19 +2118,33 @@ function Dashboard() {
   const uniqueSocialWorks = obrasSocialesState
   const uniqueProfessionals = profesionalesState.map((profesional) => profesional.displayName)
 
+  // Usado tanto para el listado de Día (dayTurnos) como para lo que reciben
+  // Semana/Mes (ver filteredRangeTurnos) — antes solo se aplicaba acá, así
+  // que Semana/Mes recibían rangeTurnosState crudo y el panel de Filtro no
+  // tenía ningún efecto visible en esas dos vistas (bug real reportado).
+  const turnoMatchesFilters = (turno: Turno) => {
+    const specialtyMatch =
+      filters.specialtyIds.length === 0 ||
+      (turno.specialtyId ? filters.specialtyIds.includes(turno.specialtyId) : false)
+    const socialWorkMatch = filters.socialWorks.length === 0 || filters.socialWorks.includes(turno.socialWorkDisplay ?? '')
+    const professionalMatch = filters.professionals.length === 0 || filters.professionals.includes(turno.professionalDisplay ?? '')
+    const statusMatch = filters.statuses.length === 0 || filters.statuses.includes(turno.status)
+
+    return specialtyMatch && socialWorkMatch && professionalMatch && statusMatch
+  }
+
   const dayTurnos = turnosState
     .filter((t) => t.date === selectedDate)
-    .filter((turno) => {
-      const specialtyMatch =
-        filters.specialtyIds.length === 0 ||
-        (turno.specialtyId ? filters.specialtyIds.includes(turno.specialtyId) : false)
-      const socialWorkMatch = filters.socialWorks.length === 0 || filters.socialWorks.includes(turno.socialWorkDisplay ?? '')
-      const professionalMatch = filters.professionals.length === 0 || filters.professionals.includes(turno.professionalDisplay ?? '')
-      const statusMatch = filters.statuses.length === 0 || filters.statuses.includes(turno.status)
-
-      return specialtyMatch && socialWorkMatch && professionalMatch && statusMatch
-    })
+    .filter(turnoMatchesFilters)
     .sort((a, b) => a.time.localeCompare(b.time))
+
+  const filteredRangeTurnos = rangeTurnosState.filter(turnoMatchesFilters)
+
+  const hasActiveFilters = Boolean(
+    filters.specialtyIds.length || filters.socialWorks.length || filters.professionals.length || filters.statuses.length,
+  )
+
+  const clearHomeFilters = () => setFilters({ specialtyIds: [], socialWorks: [], professionals: [], statuses: [] })
 
   const visibleDayTurnos = dayTurnos.filter((turno) => {
     const [hour, minute] = turno.time.split(':').map(Number)
@@ -2677,7 +2691,13 @@ function Dashboard() {
                   </select>
                 </label>
               <div className="schedule-filters-wrapper" ref={filtersRef}>
-                <button className="filter-button" type="button" aria-label="Filtro" title="Filtro" onClick={() => setFiltersOpen(!filtersOpen)}>
+                <button
+                  className={`filter-button ${hasActiveFilters ? 'has-active-filter' : ''}`}
+                  type="button"
+                  aria-label="Filtro"
+                  title="Filtro"
+                  onClick={() => setFiltersOpen(!filtersOpen)}
+                >
                   <span className="label-full">Filtro</span>
                   <span className="filter-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -2762,6 +2782,17 @@ function Dashboard() {
                   </div>
                 ) : null}
               </div>
+              {hasActiveFilters ? (
+                <button
+                  type="button"
+                  className="turnos-clear-filters"
+                  aria-label="Quitar todos los filtros"
+                  title="Quitar filtros"
+                  onClick={clearHomeFilters}
+                >
+                  &times;
+                </button>
+              ) : null}
               </div>
             </div>
 
@@ -2962,7 +2993,7 @@ function Dashboard() {
             <WeekView
               selectedDate={selectedDate}
               todayEnZonaConsultorio={todayEnZonaConsultorio}
-              turnos={rangeTurnosState}
+              turnos={filteredRangeTurnos}
               loading={rangeTurnosLoading}
               specialtiesState={specialtiesState}
               selectedTurnoId={selectedTurnoId}
@@ -2985,7 +3016,7 @@ function Dashboard() {
           ) : calendarView === 'month' ? (
             <MonthView
               selectedDate={selectedDate}
-              turnos={rangeTurnosState}
+              turnos={filteredRangeTurnos}
               loading={rangeTurnosLoading}
               todayEnZonaConsultorio={todayEnZonaConsultorio}
               onSelectDay={(date) => {

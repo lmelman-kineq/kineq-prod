@@ -6423,6 +6423,15 @@ select:disabled {
     width: 100%;
   }
 
+  /* Mismo bug, mismo fix: `.date-input.narrow-input` trae min-width:160px
+     (campo Fecha) — en la columna angosta de mobile eso lo empujaba a
+     invadir la columna de al lado (Hora), superponiendo el ícono de
+     calendario sobre el selector de hora (bug real reportado). */
+  .appointment-form .date-input.narrow-input {
+    width: 100%;
+    min-width: 0;
+  }
+
   .turno-monto-field {
     min-width: 0;
   }

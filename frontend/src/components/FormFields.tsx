@@ -901,9 +901,7 @@ export function TurnoFormFields({
 
           {!value.esSesionConsulta ? (
             <label className="appointment-field-session-number">
-              <span className="field-label-mobile-hide">
-                {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
-              </span>
+              {selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
               <input
                 type="number"
                 className="narrow-input"
@@ -916,7 +914,7 @@ export function TurnoFormFields({
           ) : null}
 
           <label className="appointment-field-monto">
-            <span className="field-label-mobile-hide">Monto</span>
+            Monto
             <div className="turno-monto-field">
               <span className="turno-monto-symbol" aria-hidden="true">$</span>
               <input
@@ -933,7 +931,7 @@ export function TurnoFormFields({
           </label>
 
           <label className="appointment-field-estado">
-            <span className="field-label-mobile-hide">Estado</span>
+            Estado
             <select
               value={value.status}
               onChange={(event) => updateValue({ status: event.target.value as TurnoStatus })}
@@ -946,7 +944,7 @@ export function TurnoFormFields({
           </label>
 
           <label className="appointment-field-duracion">
-            <span className="field-label-mobile-hide">Duración (min)</span>
+            Duración (min)
             <input
               type="number"
               min={15}
