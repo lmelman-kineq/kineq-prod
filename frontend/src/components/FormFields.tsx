@@ -4,6 +4,7 @@ import DiagnosticoSelect from './DiagnosticoSelect'
 import type { GrupoEvolucion } from '../types/domain'
 import { weekdayLabel, monthlyRecurrenceLabel, customRecurrenceSummary, type RecurrenceFrequency, type CustomRecurrenceConfig } from '../utils/recurrence'
 import CustomRecurrenceModal from './CustomRecurrenceModal'
+import InfoPopover from './InfoPopover'
 import { normalizeForSearch } from '../utils/search'
 import { useIsMobile } from '../hooks/useIsMobile'
 
@@ -514,6 +515,38 @@ export function TurnoFormFields({
 
   const endTime = addMinutesToTimeOfDay(value.time, value.duration)
 
+  // Mismos dos checkboxes en el formulario completo y en el rápido. La
+  // ayuda de "Comienzo de módulo" va en un ícono de info, no en texto fijo.
+  const turnoFlags = (
+    <>
+      <label className="checkbox-field nice-checkbox" htmlFor={sessionConsultaCheckboxId}>
+        <input
+          id={sessionConsultaCheckboxId}
+          type="checkbox"
+          checked={value.esSesionConsulta}
+          onChange={(event) => toggleSesionConsulta(event.target.checked)}
+          disabled={disabled}
+        />
+        Sesión de consulta
+      </label>
+      {!value.esSesionConsulta ? (
+        <span className="turno-flag-with-info">
+          <label className="checkbox-field nice-checkbox" htmlFor={inicioModuloCheckboxId}>
+            <input
+              id={inicioModuloCheckboxId}
+              type="checkbox"
+              checked={value.inicioModulo}
+              onChange={(event) => updateValue({ inicioModulo: event.target.checked })}
+              disabled={disabled}
+            />
+            Comienzo de módulo
+          </label>
+          <InfoPopover text={INICIO_MODULO_HINT} label="Qué es Comienzo de módulo" />
+        </span>
+      ) : null}
+    </>
+  )
+
   return (
     <>
     <div ref={formRef} className={`modal-body appointment-form ${disabled ? 'appointment-form--readonly' : ''} ${compact ? 'appointment-form--compact' : ''}`}>
@@ -862,29 +895,7 @@ export function TurnoFormFields({
 
       {compact ? (
         <div className="quick-session-row">
-          <label className="checkbox-field" htmlFor={sessionConsultaCheckboxId}>
-            <input
-              id={sessionConsultaCheckboxId}
-              type="checkbox"
-              checked={value.esSesionConsulta}
-              onChange={(event) => toggleSesionConsulta(event.target.checked)}
-              disabled={disabled}
-            />
-            Sesión de consulta
-          </label>
-
-          {!value.esSesionConsulta ? (
-            <label className="checkbox-field" htmlFor={inicioModuloCheckboxId} title={INICIO_MODULO_HINT}>
-              <input
-                id={inicioModuloCheckboxId}
-                type="checkbox"
-                checked={value.inicioModulo}
-                onChange={(event) => updateValue({ inicioModulo: event.target.checked })}
-                disabled={disabled}
-              />
-              Comienzo de módulo
-            </label>
-          ) : null}
+          {turnoFlags}
 
           {!value.esSesionConsulta ? (
             <span className="quick-session-number">
@@ -906,34 +917,12 @@ export function TurnoFormFields({
         </div>
       ) : (
         <>
-          {/* "Sesión de consulta" ocupa su propia fila completa (antes
-              compartía celda de grid con "Nro. de sesión", lo que estiraba
-              esa fila y hacía parecer que "Monto" tenía un gap enorme
-              label→input — en realidad era la fila del grid, no el campo). */}
-          <label className="checkbox-field checkbox-field--section appointment-form-full-row" htmlFor={sessionConsultaCheckboxId}>
-            <input
-              id={sessionConsultaCheckboxId}
-              type="checkbox"
-              checked={value.esSesionConsulta}
-              onChange={(event) => toggleSesionConsulta(event.target.checked)}
-              disabled={disabled}
-            />
-            Sesión de consulta
-          </label>
-
-          {!value.esSesionConsulta ? (
-            <label className="checkbox-field checkbox-field--section appointment-form-full-row" htmlFor={inicioModuloCheckboxId} title={INICIO_MODULO_HINT}>
-              <input
-                id={inicioModuloCheckboxId}
-                type="checkbox"
-                checked={value.inicioModulo}
-                onChange={(event) => updateValue({ inicioModulo: event.target.checked })}
-                disabled={disabled}
-              />
-              Comienzo de módulo
-              <span className="checkbox-field-hint">{INICIO_MODULO_HINT}</span>
-            </label>
-          ) : null}
+          {/* "Sesión de consulta" + "Comienzo de módulo" comparten una fila
+              propia a ancho completo (nunca una celda de grid junto a "Nro.
+              de sesión", que estiraba esa fila). */}
+          <div className="turno-flags-row checkbox-field--section appointment-form-full-row">
+            {turnoFlags}
+          </div>
 
           {!value.esSesionConsulta ? (
             <label className="appointment-field-session-number">

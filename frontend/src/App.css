@@ -1057,20 +1057,127 @@ body,
   margin: 6px 0;
 }
 
-/* Ayuda debajo de un checkbox ("Comienzo de módulo"): línea propia, chica,
-   alineada con el texto del checkbox (no con la casilla). */
-.modal-body .checkbox-field:has(.checkbox-field-hint) {
+/* "Sesión de consulta" + "Comienzo de módulo" en una sola fila (wrappea
+   solo si no entran, ej. mobile angosto). */
+.turno-flags-row {
+  display: flex;
   flex-wrap: wrap;
-  row-gap: 2px;
+  align-items: center;
+  gap: 10px 28px;
 }
 
-.checkbox-field-hint {
-  flex-basis: 100%;
-  padding-left: 24px;
+.turno-flag-with-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Checkbox propio: casilla redondeada que se llena con el violeta de la
+   marca y un tilde, en vez del checkbox nativo del sistema. */
+.modal-body .nice-checkbox {
+  cursor: pointer;
+  user-select: none;
+}
+
+.modal-body .nice-checkbox input[type="checkbox"] {
+  appearance: none;
+  display: grid;
+  place-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-input-bg);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.modal-body .nice-checkbox input[type="checkbox"]::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  background: var(--color-on-primary);
+  clip-path: polygon(14% 44%, 0 65%, 40% 100%, 100% 22%, 84% 6%, 38% 66%);
+  transform: scale(0);
+  transition: transform 0.12s ease;
+}
+
+.modal-body .nice-checkbox input[type="checkbox"]:checked {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.modal-body .nice-checkbox input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+.modal-body .nice-checkbox input[type="checkbox"]:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.modal-body .nice-checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--color-primary-border);
+  outline-offset: 2px;
+}
+
+.modal-body .nice-checkbox input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Ícono de info + globo de ayuda (InfoPopover.tsx). */
+.info-popover {
+  position: relative;
+  display: inline-flex;
+}
+
+.info-popover-button {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
   color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.info-popover-button:hover,
+.info-popover-button[aria-expanded="true"] {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+}
+
+.info-popover-button svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.info-popover-bubble {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  z-index: 30;
+  width: max-content;
+  max-width: min(280px, 70vw);
+  padding: 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+  color: var(--color-text);
   font-size: 12px;
   font-weight: 400;
-  line-height: 1.35;
+  line-height: 1.4;
+  transform: translateX(-50%);
 }
 
 /* Legend/subtítulo del header de un modal (ej. "Modificá los datos del
@@ -4341,9 +4448,11 @@ select:disabled {
   background: color-mix(in srgb, var(--color-warning) 20%, transparent);
 }
 
+/* Fecha: 170px para que entre la etiqueta "Comienzo de módulo" completa
+   (antes 150px la cortaba en laptop). */
 .evolution-table th:nth-child(1),
 .evolution-table td:nth-child(1) {
-  width: 150px;
+  width: 170px;
   white-space: normal;
 }
 
@@ -4352,9 +4461,25 @@ select:disabled {
   width: 170px;
 }
 
+/* Diagnóstico: el chip es nowrap y con nombres largos ("Osteoartrosis
+   Bilateral") se salía de la celda y quedaba pegado al Resumen. Ahora se
+   recorta con "…" dentro de su celda (nombre completo en el title) y la
+   celda conserva su padding como margen. */
 .evolution-table th:nth-child(3),
 .evolution-table td:nth-child(3) {
-  width: 140px;
+  width: 170px;
+}
+
+.evolution-table td:nth-child(3) .grupo-evolucion-chip {
+  display: flex;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.evolution-table td:nth-child(3) .grupo-evolucion-chip-nombre {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .evolution-table th:nth-child(5),

@@ -13,9 +13,9 @@ import DiagnosticoSelect from './DiagnosticoSelect'
 export function GrupoChip({ grupo }: { grupo: GrupoEvolucion | null | undefined }) {
   if (!grupo) return <span className="grupo-evolucion-chip grupo-evolucion-chip--none">Sin diagnóstico</span>
   return (
-    <span className="grupo-evolucion-chip">
+    <span className="grupo-evolucion-chip" title={grupo.nombre}>
       <span className="grupo-evolucion-dot" style={{ backgroundColor: grupo.color }} aria-hidden="true" />
-      {grupo.nombre}
+      <span className="grupo-evolucion-chip-nombre">{grupo.nombre}</span>
     </span>
   )
 }
