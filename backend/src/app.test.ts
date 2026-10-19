@@ -2172,6 +2172,19 @@ describe('auth, roles y aislamiento por consultorio', () => {
       await prisma.turno.delete({ where: { id: turno.id } })
     })
 
+    it('permite volver un turno cancelado a ASIGNADO y limpia canceladoAt', async () => {
+      const turno = await prisma.turno.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: profesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-08-01T17:00:00.000Z'), duracionMinutos: 60, estado: EstadoTurno.CANCELADO, canceladoAt: new Date() },
+      })
+
+      const res = await request(app).patch(`/api/turnos/${turno.id}`).set('Cookie', cookies.adminA).send({ estado: 'ASIGNADO' })
+      expect(res.status).toBe(200)
+      expect(res.body.estado).toBe('ASIGNADO')
+      expect(res.body.canceladoAt).toBeNull()
+
+      await prisma.turno.delete({ where: { id: turno.id } })
+    })
+
     it('no permite reiniciar un turno ya finalizado', async () => {
       const turno = await prisma.turno.create({
         data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: profesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-08-01T18:00:00.000Z'), duracionMinutos: 60, estado: EstadoTurno.FINALIZADO },

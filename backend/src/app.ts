@@ -1144,10 +1144,15 @@ app.patch(
       // Al transicionar de estado, se registra automáticamente el timestamp correspondiente.
       // No se aceptan estos timestamps desde el cliente (no están en `fields`).
       if (payload.estado && payload.estado !== turno.estado) {
+        // Excepción: un CANCELADO puede reabrirse a ASIGNADO (ej. turnos
+        // cancelados al archivar un paciente que después se reactivó). El
+        // chequeo de solapamiento de arriba ya cubre que el horario siga libre.
+        const reabriendo = turno.estado === 'CANCELADO' && payload.estado === 'ASIGNADO'
         const estadosFinales = ['FINALIZADO', 'CANCELADO', 'AUSENTE']
-        if (estadosFinales.includes(turno.estado)) {
+        if (estadosFinales.includes(turno.estado) && !reabriendo) {
           return res.status(409).json({ error: 'No se puede modificar un turno ya finalizado, cancelado o ausente' })
         }
+        if (reabriendo) payload.canceladoAt = null
         if (payload.estado === 'ATENDIENDO') payload.inicioAtencion = new Date()
         if (payload.estado === 'FINALIZADO') payload.finAtencion = new Date()
         if (payload.estado === 'CANCELADO') payload.canceladoAt = new Date()

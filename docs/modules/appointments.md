@@ -280,6 +280,8 @@ Significa que el turno fue cancelado.
 
 Un turno cancelado libera el horario.
 
+Es terminal salvo una excepción: puede volver a `ASIGNADO` (se limpia `canceladoAt`), siempre que el horario siga libre. Caso típico: turnos cancelados automáticamente al marcar inactivo a un paciente que después se reactivó.
+
 Debe diferenciarse claramente de un turno ausente.
 
 ---
