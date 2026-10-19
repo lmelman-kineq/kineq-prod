@@ -392,6 +392,21 @@ describe('auth, roles y aislamiento por consultorio', () => {
     await prisma.turno.delete({ where: { id: otroTurno.id } })
   })
 
+  it('el profesional que inicia la atención de un turno ajeno queda asignado al turno', async () => {
+    const otroTurno = await prisma.turno.create({
+      data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, inicio: new Date('2026-08-01T16:00:00.000Z'), duracionMinutos: 60, estado: 'EN_ESPERA' },
+    })
+
+    // Solo cambia el estado (y el profesional): el resto del body se ignora.
+    const res = await request(app).patch(`/api/turnos/${otroTurno.id}`).set('Cookie', cookies.profesionalA).send({ estado: 'ATENDIENDO', notas: 'ignorado' })
+    expect(res.status).toBe(200)
+    expect(res.body.estado).toBe('ATENDIENDO')
+    expect(res.body.profesionalId).toBe(profesionalAId)
+    expect(res.body.notas).toBeNull()
+
+    await prisma.turno.delete({ where: { id: otroTurno.id } })
+  })
+
   it('profesional sin vínculo a un Profesional recibe un error controlado, no acceso total', async () => {
     const res = await request(app).patch(`/api/turnos/${turnoAId}`).set('Cookie', cookies.profesionalSinVinculo).send({ notas: 'x' })
     expect(res.status).toBe(403)
@@ -1096,49 +1111,30 @@ describe('auth, roles y aislamiento por consultorio', () => {
       await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
     })
 
-    it('el próximo turno cuenta solo los FINALIZADO previos (no ASIGNADO/CANCELADO/AUSENTE)', async () => {
+    it('numera por fecha dentro del pack: cancelado no consume número, ausente sí', async () => {
       const grupo = await prisma.grupoEvolucion.create({
         data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Rodilla ${RUN_ID}`, color: 'var(--appointment-sky)', cantidadSesionesPlanificadas: 8 },
       })
-
-      const finalizado = await prisma.turno.create({
-        data: {
-          consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
-          grupoId: grupo.id, inicio: new Date('2026-09-02T14:00:00.000Z'), duracionMinutos: 30, estado: 'FINALIZADO', numeroSesion: 1,
-        },
-      })
-      const cancelado = await prisma.turno.create({
-        data: {
-          consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
-          grupoId: grupo.id, inicio: new Date('2026-09-03T14:00:00.000Z'), duracionMinutos: 30, estado: 'CANCELADO', numeroSesion: 2,
-        },
-      })
-      const ausente = await prisma.turno.create({
-        data: {
-          consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
-          grupoId: grupo.id, inicio: new Date('2026-09-04T14:00:00.000Z'), duracionMinutos: 30, estado: 'AUSENTE', numeroSesion: 2,
-        },
-      })
-
-      const proxima = await request(app).get(`/api/grupos-evolucion/${grupo.id}/proxima-sesion`).set('Cookie', cookies.adminA)
-      expect(proxima.status).toBe(200)
-      expect(proxima.body.numeroSesion).toBe(2)
+      const base = { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, grupoId: grupo.id, duracionMinutos: 30 }
+      const finalizado = await prisma.turno.create({ data: { ...base, inicio: new Date('2026-09-02T14:00:00.000Z'), estado: 'FINALIZADO' } })
+      const cancelado = await prisma.turno.create({ data: { ...base, inicio: new Date('2026-09-03T14:00:00.000Z'), estado: 'CANCELADO', numeroSesion: 2 } })
+      const ausente = await prisma.turno.create({ data: { ...base, inicio: new Date('2026-09-04T14:00:00.000Z'), estado: 'AUSENTE' } })
 
       const nuevo = await request(app)
         .post('/api/turnos')
         .set('Cookie', cookies.adminA)
-        .send({
-          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
-          inicio: '2026-09-05T14:00:00.000Z', duracionMinutos: 30, grupoId: grupo.id,
-        })
+        .send({ pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, inicio: '2026-09-05T14:00:00.000Z', duracionMinutos: 30, grupoId: grupo.id })
       expect(nuevo.status).toBe(201)
-      expect(nuevo.body.numeroSesion).toBe(2)
+      expect(nuevo.body.numeroSesion).toBe(3)
+
+      const numeros = await prisma.turno.findMany({ where: { id: { in: [finalizado.id, cancelado.id, ausente.id] } }, orderBy: { inicio: 'asc' } })
+      expect(numeros.map((t) => t.numeroSesion)).toEqual([1, null, 2])
 
       await prisma.turno.deleteMany({ where: { id: { in: [finalizado.id, cancelado.id, ausente.id, nuevo.body.id] } } })
       await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
     })
 
-    it('numeroSesion explícito del cliente nunca se pisa con el cálculo automático', async () => {
+    it('numeroSesion enviado por el cliente se ignora: siempre se deriva del pack', async () => {
       const grupo = await prisma.grupoEvolucion.create({
         data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Hombro ${RUN_ID}`, color: 'var(--appointment-pink)', cantidadSesionesPlanificadas: 6 },
       })
@@ -1146,38 +1142,73 @@ describe('auth, roles y aislamiento por consultorio', () => {
       const res = await request(app)
         .post('/api/turnos')
         .set('Cookie', cookies.adminA)
-        .send({
-          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
-          inicio: '2026-09-06T14:00:00.000Z', duracionMinutos: 30, grupoId: grupo.id, numeroSesion: 4,
-        })
+        .send({ pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, inicio: '2026-09-06T14:00:00.000Z', duracionMinutos: 30, grupoId: grupo.id, numeroSesion: 4 })
       expect(res.status).toBe(201)
-      expect(res.body.numeroSesion).toBe(4)
+      expect(res.body.numeroSesion).toBe(1)
 
-      // Editable a mano después, aunque sea "automático" por default.
-      const patch = await request(app)
-        .patch(`/api/turnos/${res.body.id}`)
-        .set('Cookie', cookies.adminA)
-        .send({ numeroSesion: 99 })
+      const patch = await request(app).patch(`/api/turnos/${res.body.id}`).set('Cookie', cookies.adminA).send({ numeroSesion: 99 })
       expect(patch.status).toBe(200)
-      expect(patch.body.numeroSesion).toBe(99)
+      expect(patch.body.numeroSesion).toBe(1)
 
       await prisma.turno.delete({ where: { id: res.body.id } })
       await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
     })
 
-    it('turno sin diagnóstico sigue funcionando exactamente igual (numeroSesion manual, sin grupo)', async () => {
+    it('reprogramar un turno (cambiar su fecha) renumera los del mismo pack', async () => {
+      const grupo = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Reprogramar ${RUN_ID}`, color: 'var(--appointment-teal)' },
+      })
+      const ids: number[] = []
+      for (const dia of ['2026-09-20', '2026-09-21', '2026-09-22']) {
+        const res = await request(app)
+          .post('/api/turnos')
+          .set('Cookie', cookies.adminA)
+          .send({ pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, inicio: `${dia}T14:00:00.000Z`, duracionMinutos: 30, grupoId: grupo.id })
+        ids.push(res.body.id)
+      }
+
+      // La 1ra pasa a después de la 3ra: queda última y las otras suben.
+      const patch = await request(app).patch(`/api/turnos/${ids[0]}`).set('Cookie', cookies.adminA).send({ inicio: '2026-09-23T14:00:00.000Z' })
+      expect(patch.status).toBe(200)
+      expect(patch.body.numeroSesion).toBe(3)
+      const otros = await prisma.turno.findMany({ where: { id: { in: [ids[1], ids[2]] } }, orderBy: { inicio: 'asc' } })
+      expect(otros.map((t) => t.numeroSesion)).toEqual([1, 2])
+
+      await prisma.turno.deleteMany({ where: { id: { in: ids } } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
+    })
+
+    it('volver al mismo diagnóstico después de más de diasCortePack días arranca un pack nuevo', async () => {
+      const grupo = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Pack nuevo ${RUN_ID}`, color: 'var(--appointment-purple)' },
+      })
+      const previo = await prisma.turno.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, grupoId: grupo.id, inicio: new Date('2026-01-10T14:00:00.000Z'), duracionMinutos: 30, estado: 'FINALIZADO' },
+      })
+
       const res = await request(app)
         .post('/api/turnos')
         .set('Cookie', cookies.adminA)
-        .send({
-          pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
-          inicio: '2026-09-07T14:00:00.000Z', duracionMinutos: 30, numeroSesion: 3,
-        })
+        .send({ pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, inicio: '2026-07-10T14:00:00.000Z', duracionMinutos: 30, grupoId: grupo.id })
       expect(res.status).toBe(201)
-      expect(res.body.numeroSesion).toBe(3)
+      expect(res.body.numeroSesion).toBe(1)
+
+      await prisma.turno.deleteMany({ where: { id: { in: [previo.id, res.body.id] } } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
+    })
+
+    it('turno sin diagnóstico también se numera (pack "sin diagnóstico")', async () => {
+      const paciente = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'Sin', apellido: `Dx ${RUN_ID}` } })
+      const res = await request(app)
+        .post('/api/turnos')
+        .set('Cookie', cookies.adminA)
+        .send({ pacienteId: paciente.id, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, inicio: '2026-09-07T14:00:00.000Z', duracionMinutos: 30 })
+      expect(res.status).toBe(201)
+      expect(res.body.numeroSesion).toBe(1)
       expect(res.body.grupoId).toBeNull()
 
       await prisma.turno.delete({ where: { id: res.body.id } })
+      await prisma.paciente.delete({ where: { id: paciente.id } })
     })
 
     it('no permite asignar un diagnóstico de otro paciente al turno (cross-paciente)', async () => {
@@ -1192,17 +1223,6 @@ describe('auth, roles y aislamiento por consultorio', () => {
           pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId,
           inicio: '2026-09-08T14:00:00.000Z', duracionMinutos: 30, grupoId: grupoDeB.id,
         })
-      expect(res.status).toBe(404)
-
-      await prisma.grupoEvolucion.delete({ where: { id: grupoDeB.id } })
-    })
-
-    it('no permite pedir la próxima sesión de un diagnóstico de otro consultorio', async () => {
-      const grupoDeB = await prisma.grupoEvolucion.create({
-        data: { consultorioId: consultorioBId, pacienteId: pacienteBId, nombre: `Otro consultorio sesion ${RUN_ID}`, color: 'var(--appointment-red)' },
-      })
-
-      const res = await request(app).get(`/api/grupos-evolucion/${grupoDeB.id}/proxima-sesion`).set('Cookie', cookies.adminA)
       expect(res.status).toBe(404)
 
       await prisma.grupoEvolucion.delete({ where: { id: grupoDeB.id } })
@@ -3793,7 +3813,7 @@ describe('series de turnos (recurrencia)', () => {
   })
 
   describe('creación', () => {
-    it('crea una serie semanal de 5 turnos con fechas y numeroSesion consecutivos', async () => {
+    it('crea una serie semanal de 5 turnos con fechas y numeroSesion consecutivos (derivados, ignora numeroSesionInicial)', async () => {
       const fechasInicio = weeklyIsoDates('2027-01-04T13:00:00.000Z', 1, 5)
       const res = await request(app)
         .post('/api/turnos/serie')
@@ -3815,7 +3835,7 @@ describe('series de turnos (recurrencia)', () => {
       res.body.turnos.forEach((t: any, i: number) => {
         expect(t.serieId).toBe(res.body.serie.id)
         expect(t.ordenEnSerie).toBe(i + 1)
-        expect(t.numeroSesion).toBe(4 + i)
+        expect(t.numeroSesion).toBe(1 + i)
         expect(new Date(t.inicio).toISOString()).toBe(fechasInicio[i])
       })
 
@@ -3823,7 +3843,7 @@ describe('series de turnos (recurrencia)', () => {
       await prisma.serieTurno.delete({ where: { id: res.body.serie.id } })
     })
 
-    it('serie cada 2 semanas respeta las fechas enviadas y numeroSesion manual', async () => {
+    it('serie cada 2 semanas respeta las fechas enviadas y numera desde 1', async () => {
       const fechasInicio = weeklyIsoDates('2027-02-01T13:00:00.000Z', 2, 3)
       const res = await request(app)
         .post('/api/turnos/serie')
@@ -3831,7 +3851,7 @@ describe('series de turnos (recurrencia)', () => {
         .send({ pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 30, frecuenciaSemanas: 2, fechasInicio, numeroSesionInicial: 10 })
 
       expect(res.status).toBe(201)
-      expect(res.body.turnos.map((t: any) => t.numeroSesion)).toEqual([10, 11, 12])
+      expect(res.body.turnos.map((t: any) => t.numeroSesion)).toEqual([1, 2, 3])
       expect(res.body.turnos.map((t: any) => new Date(t.inicio).toISOString())).toEqual(fechasInicio)
 
       await prisma.turno.deleteMany({ where: { serieId: res.body.serie.id } })
@@ -4075,11 +4095,14 @@ describe('series de turnos (recurrencia)', () => {
     let turnoIds: number[]
 
     beforeAll(async () => {
+      // Paciente propio: la numeración por pack depende de todos los turnos
+      // del paciente, así no la afectan los de otros tests.
+      const paciente = await prisma.paciente.create({ data: { consultorioId: consultorioAId, nombre: 'Paciente', apellido: 'Serie edición' } })
       const fechasInicio = weeklyIsoDates('2027-08-02T13:00:00.000Z', 1, 5)
       const res = await request(app)
         .post('/api/turnos/serie')
         .set('Cookie', cookies.admin)
-        .send({ pacienteId: pacienteAId, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 45, frecuenciaSemanas: 1, fechasInicio, numeroSesionInicial: 1 })
+        .send({ pacienteId: paciente.id, profesionalId: profesionalPropioId, especialidadId: especialidadAId, duracionMinutos: 45, frecuenciaSemanas: 1, fechasInicio, numeroSesionInicial: 1 })
       expect(res.status).toBe(201)
       serieId = res.body.serie.id
       turnoIds = res.body.turnos.map((t: any) => t.id)
@@ -4156,7 +4179,7 @@ describe('series de turnos (recurrencia)', () => {
       expect(nuevaSerie.cantidadSesiones).toBe(3)
       expect(res.body.turnos.map((t: any) => t.ordenEnSerie)).toEqual([1, 2, 3])
 
-      // numeroSesion nunca se toca en esta operación
+      // Mismo orden por fecha (+90min a todos): la numeración no cambia
       const actualizados = await prisma.turno.findMany({ where: { id: { in: [turnoIds[2], turnoIds[3], turnoIds[4]] } }, orderBy: { ordenEnSerie: 'asc' } })
       expect(actualizados.map((t) => t.numeroSesion)).toEqual([3, 4, 5])
     })
@@ -4170,9 +4193,9 @@ describe('series de turnos (recurrencia)', () => {
       expect(t2.eliminadoAt).toBeNull()
     })
 
-    it('eliminar "este turno y los siguientes" respeta el corte y no renumera numeroSesion de lo que sobrevive', async () => {
-      // Tras el test anterior, turnoIds[1] (numeroSesion 2, único sobreviviente de la serie
-      // original) sigue en la serie original; turnoIds[2..4] están ahora en la sub-serie nueva.
+    it('eliminar "este turno y los siguientes" respeta el corte y renumera lo que sobrevive', async () => {
+      // Tras el test anterior (turnoIds[0] eliminado), turnoIds[1] es la sesión 1 y
+      // turnoIds[2] la 2; turnoIds[2..4] están en la sub-serie nueva.
       const nuevaSerie = await prisma.turno.findUniqueOrThrow({ where: { id: turnoIds[3] } })
       const res = await request(app).delete(`/api/turnos/${turnoIds[3]}/serie`).set('Cookie', cookies.admin)
       expect(res.status).toBe(200)
@@ -4180,11 +4203,11 @@ describe('series de turnos (recurrencia)', () => {
 
       const sobreviviente = await prisma.turno.findUniqueOrThrow({ where: { id: turnoIds[2] } })
       expect(sobreviviente.eliminadoAt).toBeNull()
-      expect(sobreviviente.numeroSesion).toBe(3) // no se tocó
+      expect(sobreviviente.numeroSesion).toBe(2)
 
       const eliminados = await prisma.turno.findMany({ where: { id: { in: [turnoIds[3], turnoIds[4]] } } })
       expect(eliminados.every((t) => t.eliminadoAt !== null)).toBe(true)
-      expect(eliminados.map((t) => t.numeroSesion).sort()).toEqual([4, 5]) // tampoco se renumeraron al eliminar
+      expect(eliminados.map((t) => t.numeroSesion).sort()).toEqual([3, 4]) // los eliminados conservan su último número
 
       const subSerie = await prisma.serieTurno.findUniqueOrThrow({ where: { id: nuevaSerie.serieId! } })
       expect(subSerie.cantidadSesiones).toBe(1) // solo turnoIds[2] sobrevive en esa serie

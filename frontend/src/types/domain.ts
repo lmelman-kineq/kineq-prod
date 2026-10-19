@@ -35,6 +35,7 @@ export interface Consultorio {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria: string
+  diasCortePack: number
   activo: boolean
   createdAt: string
   updatedAt: string
@@ -495,7 +496,6 @@ export interface CreateTurnoInput {
   date: string
   time: string
   duracionMinutos: number
-  numeroSesion?: number
   esSesionConsulta?: boolean
   monto?: number | null
   grupoId?: number | null
@@ -525,7 +525,6 @@ export interface CreateSerieTurnoInput {
   unidadPersonalizada?: 'DIA' | 'SEMANA' | 'MES' | 'ANIO'
   diasSemanaPersonalizado?: number[]
   fechasInicio: string[]
-  numeroSesionInicial?: number | null
   esSesionConsulta?: boolean
   monto?: number | null
   grupoId?: number | null
@@ -569,7 +568,7 @@ export type UsuarioUpdateInput = Partial<Pick<UsuarioInput, 'nombre' | 'apellido
   activo?: boolean
 }
 
-export type ConsultorioInput = Partial<Pick<Consultorio, 'nombre' | 'email' | 'telefono' | 'direccion' | 'ciudad' | 'provincia' | 'zonaHoraria'>>
+export type ConsultorioInput = Partial<Pick<Consultorio, 'nombre' | 'email' | 'telefono' | 'direccion' | 'ciudad' | 'provincia' | 'zonaHoraria' | 'diasCortePack'>>
 
 export type ProfesionalInput = Partial<Pick<Profesional, 'nombre' | 'apellido' | 'titulo' | 'matricula' | 'email' | 'telefono' | 'activo'>> & {
   especialidadIds?: number[]

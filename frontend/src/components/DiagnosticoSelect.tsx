@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { GrupoEvolucion } from '../types/domain'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 type DiagnosticoSelectProps = {
   grupos: GrupoEvolucion[]
@@ -23,6 +24,8 @@ export default function DiagnosticoSelect({ grupos, value, onChange, onCreate, d
 
   const fieldRef = useRef<HTMLDivElement | null>(null)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const isMobile = useIsMobile()
 
   const selected = grupos.find((grupo) => grupo.id === value) ?? null
 
@@ -39,6 +42,13 @@ export default function DiagnosticoSelect({ grupos, value, onChange, onCreate, d
       const offsetTop = viewport?.offsetTop ?? 0
       const offsetLeft = viewport?.offsetLeft ?? 0
       const rect = field.getBoundingClientRect()
+      // Mobile: anclada al campo (absolute), mismo motivo que en FormFields.tsx.
+      const root = rootRef.current
+      if (isMobile && root) {
+        const rootRect = root.getBoundingClientRect()
+        setPosition({ top: rect.bottom - rootRect.top + 8, left: rect.left - rootRect.left, width: rect.width })
+        return
+      }
       setPosition({ top: rect.bottom + 8 + offsetTop, left: rect.left + offsetLeft, width: rect.width })
     }
 
@@ -55,7 +65,7 @@ export default function DiagnosticoSelect({ grupos, value, onChange, onCreate, d
       window.visualViewport?.removeEventListener('resize', updatePosition)
       window.visualViewport?.removeEventListener('scroll', updatePosition)
     }
-  }, [open])
+  }, [open, isMobile])
 
   useEffect(() => {
     if (!open) return
@@ -100,7 +110,7 @@ export default function DiagnosticoSelect({ grupos, value, onChange, onCreate, d
   }
 
   return (
-    <div className="dropdown-field">
+    <div className="dropdown-field" ref={rootRef} style={isMobile ? { position: 'relative' } : undefined}>
       <label className="dropdown-field-label field-label-mobile-hide">Diagnóstico</label>
       <div
         className="dropdown-input-row"
@@ -136,7 +146,7 @@ export default function DiagnosticoSelect({ grupos, value, onChange, onCreate, d
 
       {!disabled && open && position ? (
         <div
-          className="dropdown-list"
+          className={`dropdown-list ${isMobile ? 'dropdown-list--anchored' : ''}`}
           ref={dropdownRef}
           style={{ top: position.top, left: position.left, width: position.width }}
         >

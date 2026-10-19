@@ -2073,6 +2073,7 @@ export const ConsultorioScalarFieldEnum = {
   ciudad: 'ciudad',
   provincia: 'provincia',
   zonaHoraria: 'zonaHoraria',
+  diasCortePack: 'diasCortePack',
   activo: 'activo',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

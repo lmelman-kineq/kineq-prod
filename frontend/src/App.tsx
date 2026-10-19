@@ -44,6 +44,7 @@ import { buildSerieFechasInicio, buildMonthlySerieFechasInicio, buildCustomSerie
 import { getWeekDates, getMonthGridDates, getYearMonths, navigateDate, type CalendarView } from './utils/calendarRange'
 import { useIsMobile } from './hooks/useIsMobile'
 import { useSwipeNavigation } from './hooks/useSwipeNavigation'
+import { useFeriados } from './hooks/useFeriados'
 
 const CALENDAR_VIEW_STORAGE_KEY = 'kineq-calendar-view'
 const CALENDAR_VIEW_TITLES: Record<CalendarView, string> = {
@@ -339,11 +340,12 @@ type WeekViewProps = {
   onSelectDate: (date: string) => void
   canCreate: boolean
   isMobile: boolean
+  feriados: Map<string, string>
 }
 
 function WeekView({
   selectedDate, todayEnZonaConsultorio, turnos, loading, specialtiesState, selectedTurnoId,
-  onSelectTurno, onContextMenuTurno, onCreateSlot, onSelectDate, canCreate, isMobile,
+  onSelectTurno, onContextMenuTurno, onCreateSlot, onSelectDate, canCreate, isMobile, feriados,
 }: WeekViewProps) {
   const weekDates = getWeekDates(selectedDate)
   // Mobile (ver "Vista Semana mobile" en docs/modules/dashboard.md): 7
@@ -377,9 +379,10 @@ function WeekView({
 
     return (
       <div key={date} className="week-day-column-wrapper">
-        <div className={`week-day-header ${isToday ? 'week-day-header--today' : ''}`}>
+        <div className={`week-day-header ${isToday ? 'week-day-header--today' : ''} ${feriados.has(date) ? 'week-day-header--feriado' : ''}`} title={feriados.get(date)}>
           <span className="week-day-header-name">{WEEKDAY_HEADER_LABELS[new Date(`${date}T00:00:00Z`).getUTCDay() === 0 ? 6 : new Date(`${date}T00:00:00Z`).getUTCDay() - 1]}</span>
           <span className="week-day-header-date">{dayLabel}</span>
+          {feriados.has(date) ? <span className="calendar-feriado-label">{feriados.get(date)}</span> : null}
         </div>
         <div className="calendar-column week-day-column" onClick={handleColumnClick(date)}>
           <div className="timeline-lines">
@@ -451,7 +454,8 @@ function WeekView({
                 type="button"
                 role="tab"
                 aria-selected={isSelected}
-                className={`week-day-strip-item ${isSelected ? 'week-day-strip-item--selected' : ''} ${isToday ? 'week-day-strip-item--today' : ''}`}
+                className={`week-day-strip-item ${isSelected ? 'week-day-strip-item--selected' : ''} ${isToday ? 'week-day-strip-item--today' : ''} ${feriados.has(date) ? 'calendar-feriado' : ''}`}
+                title={feriados.get(date)}
                 onClick={() => onSelectDate(date)}
               >
                 <span className="week-day-strip-name">{WEEKDAY_HEADER_LABELS[weekday === 0 ? 6 : weekday - 1]}</span>
@@ -480,11 +484,12 @@ type MonthViewProps = {
   loading: boolean
   todayEnZonaConsultorio: string
   onSelectDay: (date: string) => void
+  feriados: Map<string, string>
 }
 
 const MONTH_VIEW_MAX_VISIBLE_PER_DAY = 3
 
-function MonthView({ selectedDate, turnos, loading, todayEnZonaConsultorio, onSelectDay }: MonthViewProps) {
+function MonthView({ selectedDate, turnos, loading, todayEnZonaConsultorio, onSelectDay, feriados }: MonthViewProps) {
   const gridDates = getMonthGridDates(selectedDate)
   const activeMonth = Number(selectedDate.split('-')[1])
   const turnosByDate = useMemo(() => {
@@ -516,7 +521,8 @@ function MonthView({ selectedDate, turnos, loading, todayEnZonaConsultorio, onSe
           return (
             <div
               key={date}
-              className={`month-view-cell ${inCurrentMonth ? '' : 'month-view-cell--outside'} ${isToday ? 'month-view-cell--today' : ''}`}
+              className={`month-view-cell ${inCurrentMonth ? '' : 'month-view-cell--outside'} ${isToday ? 'month-view-cell--today' : ''} ${feriados.has(date) ? 'calendar-feriado' : ''}`}
+              title={feriados.get(date)}
               role="button"
               tabIndex={0}
               aria-label={`Ver semana del ${dayNumber}`}
@@ -529,6 +535,7 @@ function MonthView({ selectedDate, turnos, loading, todayEnZonaConsultorio, onSe
               }}
             >
               <span className="month-view-cell-number">{dayNumber}</span>
+              {feriados.has(date) ? <span className="calendar-feriado-label">{feriados.get(date)}</span> : null}
               <div className="month-view-cell-turnos">
                 {visible.map((turno) => (
                   <button
@@ -565,9 +572,10 @@ type YearViewProps = {
   todayEnZonaConsultorio: string
   onSelectDay: (date: string) => void
   onSelectMonth: (date: string) => void
+  feriados: Map<string, string>
 }
 
-function YearView({ selectedDate, todayEnZonaConsultorio, onSelectDay, onSelectMonth }: YearViewProps) {
+function YearView({ selectedDate, todayEnZonaConsultorio, onSelectDay, onSelectMonth, feriados }: YearViewProps) {
   const months = getYearMonths(selectedDate)
 
   return (
@@ -606,7 +614,8 @@ function YearView({ selectedDate, todayEnZonaConsultorio, onSelectDay, onSelectM
                   <button
                     key={`${day ?? 'empty'}-${index}`}
                     type="button"
-                    className={`year-view-day ${day ? '' : 'year-view-day--empty'} ${isToday ? 'year-view-day--today' : ''}`}
+                    className={`year-view-day ${day ? '' : 'year-view-day--empty'} ${isToday ? 'year-view-day--today' : ''} ${dayStr && feriados.has(dayStr) ? 'calendar-feriado' : ''}`}
+                    title={dayStr ? feriados.get(dayStr) : undefined}
                     disabled={!day}
                     onClick={(event) => {
                       event.stopPropagation()
@@ -729,6 +738,7 @@ function Dashboard() {
   // de que cargue el consultorio real, api.getConsultorioTimeZone() ya
   // devuelve el default (Buenos Aires), razonable para el primer render.
   const [selectedDate, setSelectedDate] = useState<string>(() => todayInTimeZone(api.getConsultorioTimeZone()))
+  const feriados = useFeriados(selectedDate)
   // Vista del calendario de Home (Día/Semana/Mes/Año) — persistida en
   // localStorage (conveniencia por dispositivo, nunca server-side) para que
   // no vuelva a "Día" al navegar dentro de la sesión. `selectedDate` es el
@@ -811,7 +821,7 @@ function Dashboard() {
     patientId: null,
     professionalId: null,
     specialtyId: 0,
-    sessionNumber: 1,
+    sessionNumber: null,
     esSesionConsulta: false,
     monto: '',
     grupoId: null,
@@ -937,7 +947,7 @@ function Dashboard() {
       patientId: turno.patientId,
       professionalId: turno.professionalId ?? null,
       specialtyId: turno.specialtyId ?? 0,
-      sessionNumber: turno.sessionNumber ?? 1,
+      sessionNumber: turno.sessionNumber ?? null,
       esSesionConsulta: turno.esSesionConsulta ?? false,
       monto: turno.monto != null ? String(turno.monto) : '',
       grupoId: turno.grupoId ?? null,
@@ -974,6 +984,7 @@ function Dashboard() {
         // La fecha/hora de los turnos se interpreta en la zona horaria del
         // consultorio, nunca en la del navegador — ver services/api.ts.
         api.setConsultorioTimeZone(consultorio.zonaHoraria)
+        api.setConsultorioDiasCortePack(consultorio.diasCortePack)
 
         setPacientesState(
           pacientes.map((paciente: Paciente) => ({
@@ -1438,7 +1449,7 @@ function Dashboard() {
       patientId: prefillPatientId ?? null,
       professionalId: user?.rol === 'PROFESIONAL' ? user.profesionalId ?? null : null,
       specialtyId: specialtiesState[0]?.id ?? 0,
-      sessionNumber: 1,
+      sessionNumber: null,
       esSesionConsulta: false,
       monto: '',
       grupoId: null,
@@ -1567,8 +1578,6 @@ function Dashboard() {
     return created
   }
 
-  const fetchProximaSesion = (grupoId: number) => api.getProximaSesion(grupoId)
-
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (showNewTurno || showViewTurno) void loadVinculableUsuarios()
@@ -1622,7 +1631,6 @@ function Dashboard() {
         unidadPersonalizada,
         diasSemanaPersonalizado,
         fechasInicio,
-        numeroSesionInicial: newTurnoForm.sessionNumber,
         esSesionConsulta: newTurnoForm.esSesionConsulta,
         monto: newTurnoForm.monto.trim() ? Number(newTurnoForm.monto) : null,
         grupoId: newTurnoForm.grupoId,
@@ -1677,7 +1685,6 @@ function Dashboard() {
         date: newTurnoForm.date,
         time: newTurnoForm.time,
         duracionMinutos: newTurnoForm.duration,
-        numeroSesion: newTurnoForm.sessionNumber,
         esSesionConsulta: newTurnoForm.esSesionConsulta,
         monto: newTurnoForm.monto.trim() ? Number(newTurnoForm.monto) : null,
         grupoId: newTurnoForm.grupoId,
@@ -1957,9 +1964,10 @@ function Dashboard() {
     const clinicalKeys = ['iniciar', 'continuar', 'finalizar']
     if (user.rol === 'RECEPCION') return actions.filter((action) => !clinicalKeys.includes(action.key))
 
-    // PROFESIONAL: solo acciones clínicas, y solo sobre turnos propios.
+    // PROFESIONAL: solo acciones clínicas sobre turnos propios, más "Iniciar
+    // atención" sobre turnos ajenos (el backend le reasigna el turno).
     const esPropio = turno.professionalId != null && turno.professionalId === user.profesionalId
-    if (!esPropio) return []
+    if (!esPropio) return actions.filter((action) => action.key === 'iniciar')
     return actions.filter((action) => clinicalKeys.includes(action.key))
   }
 
@@ -1981,7 +1989,6 @@ function Dashboard() {
         date: editingTurnoForm.date,
         time: editingTurnoForm.time,
         duracionMinutos: editingTurnoForm.duration,
-        numeroSesion: editingTurnoForm.sessionNumber,
         esSesionConsulta: editingTurnoForm.esSesionConsulta,
         monto: editingTurnoForm.monto.trim() ? Number(editingTurnoForm.monto) : null,
         grupoId: editingTurnoForm.grupoId,
@@ -2845,6 +2852,10 @@ function Dashboard() {
             </div>
           ) : null}
 
+          {calendarView === 'day' && feriados.has(selectedDate) ? (
+            <p className="calendar-feriado-banner">Feriado · {feriados.get(selectedDate)}</p>
+          ) : null}
+
           {calendarView === 'day' ? (
           <div className="day-grid">
             <div className="hours-column">
@@ -2991,6 +3002,7 @@ function Dashboard() {
           </div>
           ) : calendarView === 'week' ? (
             <WeekView
+              feriados={feriados}
               selectedDate={selectedDate}
               todayEnZonaConsultorio={todayEnZonaConsultorio}
               turnos={filteredRangeTurnos}
@@ -3015,6 +3027,7 @@ function Dashboard() {
             />
           ) : calendarView === 'month' ? (
             <MonthView
+              feriados={feriados}
               selectedDate={selectedDate}
               turnos={filteredRangeTurnos}
               loading={rangeTurnosLoading}
@@ -3029,6 +3042,7 @@ function Dashboard() {
             />
           ) : (
             <YearView
+              feriados={feriados}
               selectedDate={selectedDate}
               todayEnZonaConsultorio={todayEnZonaConsultorio}
               onSelectDay={(date) => { setSelectedDate(date); setCalendarView('day') }}
@@ -3138,7 +3152,6 @@ function Dashboard() {
                 vinculableUsers={vinculableUsuariosState}
                 grupos={canSeeDiagnostico ? turnoGruposState : undefined}
                 onCreateGrupo={canSeeDiagnostico ? createDiagnosticoInlineParaTurno : undefined}
-                onFetchProximaSesion={fetchProximaSesion}
                 hideProfessionalField={user?.rol === 'PROFESIONAL'}
                 compact={!newTurnoIsFull}
                 allowRecurrence={isMobile || !newTurnoExpanded}
@@ -3283,7 +3296,6 @@ function Dashboard() {
                 vinculableUsers={vinculableUsuariosState}
                 grupos={canSeeDiagnostico ? turnoGruposState : undefined}
                 onCreateGrupo={canSeeDiagnostico ? createDiagnosticoInlineParaTurno : undefined}
-                onFetchProximaSesion={fetchProximaSesion}
                 hideProfessionalField={user?.rol === 'PROFESIONAL'}
                 invalidFields={editingTurnoSubmitAttempted && editingTurnoForm ? computeTurnoInvalidFields(editingTurnoForm, user?.rol === 'PROFESIONAL') : undefined}
               />
@@ -3539,7 +3551,8 @@ function Dashboard() {
               return (
                 <div
                   key={`${day ?? 'empty'}-${index}`}
-                  className={`month-cell ${isToday ? 'today' : ''} ${day ? '' : 'empty'} ${selectedClass}`}
+                  className={`month-cell ${isToday ? 'today' : ''} ${day ? '' : 'empty'} ${selectedClass} ${dayStr && feriados.has(dayStr) ? 'calendar-feriado' : ''}`}
+                  title={dayStr ? feriados.get(dayStr) : undefined}
                   onClick={() => dayStr && setSelectedDate(dayStr)}
                 >
                   {day || ''}

@@ -23,6 +23,7 @@ import RichTextEditor from './RichTextEditor'
 import KineqLoader from './KineqLoader'
 import { useFichaInicial } from '../hooks/useFichaInicial'
 import { groupEvolucionesByGrupo } from '../utils/groupEvolucionesByGrupo'
+import { inicioPackIds } from '../utils/packsEvoluciones'
 import { SPECIALTY_COLOR_TOKENS } from '../utils/specialtyColors'
 import type { ClinicalNavRequest, ClinicalNavTarget } from '../utils/clinicalNavTarget'
 import { patientFullName } from '../utils/patient'
@@ -649,7 +650,12 @@ export default function PatientDetailPage({
     { key: 'turnos', label: 'Turnos' },
   ]
 
+  // Sobre el total del paciente (no lo filtrado), para que filtrar por
+  // diagnóstico nunca cambie dónde arranca cada pack.
+  const packStartIds = inicioPackIds(evoluciones, api.getConsultorioDiasCortePack())
+
   const evolutionTableCommonProps = {
+    inicioPackIds: packStartIds,
     canEdit: canEditEvolucion,
     editingId: editingEvolucionId,
     editingText: editingEvolucionText,

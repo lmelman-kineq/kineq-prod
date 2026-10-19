@@ -5,6 +5,7 @@ import type { GrupoEvolucion } from '../types/domain'
 import { weekdayLabel, monthlyRecurrenceLabel, customRecurrenceSummary, type RecurrenceFrequency, type CustomRecurrenceConfig } from '../utils/recurrence'
 import CustomRecurrenceModal from './CustomRecurrenceModal'
 import { normalizeForSearch } from '../utils/search'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 // Íconos chicos para las filas compactas del quick-create (alta rápida desde
 // Home) — mismo estilo trazo-simple que el resto de Kineq (viewBox 24x24,
@@ -82,7 +83,9 @@ export type TurnoFormValue = {
   professionalId: number | null
   specialtyId: number
   socialWorkId?: number | null
-  sessionNumber: number
+  // Solo lectura: lo calcula el backend según el pack de sesiones (ver
+  // backend/src/sesionesPack.ts). null = turno nuevo, todavía sin número.
+  sessionNumber: number | null
   esSesionConsulta: boolean
   monto: string
   grupoId: number | null
@@ -151,7 +154,6 @@ type TurnoFormFieldsProps = {
   // GET /api/grupos-evolucion/:id/proxima-sesion) — FormFields no llama a
   // la API directamente, se mantiene "tonto"/controlado por props como el
   // resto del formulario.
-  onFetchProximaSesion?: (grupoId: number) => Promise<number>
 
   /*
    * Un usuario PROFESIONAL solo puede crear/editar turnos para sí mismo: el
@@ -228,7 +230,6 @@ export function TurnoFormFields({
   vinculableUsers = [],
   grupos,
   onCreateGrupo,
-  onFetchProximaSesion,
   hideProfessionalField = false,
   compact = false,
   allowRecurrence = false,
@@ -254,13 +255,14 @@ export function TurnoFormFields({
   const [creatingProfessional, setCreatingProfessional] = useState(false)
   const [newProfessionalError, setNewProfessionalError] = useState<string | null>(null)
 
-  const [proximaSesionLoading, setProximaSesionLoading] = useState(false)
   const [customModalOpen, setCustomModalOpen] = useState(false)
 
   const patientFieldRef = useRef<HTMLDivElement | null>(null)
   const professionalFieldRef = useRef<HTMLDivElement | null>(null)
   const specialtyFieldRef = useRef<HTMLDivElement | null>(null)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
+  const formRef = useRef<HTMLDivElement | null>(null)
+  const isMobile = useIsMobile()
 
   const specialtyInputId = useId()
   const specialtyFieldLabelId = useId()
@@ -313,6 +315,23 @@ export function TurnoFormFields({
       const offsetLeft = viewport?.offsetLeft ?? 0
 
       const rect = field.getBoundingClientRect()
+
+      // Mobile: posición absoluta dentro del formulario (`.dropdown-list--anchored`),
+      // así la lista scrollea junto con el campo sin depender de JS. Con
+      // `position: fixed` + recalcular en cada 'scroll', el scroll con
+      // inercia de iOS/Android entrega esos eventos con demora y la lista
+      // quedaba "flotando" en la pantalla mientras el campo se movía.
+      const form = formRef.current
+      if (isMobile && form) {
+        const formRect = form.getBoundingClientRect()
+        setDropdownPosition({
+          top: rect.bottom - formRect.top + form.scrollTop + 8,
+          left: rect.left - formRect.left,
+          width: rect.width,
+        })
+        return
+      }
+
       setDropdownPosition({
         top: rect.bottom + 8 + offsetTop,
         left: rect.left + offsetLeft,
@@ -336,7 +355,7 @@ export function TurnoFormFields({
       window.visualViewport?.removeEventListener('resize', updatePosition)
       window.visualViewport?.removeEventListener('scroll', updatePosition)
     }
-  }, [activeDropdown, fieldRefs])
+  }, [activeDropdown, fieldRefs, isMobile])
 
   useEffect(() => {
     if (!activeDropdown) return
@@ -463,39 +482,22 @@ export function TurnoFormFields({
 
   const selectedGrupo = grupos?.find((grupo) => grupo.id === value.grupoId) ?? null
 
-  const fetchProximaSesion = (grupoId: number) => {
-    if (!onFetchProximaSesion) return
-    setProximaSesionLoading(true)
-    onFetchProximaSesion(grupoId)
-      .then((numeroSesion) => updateValue({ sessionNumber: numeroSesion }))
-      .catch(() => {})
-      .finally(() => setProximaSesionLoading(false))
-  }
-
   const changeGrupo = (grupoId: number | '') => {
     if (grupoId === '') {
       updateValue({ grupoId: null })
       return
     }
     updateValue({ grupoId })
-    // Se sugiere el próximo número para cualquier diagnóstico, tenga o no
-    // cantidadSesionesPlanificadas configurada — ese campo solo cambia si se
-    // muestra "Sesión (de Y)" o "Nro. de sesión" a secas, nunca si el
-    // cálculo automático se ofrece o no. No aplica si ya está tildado
-    // "Sesión de consulta" (el número queda oculto de cualquier forma).
-    if (!value.esSesionConsulta) fetchProximaSesion(grupoId)
   }
 
   // Al tildar "Sesión de consulta" el número deja de aplicar (se oculta más
-  // abajo); al destildarla, si ya hay un diagnóstico elegido, se vuelve a
-  // sugerir el próximo número — mismo criterio que elegir el diagnóstico.
+  // abajo).
   const toggleSesionConsulta = (checked: boolean) => {
     // Una sesión de consulta es una visita administrativa puntual — nunca
     // parte de un pack recurrente. Se oculta el selector de Repetición (más
     // abajo) y se resetea a "No se repite" para que no quede un valor
     // recurrente invisible pero todavía vigente al guardar.
     updateValue({ esSesionConsulta: checked, ...(checked ? { recurrenceFrequency: 'none' as const } : {}) })
-    if (!checked && value.grupoId) fetchProximaSesion(value.grupoId)
   }
 
   const selectedPatient = patients.find((patient) => patient.id === value.patientId)
@@ -507,7 +509,7 @@ export function TurnoFormFields({
 
   return (
     <>
-    <div className={`modal-body appointment-form ${disabled ? 'appointment-form--readonly' : ''} ${compact ? 'appointment-form--compact' : ''}`}>
+    <div ref={formRef} className={`modal-body appointment-form ${disabled ? 'appointment-form--readonly' : ''} ${compact ? 'appointment-form--compact' : ''}`}>
       {compact ? (
         <div className="quick-datetime-row">
           <ClockFieldIcon className="quick-field-icon" aria-hidden="true" />
@@ -873,11 +875,11 @@ export function TurnoFormFields({
               <input
                 id={sessionNumberId}
                 type="number"
-                title={selectedGrupo?.cantidadSesionesPlanificadas ? `Sesión (de ${selectedGrupo.cantidadSesionesPlanificadas})` : 'Nro. de sesión'}
-                min={1}
-                value={value.sessionNumber}
-                onChange={(event) => updateValue({ sessionNumber: Number(event.target.value) })}
-                disabled={disabled || proximaSesionLoading}
+                title="Se calcula automáticamente según el pack de sesiones del diagnóstico"
+                value={value.sessionNumber ?? ''}
+                placeholder="Auto"
+                readOnly
+                disabled={disabled}
               />
             </span>
           ) : null}
@@ -905,10 +907,11 @@ export function TurnoFormFields({
               <input
                 type="number"
                 className="narrow-input"
-                min={1}
-                value={value.sessionNumber}
-                onChange={(event) => updateValue({ sessionNumber: Number(event.target.value) })}
-                disabled={disabled || proximaSesionLoading}
+                value={value.sessionNumber ?? ''}
+                placeholder="Auto"
+                title="Se calcula automáticamente según el pack de sesiones del diagnóstico"
+                readOnly
+                disabled={disabled}
               />
             </label>
           ) : null}
@@ -959,7 +962,7 @@ export function TurnoFormFields({
 
       {!disabled && activeDropdown && dropdownPosition ? (
         <div
-          className="dropdown-list"
+          className={`dropdown-list ${isMobile ? 'dropdown-list--anchored' : ''}`}
           ref={dropdownRef}
           style={{
             top: dropdownPosition.top,

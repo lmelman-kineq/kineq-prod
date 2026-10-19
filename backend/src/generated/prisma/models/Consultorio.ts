@@ -28,10 +28,12 @@ export type AggregateConsultorio = {
 
 export type ConsultorioAvgAggregateOutputType = {
   id: number | null
+  diasCortePack: number | null
 }
 
 export type ConsultorioSumAggregateOutputType = {
   id: number | null
+  diasCortePack: number | null
 }
 
 export type ConsultorioMinAggregateOutputType = {
@@ -44,6 +46,7 @@ export type ConsultorioMinAggregateOutputType = {
   ciudad: string | null
   provincia: string | null
   zonaHoraria: string | null
+  diasCortePack: number | null
   activo: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -59,6 +62,7 @@ export type ConsultorioMaxAggregateOutputType = {
   ciudad: string | null
   provincia: string | null
   zonaHoraria: string | null
+  diasCortePack: number | null
   activo: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -74,6 +78,7 @@ export type ConsultorioCountAggregateOutputType = {
   ciudad: number
   provincia: number
   zonaHoraria: number
+  diasCortePack: number
   activo: number
   createdAt: number
   updatedAt: number
@@ -83,10 +88,12 @@ export type ConsultorioCountAggregateOutputType = {
 
 export type ConsultorioAvgAggregateInputType = {
   id?: true
+  diasCortePack?: true
 }
 
 export type ConsultorioSumAggregateInputType = {
   id?: true
+  diasCortePack?: true
 }
 
 export type ConsultorioMinAggregateInputType = {
@@ -99,6 +106,7 @@ export type ConsultorioMinAggregateInputType = {
   ciudad?: true
   provincia?: true
   zonaHoraria?: true
+  diasCortePack?: true
   activo?: true
   createdAt?: true
   updatedAt?: true
@@ -114,6 +122,7 @@ export type ConsultorioMaxAggregateInputType = {
   ciudad?: true
   provincia?: true
   zonaHoraria?: true
+  diasCortePack?: true
   activo?: true
   createdAt?: true
   updatedAt?: true
@@ -129,6 +138,7 @@ export type ConsultorioCountAggregateInputType = {
   ciudad?: true
   provincia?: true
   zonaHoraria?: true
+  diasCortePack?: true
   activo?: true
   createdAt?: true
   updatedAt?: true
@@ -231,6 +241,7 @@ export type ConsultorioGroupByOutputType = {
   ciudad: string | null
   provincia: string | null
   zonaHoraria: string
+  diasCortePack: number
   activo: boolean
   createdAt: Date
   updatedAt: Date
@@ -269,6 +280,7 @@ export type ConsultorioWhereInput = {
   ciudad?: Prisma.StringNullableFilter<"Consultorio"> | string | null
   provincia?: Prisma.StringNullableFilter<"Consultorio"> | string | null
   zonaHoraria?: Prisma.StringFilter<"Consultorio"> | string
+  diasCortePack?: Prisma.IntFilter<"Consultorio"> | number
   activo?: Prisma.BoolFilter<"Consultorio"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Consultorio"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Consultorio"> | Date | string
@@ -305,6 +317,7 @@ export type ConsultorioOrderByWithRelationInput = {
   ciudad?: Prisma.SortOrderInput | Prisma.SortOrder
   provincia?: Prisma.SortOrderInput | Prisma.SortOrder
   zonaHoraria?: Prisma.SortOrder
+  diasCortePack?: Prisma.SortOrder
   activo?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -345,6 +358,7 @@ export type ConsultorioWhereUniqueInput = Prisma.AtLeast<{
   ciudad?: Prisma.StringNullableFilter<"Consultorio"> | string | null
   provincia?: Prisma.StringNullableFilter<"Consultorio"> | string | null
   zonaHoraria?: Prisma.StringFilter<"Consultorio"> | string
+  diasCortePack?: Prisma.IntFilter<"Consultorio"> | number
   activo?: Prisma.BoolFilter<"Consultorio"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Consultorio"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Consultorio"> | Date | string
@@ -381,6 +395,7 @@ export type ConsultorioOrderByWithAggregationInput = {
   ciudad?: Prisma.SortOrderInput | Prisma.SortOrder
   provincia?: Prisma.SortOrderInput | Prisma.SortOrder
   zonaHoraria?: Prisma.SortOrder
+  diasCortePack?: Prisma.SortOrder
   activo?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -404,6 +419,7 @@ export type ConsultorioScalarWhereWithAggregatesInput = {
   ciudad?: Prisma.StringNullableWithAggregatesFilter<"Consultorio"> | string | null
   provincia?: Prisma.StringNullableWithAggregatesFilter<"Consultorio"> | string | null
   zonaHoraria?: Prisma.StringWithAggregatesFilter<"Consultorio"> | string
+  diasCortePack?: Prisma.IntWithAggregatesFilter<"Consultorio"> | number
   activo?: Prisma.BoolWithAggregatesFilter<"Consultorio"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Consultorio"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Consultorio"> | Date | string
@@ -418,6 +434,7 @@ export type ConsultorioCreateInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -454,6 +471,7 @@ export type ConsultorioUncheckedCreateInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -489,6 +507,7 @@ export type ConsultorioUpdateInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -525,6 +544,7 @@ export type ConsultorioUncheckedUpdateInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -561,6 +581,7 @@ export type ConsultorioCreateManyInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -575,6 +596,7 @@ export type ConsultorioUpdateManyMutationInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -590,6 +612,7 @@ export type ConsultorioUncheckedUpdateManyInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -611,6 +634,7 @@ export type ConsultorioCountOrderByAggregateInput = {
   ciudad?: Prisma.SortOrder
   provincia?: Prisma.SortOrder
   zonaHoraria?: Prisma.SortOrder
+  diasCortePack?: Prisma.SortOrder
   activo?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -618,6 +642,7 @@ export type ConsultorioCountOrderByAggregateInput = {
 
 export type ConsultorioAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  diasCortePack?: Prisma.SortOrder
 }
 
 export type ConsultorioMaxOrderByAggregateInput = {
@@ -630,6 +655,7 @@ export type ConsultorioMaxOrderByAggregateInput = {
   ciudad?: Prisma.SortOrder
   provincia?: Prisma.SortOrder
   zonaHoraria?: Prisma.SortOrder
+  diasCortePack?: Prisma.SortOrder
   activo?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -645,6 +671,7 @@ export type ConsultorioMinOrderByAggregateInput = {
   ciudad?: Prisma.SortOrder
   provincia?: Prisma.SortOrder
   zonaHoraria?: Prisma.SortOrder
+  diasCortePack?: Prisma.SortOrder
   activo?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -652,6 +679,7 @@ export type ConsultorioMinOrderByAggregateInput = {
 
 export type ConsultorioSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  diasCortePack?: Prisma.SortOrder
 }
 
 export type ConsultorioScalarRelationFilter = {
@@ -672,20 +700,20 @@ export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
-}
-
 export type IntFieldUpdateOperationsInput = {
   set?: number
   increment?: number
   decrement?: number
   multiply?: number
   divide?: number
+}
+
+export type BoolFieldUpdateOperationsInput = {
+  set?: boolean
+}
+
+export type DateTimeFieldUpdateOperationsInput = {
+  set?: Date | string
 }
 
 export type ConsultorioCreateNestedOneWithoutUsuariosInput = {
@@ -997,6 +1025,7 @@ export type ConsultorioCreateWithoutUsuariosInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1032,6 +1061,7 @@ export type ConsultorioUncheckedCreateWithoutUsuariosInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1082,6 +1112,7 @@ export type ConsultorioUpdateWithoutUsuariosInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1117,6 +1148,7 @@ export type ConsultorioUncheckedUpdateWithoutUsuariosInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1151,6 +1183,7 @@ export type ConsultorioCreateWithoutPacientesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1186,6 +1219,7 @@ export type ConsultorioUncheckedCreateWithoutPacientesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1236,6 +1270,7 @@ export type ConsultorioUpdateWithoutPacientesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1271,6 +1306,7 @@ export type ConsultorioUncheckedUpdateWithoutPacientesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1305,6 +1341,7 @@ export type ConsultorioCreateWithoutProfesionalesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1340,6 +1377,7 @@ export type ConsultorioUncheckedCreateWithoutProfesionalesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1390,6 +1428,7 @@ export type ConsultorioUpdateWithoutProfesionalesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1425,6 +1464,7 @@ export type ConsultorioUncheckedUpdateWithoutProfesionalesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1459,6 +1499,7 @@ export type ConsultorioCreateWithoutEspecialidadesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1494,6 +1535,7 @@ export type ConsultorioUncheckedCreateWithoutEspecialidadesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1544,6 +1586,7 @@ export type ConsultorioUpdateWithoutEspecialidadesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1579,6 +1622,7 @@ export type ConsultorioUncheckedUpdateWithoutEspecialidadesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1613,6 +1657,7 @@ export type ConsultorioCreateWithoutEspecialidadesOcultasInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1648,6 +1693,7 @@ export type ConsultorioUncheckedCreateWithoutEspecialidadesOcultasInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1698,6 +1744,7 @@ export type ConsultorioUpdateWithoutEspecialidadesOcultasInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1733,6 +1780,7 @@ export type ConsultorioUncheckedUpdateWithoutEspecialidadesOcultasInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1767,6 +1815,7 @@ export type ConsultorioCreateWithoutProfesionalEspecialidadesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1802,6 +1851,7 @@ export type ConsultorioUncheckedCreateWithoutProfesionalEspecialidadesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1852,6 +1902,7 @@ export type ConsultorioUpdateWithoutProfesionalEspecialidadesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1887,6 +1938,7 @@ export type ConsultorioUncheckedUpdateWithoutProfesionalEspecialidadesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1921,6 +1973,7 @@ export type ConsultorioCreateWithoutObrasSocialesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1956,6 +2009,7 @@ export type ConsultorioUncheckedCreateWithoutObrasSocialesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2006,6 +2060,7 @@ export type ConsultorioUpdateWithoutObrasSocialesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2041,6 +2096,7 @@ export type ConsultorioUncheckedUpdateWithoutObrasSocialesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2075,6 +2131,7 @@ export type ConsultorioCreateWithoutObrasSocialesOcultasInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2110,6 +2167,7 @@ export type ConsultorioUncheckedCreateWithoutObrasSocialesOcultasInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2160,6 +2218,7 @@ export type ConsultorioUpdateWithoutObrasSocialesOcultasInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2195,6 +2254,7 @@ export type ConsultorioUncheckedUpdateWithoutObrasSocialesOcultasInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2229,6 +2289,7 @@ export type ConsultorioCreateWithoutTurnosInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2264,6 +2325,7 @@ export type ConsultorioUncheckedCreateWithoutTurnosInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2314,6 +2376,7 @@ export type ConsultorioUpdateWithoutTurnosInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2349,6 +2412,7 @@ export type ConsultorioUncheckedUpdateWithoutTurnosInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2383,6 +2447,7 @@ export type ConsultorioCreateWithoutSeriesTurnoInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2418,6 +2483,7 @@ export type ConsultorioUncheckedCreateWithoutSeriesTurnoInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2468,6 +2534,7 @@ export type ConsultorioUpdateWithoutSeriesTurnoInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2503,6 +2570,7 @@ export type ConsultorioUncheckedUpdateWithoutSeriesTurnoInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2537,6 +2605,7 @@ export type ConsultorioCreateWithoutEvolucionesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2572,6 +2641,7 @@ export type ConsultorioUncheckedCreateWithoutEvolucionesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2622,6 +2692,7 @@ export type ConsultorioUpdateWithoutEvolucionesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2657,6 +2728,7 @@ export type ConsultorioUncheckedUpdateWithoutEvolucionesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2691,6 +2763,7 @@ export type ConsultorioCreateWithoutGruposEvolucionInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2726,6 +2799,7 @@ export type ConsultorioUncheckedCreateWithoutGruposEvolucionInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2776,6 +2850,7 @@ export type ConsultorioUpdateWithoutGruposEvolucionInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2811,6 +2886,7 @@ export type ConsultorioUncheckedUpdateWithoutGruposEvolucionInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2845,6 +2921,7 @@ export type ConsultorioCreateWithoutPlantillasEvolucionInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2880,6 +2957,7 @@ export type ConsultorioUncheckedCreateWithoutPlantillasEvolucionInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2930,6 +3008,7 @@ export type ConsultorioUpdateWithoutPlantillasEvolucionInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2965,6 +3044,7 @@ export type ConsultorioUncheckedUpdateWithoutPlantillasEvolucionInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2999,6 +3079,7 @@ export type ConsultorioCreateWithoutFichasInicialesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3034,6 +3115,7 @@ export type ConsultorioUncheckedCreateWithoutFichasInicialesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3084,6 +3166,7 @@ export type ConsultorioUpdateWithoutFichasInicialesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3119,6 +3202,7 @@ export type ConsultorioUncheckedUpdateWithoutFichasInicialesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3153,6 +3237,7 @@ export type ConsultorioCreateWithoutFichaAlertasCampoInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3188,6 +3273,7 @@ export type ConsultorioUncheckedCreateWithoutFichaAlertasCampoInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3238,6 +3324,7 @@ export type ConsultorioUpdateWithoutFichaAlertasCampoInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3273,6 +3360,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaAlertasCampoInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3307,6 +3395,7 @@ export type ConsultorioCreateWithoutCatalogoClinicoItemsInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3342,6 +3431,7 @@ export type ConsultorioUncheckedCreateWithoutCatalogoClinicoItemsInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3392,6 +3482,7 @@ export type ConsultorioUpdateWithoutCatalogoClinicoItemsInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3427,6 +3518,7 @@ export type ConsultorioUncheckedUpdateWithoutCatalogoClinicoItemsInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3461,6 +3553,7 @@ export type ConsultorioCreateWithoutFichaAntecedentesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3496,6 +3589,7 @@ export type ConsultorioUncheckedCreateWithoutFichaAntecedentesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3546,6 +3640,7 @@ export type ConsultorioUpdateWithoutFichaAntecedentesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3581,6 +3676,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaAntecedentesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3615,6 +3711,7 @@ export type ConsultorioCreateWithoutFichaAlergiasInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3650,6 +3747,7 @@ export type ConsultorioUncheckedCreateWithoutFichaAlergiasInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3700,6 +3798,7 @@ export type ConsultorioUpdateWithoutFichaAlergiasInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3735,6 +3834,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaAlergiasInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3769,6 +3869,7 @@ export type ConsultorioCreateWithoutFichaMedicacionesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3804,6 +3905,7 @@ export type ConsultorioUncheckedCreateWithoutFichaMedicacionesInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3854,6 +3956,7 @@ export type ConsultorioUpdateWithoutFichaMedicacionesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3889,6 +3992,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaMedicacionesInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3923,6 +4027,7 @@ export type ConsultorioCreateWithoutFichaEstudiosInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3958,6 +4063,7 @@ export type ConsultorioUncheckedCreateWithoutFichaEstudiosInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4008,6 +4114,7 @@ export type ConsultorioUpdateWithoutFichaEstudiosInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4043,6 +4150,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaEstudiosInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4077,6 +4185,7 @@ export type ConsultorioCreateWithoutFichaSeccionesEstadoInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4112,6 +4221,7 @@ export type ConsultorioUncheckedCreateWithoutFichaSeccionesEstadoInput = {
   ciudad?: string | null
   provincia?: string | null
   zonaHoraria?: string
+  diasCortePack?: number
   activo?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4162,6 +4272,7 @@ export type ConsultorioUpdateWithoutFichaSeccionesEstadoInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4197,6 +4308,7 @@ export type ConsultorioUncheckedUpdateWithoutFichaSeccionesEstadoInput = {
   ciudad?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   provincia?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   zonaHoraria?: Prisma.StringFieldUpdateOperationsInput | string
+  diasCortePack?: Prisma.IntFieldUpdateOperationsInput | number
   activo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4443,6 +4555,7 @@ export type ConsultorioSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   ciudad?: boolean
   provincia?: boolean
   zonaHoraria?: boolean
+  diasCortePack?: boolean
   activo?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -4482,12 +4595,13 @@ export type ConsultorioSelectScalar = {
   ciudad?: boolean
   provincia?: boolean
   zonaHoraria?: boolean
+  diasCortePack?: boolean
   activo?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ConsultorioOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "nombre" | "slug" | "email" | "telefono" | "direccion" | "ciudad" | "provincia" | "zonaHoraria" | "activo" | "createdAt" | "updatedAt", ExtArgs["result"]["consultorio"]>
+export type ConsultorioOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "nombre" | "slug" | "email" | "telefono" | "direccion" | "ciudad" | "provincia" | "zonaHoraria" | "diasCortePack" | "activo" | "createdAt" | "updatedAt", ExtArgs["result"]["consultorio"]>
 export type ConsultorioInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   pacientes?: boolean | Prisma.Consultorio$pacientesArgs<ExtArgs>
   profesionales?: boolean | Prisma.Consultorio$profesionalesArgs<ExtArgs>
@@ -4548,6 +4662,7 @@ export type $ConsultorioPayload<ExtArgs extends runtime.Types.Extensions.Interna
     ciudad: string | null
     provincia: string | null
     zonaHoraria: string
+    diasCortePack: number
     activo: boolean
     createdAt: Date
     updatedAt: Date
@@ -4950,6 +5065,7 @@ export interface ConsultorioFieldRefs {
   readonly ciudad: Prisma.FieldRef<"Consultorio", 'String'>
   readonly provincia: Prisma.FieldRef<"Consultorio", 'String'>
   readonly zonaHoraria: Prisma.FieldRef<"Consultorio", 'String'>
+  readonly diasCortePack: Prisma.FieldRef<"Consultorio", 'Int'>
   readonly activo: Prisma.FieldRef<"Consultorio", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"Consultorio", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Consultorio", 'DateTime'>

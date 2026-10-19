@@ -106,6 +106,10 @@ model Consultorio {
   ciudad      String?
   provincia   String?
   zonaHoraria String   @default("America/Argentina/Buenos_Aires")
+  // Días sin turnos del mismo paciente+diagnóstico a partir de los cuales
+  // el siguiente turno arranca un pack de sesiones nuevo (numeroSesion
+  // vuelve a 1). Ver renumerarSesionesPaciente() en app.ts.
+  diasCortePack Int     @default(60)
   activo      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

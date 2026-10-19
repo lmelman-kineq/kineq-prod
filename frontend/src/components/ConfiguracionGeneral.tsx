@@ -14,6 +14,7 @@ type FormState = {
   ciudad: string
   provincia: string
   zonaHoraria: string
+  diasCortePack: string
 }
 
 function formFromConsultorio(consultorio: Consultorio): FormState {
@@ -25,6 +26,7 @@ function formFromConsultorio(consultorio: Consultorio): FormState {
     ciudad: consultorio.ciudad ?? '',
     provincia: consultorio.provincia ?? '',
     zonaHoraria: consultorio.zonaHoraria,
+    diasCortePack: String(consultorio.diasCortePack),
   }
 }
 
@@ -81,9 +83,11 @@ export default function ConfiguracionGeneral() {
       ciudad: form.ciudad.trim() || null,
       provincia: form.provincia.trim() || null,
       zonaHoraria: form.zonaHoraria,
+      diasCortePack: Number(form.diasCortePack),
     }
     try {
       const updated = await api.patchConsultorio(payload)
+      api.setConsultorioDiasCortePack(updated.diasCortePack)
       setConsultorio(updated)
       setForm(formFromConsultorio(updated))
       setSavedNotice(true)
@@ -134,13 +138,26 @@ export default function ConfiguracionGeneral() {
           <span>Provincia</span>
           <input type="text" value={form.provincia} onChange={(event) => update({ provincia: event.target.value })} />
         </label>
+        <label className="ficha-field">
+          <span>Días sin sesiones para empezar un pack nuevo</span>
+          <input
+            type="number"
+            min={1}
+            max={3650}
+            value={form.diasCortePack}
+            onChange={(event) => update({ diasCortePack: event.target.value })}
+          />
+          <small className="ficha-saving-hint">
+            Si un paciente vuelve con el mismo diagnóstico después de este tiempo, la numeración de sesiones empieza de nuevo en 1.
+          </small>
+        </label>
       </div>
 
       {error ? <p className="evolution-form-error">{error}</p> : null}
 
       <div className="config-form-actions">
         {dirty ? <span className="ficha-saving-hint">Cambios sin guardar</span> : savedNotice ? <span className="ficha-saving-hint">Guardado</span> : null}
-        <button type="button" className="primary-button" disabled={saving || !dirty} onClick={() => { void submit() }}>
+        <button type="button" className="primary-button" disabled={saving || !dirty || !(Number.isInteger(Number(form.diasCortePack)) && Number(form.diasCortePack) >= 1)} onClick={() => { void submit() }}>
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>
       </div>

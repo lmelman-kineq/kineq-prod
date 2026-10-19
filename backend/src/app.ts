@@ -14,6 +14,7 @@ import { pacienteParaCliente } from './pacienteSerializer'
 import { evolucionParaCliente } from './evolucionImagenSerializer'
 import { sanitizeRichText, stripToPlainText } from './sanitizeRichText'
 import { deleteFromBlob } from './blobStorage'
+import { renumerarSesionesPaciente, renumerarSesionesConsultorio } from './sesionesPack'
 import {
   ADMIN_DATA_ROLES,
   CLINICAL_ROLES,
@@ -106,15 +107,21 @@ function isValidTimeZone(zone: string): boolean {
 app.patch('/api/consultorio', requireRole(RolUsuario.ADMINISTRADOR), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
   const allowed: any = {}
-  const fields = ['nombre', 'email', 'telefono', 'direccion', 'ciudad', 'provincia', 'zonaHoraria']
+  const fields = ['nombre', 'email', 'telefono', 'direccion', 'ciudad', 'provincia', 'zonaHoraria', 'diasCortePack']
   for (const f of fields) if (f in req.body) allowed[f] = req.body[f]
+
+  if ('diasCortePack' in allowed && (!Number.isInteger(allowed.diasCortePack) || allowed.diasCortePack < 1 || allowed.diasCortePack > 3650)) {
+    return res.status(400).json({ error: 'diasCortePack inválido' })
+  }
 
   if ('zonaHoraria' in allowed && !isValidTimeZone(allowed.zonaHoraria)) {
     return res.status(400).json({ error: 'zona horaria inválida' })
   }
 
   try {
+    const previo = await prisma.consultorio.findUnique({ where: { id: consultorioId }, select: { diasCortePack: true } })
     const updated = await prisma.consultorio.update({ where: { id: consultorioId }, data: allowed })
+    if (previo && updated.diasCortePack !== previo.diasCortePack) await renumerarSesionesConsultorio(consultorioId)
     res.json(updated)
   } catch (err) {
     res.status(500).json({ error: 'failed to update consultorio' })
@@ -399,6 +406,7 @@ app.patch(
 
         return result
       })
+      if (archivando) await renumerarSesionesPaciente(consultorioId, pacienteId)
 
       res.json(pacienteParaCliente(updated))
     } catch (err) {
@@ -992,7 +1000,7 @@ function overlapExists(consultorioId: number, profesionalId: number, inicio: Dat
 
 app.post('/api/turnos', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
-  const { pacienteId, especialidadId, obraSocialId, inicio, duracionMinutos = 60, numeroSesion, notas, grupoId, esSesionConsulta, monto } = req.body
+  const { pacienteId, especialidadId, obraSocialId, inicio, duracionMinutos = 60, notas, grupoId, esSesionConsulta, monto } = req.body
 
   // Un profesional solo puede crear turnos para sí mismo: se ignora cualquier
   // profesionalId enviado por el cliente y se usa el vínculo de sesión.
@@ -1014,7 +1022,6 @@ app.post('/api/turnos', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
   const inicioDate = new Date(inicio)
   if (Number.isNaN(inicioDate.getTime())) return res.status(400).json({ error: 'invalid inicio' })
   if (!Number.isInteger(duracionMinutos) || duracionMinutos < 15) return res.status(400).json({ error: 'invalid duracionMinutos' })
-  if (numeroSesion && Number(numeroSesion) <= 0) return res.status(400).json({ error: 'invalid numeroSesion' })
   if (monto !== undefined && monto !== null && (typeof monto !== 'number' || monto < 0)) return res.status(400).json({ error: 'invalid monto' })
 
   try {
@@ -1045,23 +1052,15 @@ app.post('/api/turnos', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
       resolvedGrupoId = Number(grupoId)
     }
 
-    // Una sesión de consulta nunca tiene número de sesión: ni el explícito
-    // del cliente ni el automático aplican acá — es una visita administrativa/
-    // de evaluación fuera del conteo del plan de tratamiento.
     const resolvedEsSesionConsulta = Boolean(esSesionConsulta)
-
-    // `numeroSesion` explícito del cliente siempre gana — el cálculo
-    // automático es solo un default cuando no se mandó nada.
-    let resolvedNumeroSesion = resolvedEsSesionConsulta ? null : numeroSesion ? Number(numeroSesion) : null
-    if (!resolvedEsSesionConsulta && resolvedGrupoId && !resolvedNumeroSesion) {
-      resolvedNumeroSesion = await sesionAutomaticaParaGrupo(consultorioId, pacienteId, resolvedGrupoId)
-    }
 
     // chequear solapamientos
     const conflict = await overlapExists(consultorioId, profesionalId, inicioDate, Number(duracionMinutos))
     if (conflict) return res.status(409).json({ error: 'overlap with existing turno' })
 
-    const turno = await prisma.turno.create({ data: { consultorioId, pacienteId, profesionalId, especialidadId, obraSocialId: obraSocialId || null, grupoId: resolvedGrupoId, inicio: inicioDate, duracionMinutos: Number(duracionMinutos), numeroSesion: resolvedNumeroSesion, esSesionConsulta: resolvedEsSesionConsulta, monto: monto ?? null, notas: notas || null } })
+    const turno = await prisma.turno.create({ data: { consultorioId, pacienteId, profesionalId, especialidadId, obraSocialId: obraSocialId || null, grupoId: resolvedGrupoId, inicio: inicioDate, duracionMinutos: Number(duracionMinutos), esSesionConsulta: resolvedEsSesionConsulta, monto: monto ?? null, notas: notas || null } })
+    // numeroSesion nunca viene del cliente: se deriva del pack (ver sesionesPack.ts).
+    await renumerarSesionesPaciente(consultorioId, pacienteId)
 
     const result = await prisma.turno.findUnique({ where: { id: turno.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true } })
     res.status(201).json(result)
@@ -1085,17 +1084,23 @@ app.patch(
       // Un profesional solo puede operar sus propios turnos, y no puede
       // reasignarlos a otro profesional (profesionalId queda fuera de los
       // campos editables para este rol).
+      // Excepción: "Iniciar atención" sobre un turno ajeno — quien atiende
+      // pasa a ser el profesional del turno (ver más abajo).
       const esProfesional = req.usuario!.rol === RolUsuario.PROFESIONAL
+      const iniciandoAtencion = req.body.estado === 'ATENDIENDO' && turno.estado !== 'ATENDIENDO'
       if (esProfesional) {
         const profesionalId = await requireProfesionalVinculado(req, res)
         if (profesionalId === null) return
-        if (turno.profesionalId !== profesionalId) {
+        if (turno.profesionalId !== profesionalId && !iniciandoAtencion) {
           return res.status(403).json({ error: 'No podés modificar turnos de otro profesional' })
         }
       }
 
       const payload: any = {}
-      const fields = ['pacienteId', ...(esProfesional ? [] : ['profesionalId']), 'especialidadId', 'obraSocialId', 'grupoId', 'inicio', 'duracionMinutos', 'numeroSesion', 'esSesionConsulta', 'monto', 'notas', 'estado']
+      const turnoAjeno = esProfesional && turno.profesionalId !== req.usuario!.profesionalId
+      const fields = turnoAjeno
+        ? ['estado']
+        : ['pacienteId', ...(esProfesional ? [] : ['profesionalId']), 'especialidadId', 'obraSocialId', 'grupoId', 'inicio', 'duracionMinutos', 'esSesionConsulta', 'monto', 'notas', 'estado']
       for (const f of fields) if (f in req.body) payload[f] = req.body[f]
 
       if (payload.inicio) payload.inicio = new Date(payload.inicio)
@@ -1109,25 +1114,12 @@ app.patch(
         return res.status(400).json({ error: 'invalid monto' })
       }
 
-      // Vigente después de este PATCH, combinando lo que ya tenía el turno
-      // con lo que llega en el body — una sesión de consulta nunca tiene
-      // número de sesión, sin importar si el cambio viene de este mismo
-      // request o ya era así.
-      const resolvedEsSesionConsulta = 'esSesionConsulta' in payload ? Boolean(payload.esSesionConsulta) : turno.esSesionConsulta
-      if (resolvedEsSesionConsulta) payload.numeroSesion = null
-
       if ('grupoId' in payload) {
         const targetPacienteId = payload.pacienteId ?? turno.pacienteId
         if (payload.grupoId) {
           const check = await resolveGrupoParaAsignar(consultorioId, targetPacienteId, Number(payload.grupoId))
           if (!check.ok) return res.status(check.status).json({ error: check.error })
           payload.grupoId = Number(payload.grupoId)
-          // Mismo criterio que el POST: si el cliente no mandó numeroSesion
-          // en el mismo request, se recalcula como default al cambiar de
-          // diagnóstico — nunca pisa un numeroSesion que sí vino explícito.
-          if (!resolvedEsSesionConsulta && !('numeroSesion' in req.body)) {
-            payload.numeroSesion = await sesionAutomaticaParaGrupo(consultorioId, targetPacienteId, payload.grupoId, turnoId)
-          }
         } else {
           payload.grupoId = null
         }
@@ -1153,12 +1145,29 @@ app.patch(
           return res.status(409).json({ error: 'No se puede modificar un turno ya finalizado, cancelado o ausente' })
         }
         if (reabriendo) payload.canceladoAt = null
-        if (payload.estado === 'ATENDIENDO') payload.inicioAtencion = new Date()
+        if (payload.estado === 'ATENDIENDO') {
+          payload.inicioAtencion = new Date()
+          // El profesional que inicia la atención queda asignado al turno
+          // (impacta estadísticas por profesional). Solo si el usuario está
+          // vinculado a un profesional activo; un admin/recepción sin
+          // vínculo no cambia nada. Va después del chequeo de solapamiento a
+          // propósito: si atiende este turno, su otro turno a esa hora no
+          // está ocurriendo.
+          const propioId = req.usuario!.profesionalId
+          if (propioId && propioId !== turno.profesionalId) {
+            const propio = await prisma.profesional.findFirst({ where: { id: propioId, consultorioId, activo: true, deletedAt: null } })
+            if (propio) payload.profesionalId = propioId
+          }
+        }
         if (payload.estado === 'FINALIZADO') payload.finAtencion = new Date()
         if (payload.estado === 'CANCELADO') payload.canceladoAt = new Date()
       }
 
       const updated = await prisma.turno.update({ where: { id: turnoId }, data: payload })
+      // Fecha/diagnóstico/estado/consulta cambian el pack y la numeración
+      // del resto (ej. reprogramar corre los números siguientes).
+      await renumerarSesionesPaciente(consultorioId, updated.pacienteId)
+      if (updated.pacienteId !== turno.pacienteId) await renumerarSesionesPaciente(consultorioId, turno.pacienteId)
       const result = await prisma.turno.findUnique({ where: { id: updated.id }, include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true } })
       res.json(result)
     } catch (err) {
@@ -1195,6 +1204,7 @@ app.delete(
       }
 
       await prisma.turno.update({ where: { id: turnoId }, data: { eliminadoAt: new Date() } })
+      await renumerarSesionesPaciente(consultorioId, turno.pacienteId)
       res.status(204).end()
     } catch (err) {
       res.status(500).json({ error: 'failed to delete turno' })
@@ -1238,7 +1248,6 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
     unidadPersonalizada,
     diasSemanaPersonalizado,
     fechasInicio,
-    numeroSesionInicial,
     confirmarSuperposicion,
   } = req.body
 
@@ -1283,9 +1292,6 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
     }
   }
   if (!Number.isInteger(duracionMinutos) || duracionMinutos < 15) return res.status(400).json({ error: 'invalid duracionMinutos' })
-  if (numeroSesionInicial !== undefined && numeroSesionInicial !== null && Number(numeroSesionInicial) <= 0) {
-    return res.status(400).json({ error: 'invalid numeroSesionInicial' })
-  }
   if (monto !== undefined && monto !== null && (typeof monto !== 'number' || monto < 0)) return res.status(400).json({ error: 'invalid monto' })
 
   const inicios: Date[] = []
@@ -1320,15 +1326,6 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
 
     const resolvedEsSesionConsulta = Boolean(esSesionConsulta)
 
-    let numeroSesionBase: number | null = null
-    if (!resolvedEsSesionConsulta) {
-      if (numeroSesionInicial) {
-        numeroSesionBase = Number(numeroSesionInicial)
-      } else if (resolvedGrupoId) {
-        numeroSesionBase = await sesionAutomaticaParaGrupo(consultorioId, pacienteId, resolvedGrupoId)
-      }
-    }
-
     // Advertencia de superposición: se revisa cada ocurrencia contra los
     // turnos ya existentes (nunca bloquea, ver overlapExists más arriba) —
     // si hay conflictos y el cliente no confirmó explícitamente, se informa
@@ -1362,7 +1359,6 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
       })
       const turnos = []
       for (let i = 0; i < inicios.length; i++) {
-        const numeroSesion = numeroSesionBase !== null ? numeroSesionBase + i : null
         turnos.push(
           await tx.turno.create({
             data: {
@@ -1376,7 +1372,6 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
               ordenEnSerie: i + 1,
               inicio: inicios[i],
               duracionMinutos: Number(duracionMinutos),
-              numeroSesion,
               esSesionConsulta: resolvedEsSesionConsulta,
               monto: monto ?? null,
               notas: notas || null,
@@ -1388,7 +1383,13 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
       return { serie, turnos }
     })
 
-    res.status(201).json({ serie, turnos })
+    await renumerarSesionesPaciente(consultorioId, pacienteId)
+    const turnosNumerados = await prisma.turno.findMany({
+      where: { id: { in: turnos.map((t) => t.id) } },
+      orderBy: { ordenEnSerie: 'asc' },
+      include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true },
+    })
+    res.status(201).json({ serie, turnos: turnosNumerados })
   } catch (err) {
     res.status(500).json({ error: 'failed to create serie de turnos' })
   }
@@ -1436,7 +1437,7 @@ app.get('/api/turnos/:turnoId/serie', async (req, res) => {
 // dos si quedan turnos anteriores al corte (para que la serie original nunca
 // cambie de significado retroactivamente), reasigna serieId/ordenEnSerie a
 // los turnos seleccionados y aplica los cambios compartidos. `numeroSesion`
-// nunca se toca acá — ver Turno.serieId en schema.prisma.
+// se recalcula después para todo el paciente (ver sesionesPack.ts).
 app.patch('/api/turnos/:turnoId/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
   const turnoId = Number(req.params.turnoId)
@@ -1558,7 +1559,13 @@ app.patch('/api/turnos/:turnoId/serie', requireRole(...ADMIN_DATA_ROLES), async 
       return actualizados
     })
 
-    res.json({ turnos: result })
+    await renumerarSesionesPaciente(consultorioId, anchor.pacienteId)
+    const turnosNumerados = await prisma.turno.findMany({
+      where: { id: { in: result.map((t) => t.id) } },
+      orderBy: { ordenEnSerie: 'asc' },
+      include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true },
+    })
+    res.json({ turnos: turnosNumerados })
   } catch (err) {
     res.status(500).json({ error: 'failed to update serie de turnos' })
   }
@@ -1591,6 +1598,7 @@ app.delete('/api/turnos/:turnoId/serie', requireRole(...ADMIN_DATA_ROLES), async
       await tx.turno.updateMany({ where: { id: { in: siguientes.map((t) => t.id) } }, data: { eliminadoAt: new Date() } })
       await tx.serieTurno.update({ where: { id: anchor.serieId! }, data: { cantidadSesiones: anteriores } })
     })
+    await renumerarSesionesPaciente(consultorioId, anchor.pacienteId)
 
     res.json({ eliminados: siguientes.length })
   } catch (err) {
@@ -1619,32 +1627,6 @@ async function resolveGrupoParaAsignar(consultorioId: number, pacienteId: number
   const grupo = await prisma.grupoEvolucion.findFirst({ where: { id: grupoId, consultorioId, pacienteId } })
   if (!grupo) return { ok: false, status: 404, error: 'grupo not found for this paciente' }
   return { ok: true }
-}
-
-// "Sesión X de Y": X es siempre count(turnos FINALIZADO del mismo paciente+
-// grupo, sin contar el propio turno si se está editando) + 1 — nunca
-// count(Evolucion)+1, que se desincroniza fácil (una evolución puede
-// cargarse sin turno, o un turno puede tener más de una evolución). Ni
-// CANCELADO ni AUSENTE cuentan como sesión realizada: mismo criterio que
-// `sesionesRealizadas` en estadisticasService.ts (solo FINALIZADO). Es un
-// valor prospectivo/default al crear o cambiar de diagnóstico — queda
-// guardado en `numeroSesion` y sigue siendo editable a mano después,
-// nunca recalculado por detrás sin que el usuario lo pida.
-async function sesionAutomaticaParaGrupo(consultorioId: number, pacienteId: number, grupoId: number, excludeTurnoId?: number): Promise<number> {
-  const completados = await prisma.turno.count({
-    where: {
-      consultorioId,
-      pacienteId,
-      grupoId,
-      estado: 'FINALIZADO',
-      eliminadoAt: null,
-      // Una sesión de consulta no consume número de sesión del plan de
-      // tratamiento — tampoco debe contar para el número de las demás.
-      esSesionConsulta: false,
-      NOT: excludeTurnoId ? { id: excludeTurnoId } : undefined,
-    },
-  })
-  return completados + 1
 }
 
 app.post('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) => {
@@ -1893,23 +1875,9 @@ app.delete('/api/grupos-evolucion/:id', requireRole(...CLINICAL_ROLES), async (r
   if (!grupo) return res.status(404).json({ error: 'grupo not found in consultorio' })
 
   await prisma.grupoEvolucion.delete({ where: { id } })
+  // Sus turnos pasan a "sin diagnóstico" (SetNull): cambian de pack.
+  await renumerarSesionesPaciente(consultorioId, grupo.pacienteId)
   res.status(204).end()
-})
-
-// Próxima "Sesión X" para este diagnóstico — el frontend la pide al elegir
-// un Diagnóstico en el formulario de Turno, para mostrar el número real de
-// una (en vez de un placeholder) antes de guardar. Mismo cálculo que usa el
-// backend como default en POST/PATCH /api/turnos — ver sesionAutomaticaParaGrupo.
-app.get('/api/grupos-evolucion/:id/proxima-sesion', requireRole(...CLINICAL_ROLES), async (req, res) => {
-  const consultorioId = req.usuario!.consultorioId
-  const id = Number(req.params.id)
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'invalid id' })
-
-  const grupo = await prisma.grupoEvolucion.findFirst({ where: { id, consultorioId } })
-  if (!grupo) return res.status(404).json({ error: 'grupo not found in consultorio' })
-
-  const numeroSesion = await sesionAutomaticaParaGrupo(consultorioId, grupo.pacienteId, id)
-  res.json({ numeroSesion })
 })
 
 // PLANTILLAS DE EVOLUCIÓN

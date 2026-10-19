@@ -1,4 +1,4 @@
-import { Fragment, useState, type SVGProps } from 'react'
+import { Fragment, useState, type CSSProperties, type SVGProps } from 'react'
 import type { Evolucion, GrupoEvolucion } from '../types/domain'
 import { formatDateTime } from '../utils/dateFormat'
 import { professionalName, professionalNameCompact } from '../utils/professional'
@@ -40,6 +40,8 @@ export function TrashIcon(props: SVGProps<SVGSVGElement>) {
 
 type EvolutionTableProps = {
   evoluciones: Evolucion[]
+  /** Evoluciones que abren un pack de sesiones (ver utils/packsEvoluciones.ts). */
+  inicioPackIds?: Set<number>
   canEdit: (evolucion: Evolucion) => boolean
   editingId: number | null
   editingText: string
@@ -66,6 +68,7 @@ type EvolutionTableProps = {
 
 export default function EvolutionTable({
   evoluciones,
+  inicioPackIds,
   canEdit,
   editingId,
   editingText,
@@ -157,11 +160,15 @@ export default function EvolutionTable({
             const isEditing = editingId === evolucion.id
             const wasEdited = new Date(evolucion.updatedAt).getTime() !== new Date(evolucion.createdAt).getTime()
             const showExpandedRow = isExpanded
+            const isPackStart = inicioPackIds?.has(evolucion.id) ?? false
 
             return (
               <Fragment key={evolucion.id}>
                 <tr
-                  className="evolution-row"
+                  className={`evolution-row ${isPackStart ? 'evolution-row--pack-start' : ''}`}
+                  // Color del diagnóstico: borde izquierdo de cada fila y
+                  // tinte de la fila que abre un pack (ver App.css).
+                  style={evolucion.grupo ? ({ '--grupo-color': evolucion.grupo.color } as CSSProperties) : undefined}
                   tabIndex={0}
                   onClick={() => handleRowClick(evolucion)}
                   onKeyDown={(event) => {
@@ -178,6 +185,7 @@ export default function EvolutionTable({
                   <td>
                     {formatDateTime(evolucion.createdAt)}
                     {wasEdited ? <span className="evolution-edited-tag"> · editada</span> : null}
+                    {isPackStart ? <span className="evolution-pack-start-tag">Inicio de tratamiento</span> : null}
                   </td>
                   <td data-label="Profesional" title={professionalName(evolucion.profesional)}>{professionalNameCompact(evolucion.profesional)}</td>
                   <td data-label="Diagnóstico"><GrupoChip grupo={evolucion.grupo} /></td>

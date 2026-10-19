@@ -59,6 +59,18 @@ export function getConsultorioTimeZone(): string {
   return consultorioTimeZone
 }
 
+// Corte de packs de sesiones del consultorio (ver Consultorio.diasCortePack),
+// mismo mecanismo que la zona horaria: App.tsx lo setea al cargar.
+let consultorioDiasCortePack = 60
+
+export function setConsultorioDiasCortePack(dias: number): void {
+  consultorioDiasCortePack = dias
+}
+
+export function getConsultorioDiasCortePack(): number {
+  return consultorioDiasCortePack
+}
+
 type ApiErrorBody = {
   error?: string
   message?: string
@@ -548,11 +560,6 @@ export function patchGrupoEvolucion(id: number, data: Partial<GrupoEvolucionInpu
 
 export function deleteGrupoEvolucion(id: number): Promise<void> {
   return request(`/api/grupos-evolucion/${id}`, { method: 'DELETE' })
-}
-
-export async function getProximaSesion(grupoId: number): Promise<number> {
-  const result = await request<{ numeroSesion: number }>(`/api/grupos-evolucion/${grupoId}/proxima-sesion`)
-  return result.numeroSesion
 }
 
 export function getPlantillasEvolucion(): Promise<PlantillaEvolucion[]> {
