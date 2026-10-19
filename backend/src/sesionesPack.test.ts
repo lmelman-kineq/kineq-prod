@@ -23,6 +23,15 @@ describe('calcularNumerosSesion', () => {
     expect([n.get(a.id), n.get(b.id), n.get(c.id)]).toEqual([1, 2, 1])
   })
 
+  it('"Comienzo de módulo" reinicia la numeración aunque no haya hueco, y los siguientes siguen desde ahí', () => {
+    const a = turno('2026-03-01')
+    const b = turno('2026-03-08')
+    const c = turno('2026-03-15', { inicioModulo: true })
+    const d = turno('2026-03-22')
+    const n = calcularNumerosSesion([a, b, c, d], 60)
+    expect([n.get(a.id), n.get(b.id), n.get(c.id), n.get(d.id)]).toEqual([1, 2, 1, 2])
+  })
+
   it('cada diagnóstico (y "sin diagnóstico") numera por separado', () => {
     const lumbar = turno('2026-01-10', { grupoId: 1 })
     const cervical = turno('2026-01-11', { grupoId: 2 })

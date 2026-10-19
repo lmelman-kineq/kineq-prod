@@ -8,7 +8,11 @@ import prisma from './prisma'
 // `Consultorio.diasCortePack` días entre turnos consecutivos que cuentan. Un
 // cambio de diagnóstico ya es otro pack por construcción (otra clave), y
 // volver al mismo diagnóstico después de un hueco largo arranca un pack
-// nuevo (numeroSesion vuelve a 1).
+// nuevo (numeroSesion vuelve a 1). Además, un turno marcado a mano como
+// "Comienzo de módulo" (`Turno.inicioModulo`) siempre abre un pack nuevo —
+// escape manual para lo que la regla automática no puede ver (dos módulos
+// seguidos del mismo diagnóstico, sin hueco); los siguientes siguen
+// numerando desde ahí.
 //
 // `numeroSesion` es siempre derivado: se recalcula para todo el paciente
 // cada vez que algo que lo afecta cambia (crear/editar/reprogramar/
@@ -25,6 +29,7 @@ export type TurnoParaNumerar = {
   inicio: Date
   estado: EstadoTurno
   esSesionConsulta: boolean
+  inicioModulo?: boolean
 }
 
 export function calcularNumerosSesion(turnos: TurnoParaNumerar[], diasCortePack: number): Map<number, number | null> {
@@ -39,7 +44,7 @@ export function calcularNumerosSesion(turnos: TurnoParaNumerar[], diasCortePack:
     }
     const inicio = turno.inicio.getTime()
     const previo = porGrupo.get(turno.grupoId)
-    const nuevoPack = !previo || inicio - previo.ultimoInicio > diasCortePack * MS_POR_DIA
+    const nuevoPack = !previo || turno.inicioModulo === true || inicio - previo.ultimoInicio > diasCortePack * MS_POR_DIA
     const numero = nuevoPack ? 1 : previo.numero + 1
     porGrupo.set(turno.grupoId, { numero, ultimoInicio: inicio })
     resultado.set(turno.id, numero)
@@ -55,7 +60,7 @@ export async function renumerarSesionesPaciente(consultorioId: number, pacienteI
     prisma.consultorio.findUnique({ where: { id: consultorioId }, select: { diasCortePack: true } }),
     prisma.turno.findMany({
       where: { consultorioId, pacienteId, eliminadoAt: null },
-      select: { id: true, grupoId: true, inicio: true, estado: true, esSesionConsulta: true, numeroSesion: true },
+      select: { id: true, grupoId: true, inicio: true, estado: true, esSesionConsulta: true, inicioModulo: true, numeroSesion: true },
     }),
   ])
   if (!consultorio) return

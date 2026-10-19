@@ -29,6 +29,7 @@ export type TurnosPageItem = {
   socialWorkDisplay?: string | null
   sessionNumber?: number
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   grupoId?: number | null
   status: TurnoStatus

@@ -1057,6 +1057,22 @@ body,
   margin: 6px 0;
 }
 
+/* Ayuda debajo de un checkbox ("Comienzo de módulo"): línea propia, chica,
+   alineada con el texto del checkbox (no con la casilla). */
+.modal-body .checkbox-field:has(.checkbox-field-hint) {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.checkbox-field-hint {
+  flex-basis: 100%;
+  padding-left: 24px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
 /* Legend/subtítulo del header de un modal (ej. "Modificá los datos del
    turno.", "Elegí qué sesiones incluir en el PDF.") — clase propia para
    poder ocultarlo puntualmente en mobile sin afectar el resto de
@@ -4280,6 +4296,10 @@ select:disabled {
   cursor: pointer;
 }
 
+.evolution-row-actions {
+  gap: 8px;
+}
+
 /* Packs de sesiones (ver utils/packsEvoluciones.ts): cada fila lleva el
    color de su diagnóstico como borde izquierdo (`--grupo-color`, inline
    desde EvolutionTable; sin diagnóstico queda neutro). La fila que abre un
@@ -4298,8 +4318,12 @@ select:disabled {
 .evolution-pack-start-tag {
   display: block;
   width: fit-content;
+  max-width: 100%;
   margin-top: 4px;
   padding: 1px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   border-radius: 999px;
   background: color-mix(in srgb, var(--grupo-color, var(--color-primary)) 18%, transparent);
   color: var(--color-text);
@@ -7084,11 +7108,11 @@ select:disabled {
   .evolution-table .evolution-row td.turnos-actions-cell {
     grid-column: 2;
     grid-row: 1;
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 8px;
     width: auto;
-    justify-content: flex-end;
+  }
+
+  .evolution-row-actions {
+    flex-wrap: nowrap;
   }
 
   /* Colapsada, la card mobile muestra el Resumen recortado a 2 líneas (no

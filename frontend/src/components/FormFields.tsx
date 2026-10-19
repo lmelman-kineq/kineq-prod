@@ -87,6 +87,7 @@ export type TurnoFormValue = {
   // backend/src/sesionesPack.ts). null = turno nuevo, todavía sin número.
   sessionNumber: number | null
   esSesionConsulta: boolean
+  inicioModulo: boolean
   monto: string
   grupoId: number | null
   status: TurnoStatus
@@ -202,6 +203,11 @@ function minutesBetweenTimesOfDay(start: string, end: string): number {
   return diff > 0 ? diff : diff + 1440
 }
 
+// La numeración ya detecta sola el comienzo de un módulo (cambio de
+// diagnóstico o muchos días sin sesiones); esta marca es el escape manual
+// para lo que no detecta, ej. dos módulos seguidos del mismo diagnóstico.
+const INICIO_MODULO_HINT = 'La numeración de sesiones vuelve a 1 desde este turno. Normalmente se detecta sola; marcalo solo si empieza un módulo nuevo del mismo diagnóstico.'
+
 const minuteOptions = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55']
 const statusOptions: TurnoStatus[] = [
   'Asignado',
@@ -274,6 +280,7 @@ export function TurnoFormFields({
   const repeatSelectId = useId()
   const recurrenceCountId = useId()
   const sessionConsultaCheckboxId = useId()
+  const inicioModuloCheckboxId = useId()
   const sessionNumberId = useId()
 
   const fieldRefs = useMemo<Record<DropdownName, React.RefObject<HTMLDivElement | null>>>(
@@ -867,6 +874,19 @@ export function TurnoFormFields({
           </label>
 
           {!value.esSesionConsulta ? (
+            <label className="checkbox-field" htmlFor={inicioModuloCheckboxId} title={INICIO_MODULO_HINT}>
+              <input
+                id={inicioModuloCheckboxId}
+                type="checkbox"
+                checked={value.inicioModulo}
+                onChange={(event) => updateValue({ inicioModulo: event.target.checked })}
+                disabled={disabled}
+              />
+              Comienzo de módulo
+            </label>
+          ) : null}
+
+          {!value.esSesionConsulta ? (
             <span className="quick-session-number">
               <HashFieldIcon className="quick-field-icon" aria-hidden="true" />
               <label className="sr-only" htmlFor={sessionNumberId}>
@@ -900,6 +920,20 @@ export function TurnoFormFields({
             />
             Sesión de consulta
           </label>
+
+          {!value.esSesionConsulta ? (
+            <label className="checkbox-field checkbox-field--section appointment-form-full-row" htmlFor={inicioModuloCheckboxId} title={INICIO_MODULO_HINT}>
+              <input
+                id={inicioModuloCheckboxId}
+                type="checkbox"
+                checked={value.inicioModulo}
+                onChange={(event) => updateValue({ inicioModulo: event.target.checked })}
+                disabled={disabled}
+              />
+              Comienzo de módulo
+              <span className="checkbox-field-hint">{INICIO_MODULO_HINT}</span>
+            </label>
+          ) : null}
 
           {!value.esSesionConsulta ? (
             <label className="appointment-field-session-number">

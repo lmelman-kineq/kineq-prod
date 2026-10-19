@@ -1000,7 +1000,7 @@ function overlapExists(consultorioId: number, profesionalId: number, inicio: Dat
 
 app.post('/api/turnos', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
   const consultorioId = req.usuario!.consultorioId
-  const { pacienteId, especialidadId, obraSocialId, inicio, duracionMinutos = 60, notas, grupoId, esSesionConsulta, monto } = req.body
+  const { pacienteId, especialidadId, obraSocialId, inicio, duracionMinutos = 60, notas, grupoId, esSesionConsulta, inicioModulo, monto } = req.body
 
   // Un profesional solo puede crear turnos para sí mismo: se ignora cualquier
   // profesionalId enviado por el cliente y se usa el vínculo de sesión.
@@ -1058,7 +1058,7 @@ app.post('/api/turnos', requireRole(...ADMIN_DATA_ROLES), async (req, res) => {
     const conflict = await overlapExists(consultorioId, profesionalId, inicioDate, Number(duracionMinutos))
     if (conflict) return res.status(409).json({ error: 'overlap with existing turno' })
 
-    const turno = await prisma.turno.create({ data: { consultorioId, pacienteId, profesionalId, especialidadId, obraSocialId: obraSocialId || null, grupoId: resolvedGrupoId, inicio: inicioDate, duracionMinutos: Number(duracionMinutos), esSesionConsulta: resolvedEsSesionConsulta, monto: monto ?? null, notas: notas || null } })
+    const turno = await prisma.turno.create({ data: { consultorioId, pacienteId, profesionalId, especialidadId, obraSocialId: obraSocialId || null, grupoId: resolvedGrupoId, inicio: inicioDate, duracionMinutos: Number(duracionMinutos), esSesionConsulta: resolvedEsSesionConsulta, inicioModulo: Boolean(inicioModulo), monto: monto ?? null, notas: notas || null } })
     // numeroSesion nunca viene del cliente: se deriva del pack (ver sesionesPack.ts).
     await renumerarSesionesPaciente(consultorioId, pacienteId)
 
@@ -1100,8 +1100,9 @@ app.patch(
       const turnoAjeno = esProfesional && turno.profesionalId !== req.usuario!.profesionalId
       const fields = turnoAjeno
         ? ['estado']
-        : ['pacienteId', ...(esProfesional ? [] : ['profesionalId']), 'especialidadId', 'obraSocialId', 'grupoId', 'inicio', 'duracionMinutos', 'esSesionConsulta', 'monto', 'notas', 'estado']
+        : ['pacienteId', ...(esProfesional ? [] : ['profesionalId']), 'especialidadId', 'obraSocialId', 'grupoId', 'inicio', 'duracionMinutos', 'esSesionConsulta', 'inicioModulo', 'monto', 'notas', 'estado']
       for (const f of fields) if (f in req.body) payload[f] = req.body[f]
+      if ('inicioModulo' in payload) payload.inicioModulo = Boolean(payload.inicioModulo)
 
       if (payload.inicio) payload.inicio = new Date(payload.inicio)
       if (payload.duracionMinutos) payload.duracionMinutos = Number(payload.duracionMinutos)
@@ -1241,6 +1242,7 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
     notas,
     grupoId,
     esSesionConsulta,
+    inicioModulo,
     monto,
     frecuenciaSemanas,
     patron = 'SEMANAL',
@@ -1373,6 +1375,8 @@ app.post('/api/turnos/serie', requireRole(...ADMIN_DATA_ROLES), async (req, res)
               inicio: inicios[i],
               duracionMinutos: Number(duracionMinutos),
               esSesionConsulta: resolvedEsSesionConsulta,
+              // Una serie es un solo módulo: la marca va solo en la 1ra.
+              inicioModulo: i === 0 && Boolean(inicioModulo),
               monto: monto ?? null,
               notas: notas || null,
             },
@@ -1502,6 +1506,9 @@ app.patch('/api/turnos/:turnoId/serie', requireRole(...ADMIN_DATA_ROLES), async 
       }
     }
     if ('esSesionConsulta' in payload) payload.esSesionConsulta = Boolean(payload.esSesionConsulta)
+    // "Comienzo de módulo" es de un turno, nunca se copia a toda la serie:
+    // solo se aplica al turno ancla (el que se está editando).
+    const inicioModuloAncla = 'inicioModulo' in req.body ? Boolean(req.body.inicioModulo) : undefined
 
     const newProfesionalId = payload.profesionalId ?? anchor.profesionalId
     const newDuracion = payload.duracionMinutos ?? anchor.duracionMinutos
@@ -1551,7 +1558,13 @@ app.patch('/api/turnos/:turnoId/serie', requireRole(...ADMIN_DATA_ROLES), async 
         actualizados.push(
           await tx.turno.update({
             where: { id: t.id },
-            data: { ...payload, inicio: inicioPorTurno.get(t.id)!, serieId: targetSerieId, ordenEnSerie: i + 1 },
+            data: {
+              ...payload,
+              ...(t.id === anchor.id && inicioModuloAncla !== undefined ? { inicioModulo: inicioModuloAncla } : {}),
+              inicio: inicioPorTurno.get(t.id)!,
+              serieId: targetSerieId,
+              ordenEnSerie: i + 1,
+            },
             include: { paciente: true, profesional: true, especialidad: true, obraSocial: true, grupo: true, serie: true },
           }),
         )
@@ -1617,7 +1630,7 @@ app.get('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) => 
   const where: any = { consultorioId, activo: true }
   if (pacienteId) where.pacienteId = pacienteId
 
-  const evoluciones = await prisma.evolucion.findMany({ where, include: { profesional: true, grupo: true, imagenes: true, turno: { select: { esSesionConsulta: true } } } })
+  const evoluciones = await prisma.evolucion.findMany({ where, include: { profesional: true, grupo: true, imagenes: true, turno: { select: { esSesionConsulta: true, numeroSesion: true } } } })
   res.json(evoluciones.map(evolucionParaCliente))
 })
 
@@ -1667,7 +1680,7 @@ app.post('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) =>
 
     const ev = await prisma.evolucion.create({
       data: { consultorioId, pacienteId, profesionalId, turnoId: turnoId || null, contenido, contenidoHtml, grupoId: grupoId || null },
-      include: { profesional: true, grupo: true, imagenes: true, turno: { select: { esSesionConsulta: true } } },
+      include: { profesional: true, grupo: true, imagenes: true, turno: { select: { esSesionConsulta: true, numeroSesion: true } } },
     })
     res.status(201).json(evolucionParaCliente(ev))
   } catch (err) {
@@ -1734,7 +1747,7 @@ app.patch('/api/evoluciones/:evolucionId', requireRole(...CLINICAL_ROLES), async
       }
     }
 
-    const updated = await prisma.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true, imagenes: true, turno: { select: { esSesionConsulta: true } } } })
+    const updated = await prisma.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true, imagenes: true, turno: { select: { esSesionConsulta: true, numeroSesion: true } } } })
     res.json(evolucionParaCliente(updated))
   } catch (err) {
     console.error('failed to update evolucion', err)

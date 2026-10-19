@@ -121,6 +121,8 @@ export interface Turno {
   duracionMinutos: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  /** Marca manual "Comienzo de módulo": reinicia la numeración de sesiones desde este turno. */
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado: EstadoTurno
@@ -224,7 +226,7 @@ export interface Evolucion {
   paciente?: Paciente
   profesional?: Profesional
   /** Solo lo que el backend incluye del turno: si fue una sesión de consulta. */
-  turno?: Pick<Turno, 'esSesionConsulta'> | null
+  turno?: Pick<Turno, 'esSesionConsulta' | 'numeroSesion'> | null
   grupo?: GrupoEvolucion | null
   imagenes?: EvolucionImagen[]
 }
@@ -498,6 +500,7 @@ export interface CreateTurnoInput {
   time: string
   duracionMinutos: number
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   grupoId?: number | null
   notas?: string
@@ -527,6 +530,7 @@ export interface CreateSerieTurnoInput {
   diasSemanaPersonalizado?: number[]
   fechasInicio: string[]
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   grupoId?: number | null
   notas?: string
@@ -553,6 +557,7 @@ export interface UpdateSerieTurnoInput {
   monto?: number | null
   grupoId?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   confirmarSuperposicion?: boolean
 }
 

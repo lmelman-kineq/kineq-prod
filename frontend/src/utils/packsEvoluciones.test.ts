@@ -20,9 +20,19 @@ describe('inicioPackIds', () => {
   })
 
   it('una sesión de consulta no abre pack: la siguiente sesión real sí', () => {
-    const consulta = { ...ev(1, '2026-09-02', 1), turno: { esSesionConsulta: true } }
+    const consulta = { ...ev(1, '2026-09-02', 1), turno: { esSesionConsulta: true, numeroSesion: null } }
     const evoluciones = [consulta, ev(2, '2026-09-23', 1), ev(3, '2026-09-30', 1)]
     expect([...inicioPackIds(evoluciones, 60)]).toEqual([2])
+  })
+
+  it('con turno manda la numeración del turno (incluida la marca manual de módulo), no la fecha', () => {
+    const evoluciones = [
+      { ...ev(1, '2026-03-01', 1), turno: { esSesionConsulta: false, numeroSesion: 1 } },
+      { ...ev(2, '2026-03-08', 1), turno: { esSesionConsulta: false, numeroSesion: 2 } },
+      // mismo diagnóstico, sin hueco, pero el turno fue marcado "Comienzo de módulo"
+      { ...ev(3, '2026-03-15', 1), turno: { esSesionConsulta: false, numeroSesion: 1 } },
+    ]
+    expect([...inicioPackIds(evoluciones, 60)].sort()).toEqual([1, 3])
   })
 
   it('no depende del orden de entrada (la tabla viene más reciente primero)', () => {

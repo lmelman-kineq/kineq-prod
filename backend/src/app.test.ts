@@ -1178,6 +1178,33 @@ describe('auth, roles y aislamiento por consultorio', () => {
       await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
     })
 
+    it('marcar un turno ya cargado como "Comienzo de módulo" renumera ese y los siguientes', async () => {
+      const grupo = await prisma.grupoEvolucion.create({
+        data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Modulo ${RUN_ID}`, color: 'var(--appointment-sky)' },
+      })
+      const ids: number[] = []
+      for (const dia of ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04']) {
+        const res = await request(app)
+          .post('/api/turnos')
+          .set('Cookie', cookies.adminA)
+          .send({ pacienteId: pacienteAId, profesionalId: otroProfesionalAId, especialidadId: especialidadAId, inicio: `${dia}T14:00:00.000Z`, duracionMinutos: 30, grupoId: grupo.id })
+        ids.push(res.body.id)
+      }
+
+      const marcar = await request(app).patch(`/api/turnos/${ids[2]}`).set('Cookie', cookies.adminA).send({ inicioModulo: true })
+      expect(marcar.status).toBe(200)
+      expect(marcar.body.inicioModulo).toBe(true)
+      const numeros = async () => (await prisma.turno.findMany({ where: { id: { in: ids } }, orderBy: { inicio: 'asc' } })).map((t) => t.numeroSesion)
+      expect(await numeros()).toEqual([1, 2, 1, 2])
+
+      // Desmarcar vuelve a la numeración automática.
+      await request(app).patch(`/api/turnos/${ids[2]}`).set('Cookie', cookies.adminA).send({ inicioModulo: false })
+      expect(await numeros()).toEqual([1, 2, 3, 4])
+
+      await prisma.turno.deleteMany({ where: { id: { in: ids } } })
+      await prisma.grupoEvolucion.delete({ where: { id: grupo.id } })
+    })
+
     it('volver al mismo diagnóstico después de más de diasCortePack días arranca un pack nuevo', async () => {
       const grupo = await prisma.grupoEvolucion.create({
         data: { consultorioId: consultorioAId, pacienteId: pacienteAId, nombre: `Pack nuevo ${RUN_ID}`, color: 'var(--appointment-purple)' },

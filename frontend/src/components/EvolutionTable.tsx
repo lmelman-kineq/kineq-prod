@@ -187,15 +187,20 @@ export default function EvolutionTable({
                   <td>
                     {formatDateTime(evolucion.createdAt)}
                     {wasEdited ? <span className="evolution-edited-tag"> · editada</span> : null}
-                    {isPackStart ? <span className="evolution-pack-start-tag">Inicio de tratamiento</span> : null}
-                    {isConsulta ? <span className="evolution-pack-start-tag evolution-consulta-tag">Sesión de consulta</span> : null}
+                    {isPackStart ? <span className="evolution-pack-start-tag" title="Comienzo de módulo">Comienzo de módulo</span> : null}
+                    {isConsulta ? <span className="evolution-pack-start-tag evolution-consulta-tag" title="Sesión de consulta">Sesión de consulta</span> : null}
                   </td>
                   <td data-label="Profesional" title={professionalName(evolucion.profesional)}>{professionalNameCompact(evolucion.profesional)}</td>
                   <td data-label="Diagnóstico"><GrupoChip grupo={evolucion.grupo} /></td>
                   <td className="evolution-resumen-cell" data-label="Resumen">
                     <span>{evolucion.contenido}</span>
                   </td>
-                  <td className="turnos-actions-cell config-row-actions">
+                  {/* El flex va en un div interno, no en el <td>: un <td> con
+                      display:flex deja de ser celda de tabla — no toma el alto
+                      ni el fondo de la fila (se veía desfasado en laptop cuando
+                      la fila crece por la etiqueta de módulo). */}
+                  <td className="turnos-actions-cell">
+                    <div className="config-row-actions evolution-row-actions">
                     {canEdit(evolucion) ? (
                       <button
                         type="button"
@@ -224,6 +229,7 @@ export default function EvolutionTable({
                         <TrashIcon />
                       </button>
                     ) : null}
+                    </div>
                   </td>
                 </tr>
 

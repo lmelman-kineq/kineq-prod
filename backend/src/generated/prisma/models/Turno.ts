@@ -70,6 +70,7 @@ export type TurnoMinAggregateOutputType = {
   duracionMinutos: number | null
   numeroSesion: number | null
   esSesionConsulta: boolean | null
+  inicioModulo: boolean | null
   monto: number | null
   notas: string | null
   estado: $Enums.EstadoTurno | null
@@ -95,6 +96,7 @@ export type TurnoMaxAggregateOutputType = {
   duracionMinutos: number | null
   numeroSesion: number | null
   esSesionConsulta: boolean | null
+  inicioModulo: boolean | null
   monto: number | null
   notas: string | null
   estado: $Enums.EstadoTurno | null
@@ -120,6 +122,7 @@ export type TurnoCountAggregateOutputType = {
   duracionMinutos: number
   numeroSesion: number
   esSesionConsulta: number
+  inicioModulo: number
   monto: number
   notas: number
   estado: number
@@ -177,6 +180,7 @@ export type TurnoMinAggregateInputType = {
   duracionMinutos?: true
   numeroSesion?: true
   esSesionConsulta?: true
+  inicioModulo?: true
   monto?: true
   notas?: true
   estado?: true
@@ -202,6 +206,7 @@ export type TurnoMaxAggregateInputType = {
   duracionMinutos?: true
   numeroSesion?: true
   esSesionConsulta?: true
+  inicioModulo?: true
   monto?: true
   notas?: true
   estado?: true
@@ -227,6 +232,7 @@ export type TurnoCountAggregateInputType = {
   duracionMinutos?: true
   numeroSesion?: true
   esSesionConsulta?: true
+  inicioModulo?: true
   monto?: true
   notas?: true
   estado?: true
@@ -339,6 +345,7 @@ export type TurnoGroupByOutputType = {
   duracionMinutos: number
   numeroSesion: number | null
   esSesionConsulta: boolean
+  inicioModulo: boolean
   monto: number | null
   notas: string | null
   estado: $Enums.EstadoTurno
@@ -387,6 +394,7 @@ export type TurnoWhereInput = {
   duracionMinutos?: Prisma.IntFilter<"Turno"> | number
   numeroSesion?: Prisma.IntNullableFilter<"Turno"> | number | null
   esSesionConsulta?: Prisma.BoolFilter<"Turno"> | boolean
+  inicioModulo?: Prisma.BoolFilter<"Turno"> | boolean
   monto?: Prisma.FloatNullableFilter<"Turno"> | number | null
   notas?: Prisma.StringNullableFilter<"Turno"> | string | null
   estado?: Prisma.EnumEstadoTurnoFilter<"Turno"> | $Enums.EstadoTurno
@@ -420,6 +428,7 @@ export type TurnoOrderByWithRelationInput = {
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrderInput | Prisma.SortOrder
   esSesionConsulta?: Prisma.SortOrder
+  inicioModulo?: Prisma.SortOrder
   monto?: Prisma.SortOrderInput | Prisma.SortOrder
   notas?: Prisma.SortOrderInput | Prisma.SortOrder
   estado?: Prisma.SortOrder
@@ -457,6 +466,7 @@ export type TurnoWhereUniqueInput = Prisma.AtLeast<{
   duracionMinutos?: Prisma.IntFilter<"Turno"> | number
   numeroSesion?: Prisma.IntNullableFilter<"Turno"> | number | null
   esSesionConsulta?: Prisma.BoolFilter<"Turno"> | boolean
+  inicioModulo?: Prisma.BoolFilter<"Turno"> | boolean
   monto?: Prisma.FloatNullableFilter<"Turno"> | number | null
   notas?: Prisma.StringNullableFilter<"Turno"> | string | null
   estado?: Prisma.EnumEstadoTurnoFilter<"Turno"> | $Enums.EstadoTurno
@@ -490,6 +500,7 @@ export type TurnoOrderByWithAggregationInput = {
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrderInput | Prisma.SortOrder
   esSesionConsulta?: Prisma.SortOrder
+  inicioModulo?: Prisma.SortOrder
   monto?: Prisma.SortOrderInput | Prisma.SortOrder
   notas?: Prisma.SortOrderInput | Prisma.SortOrder
   estado?: Prisma.SortOrder
@@ -523,6 +534,7 @@ export type TurnoScalarWhereWithAggregatesInput = {
   duracionMinutos?: Prisma.IntWithAggregatesFilter<"Turno"> | number
   numeroSesion?: Prisma.IntNullableWithAggregatesFilter<"Turno"> | number | null
   esSesionConsulta?: Prisma.BoolWithAggregatesFilter<"Turno"> | boolean
+  inicioModulo?: Prisma.BoolWithAggregatesFilter<"Turno"> | boolean
   monto?: Prisma.FloatNullableWithAggregatesFilter<"Turno"> | number | null
   notas?: Prisma.StringNullableWithAggregatesFilter<"Turno"> | string | null
   estado?: Prisma.EnumEstadoTurnoWithAggregatesFilter<"Turno"> | $Enums.EstadoTurno
@@ -540,6 +552,7 @@ export type TurnoCreateInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -573,6 +586,7 @@ export type TurnoUncheckedCreateInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -591,6 +605,7 @@ export type TurnoUpdateInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -624,6 +639,7 @@ export type TurnoUncheckedUpdateInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -650,6 +666,7 @@ export type TurnoCreateManyInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -667,6 +684,7 @@ export type TurnoUpdateManyMutationInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -692,6 +710,7 @@ export type TurnoUncheckedUpdateManyInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -733,6 +752,7 @@ export type TurnoCountOrderByAggregateInput = {
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrder
   esSesionConsulta?: Prisma.SortOrder
+  inicioModulo?: Prisma.SortOrder
   monto?: Prisma.SortOrder
   notas?: Prisma.SortOrder
   estado?: Prisma.SortOrder
@@ -773,6 +793,7 @@ export type TurnoMaxOrderByAggregateInput = {
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrder
   esSesionConsulta?: Prisma.SortOrder
+  inicioModulo?: Prisma.SortOrder
   monto?: Prisma.SortOrder
   notas?: Prisma.SortOrder
   estado?: Prisma.SortOrder
@@ -798,6 +819,7 @@ export type TurnoMinOrderByAggregateInput = {
   duracionMinutos?: Prisma.SortOrder
   numeroSesion?: Prisma.SortOrder
   esSesionConsulta?: Prisma.SortOrder
+  inicioModulo?: Prisma.SortOrder
   monto?: Prisma.SortOrder
   notas?: Prisma.SortOrder
   estado?: Prisma.SortOrder
@@ -1157,6 +1179,7 @@ export type TurnoCreateWithoutConsultorioInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1188,6 +1211,7 @@ export type TurnoUncheckedCreateWithoutConsultorioInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1243,6 +1267,7 @@ export type TurnoScalarWhereInput = {
   duracionMinutos?: Prisma.IntFilter<"Turno"> | number
   numeroSesion?: Prisma.IntNullableFilter<"Turno"> | number | null
   esSesionConsulta?: Prisma.BoolFilter<"Turno"> | boolean
+  inicioModulo?: Prisma.BoolFilter<"Turno"> | boolean
   monto?: Prisma.FloatNullableFilter<"Turno"> | number | null
   notas?: Prisma.StringNullableFilter<"Turno"> | string | null
   estado?: Prisma.EnumEstadoTurnoFilter<"Turno"> | $Enums.EstadoTurno
@@ -1260,6 +1285,7 @@ export type TurnoCreateWithoutPacienteInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1291,6 +1317,7 @@ export type TurnoUncheckedCreateWithoutPacienteInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1335,6 +1362,7 @@ export type TurnoCreateWithoutProfesionalInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1366,6 +1394,7 @@ export type TurnoUncheckedCreateWithoutProfesionalInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1410,6 +1439,7 @@ export type TurnoCreateWithoutEspecialidadInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1441,6 +1471,7 @@ export type TurnoUncheckedCreateWithoutEspecialidadInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1485,6 +1516,7 @@ export type TurnoCreateWithoutObraSocialInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1516,6 +1548,7 @@ export type TurnoUncheckedCreateWithoutObraSocialInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1560,6 +1593,7 @@ export type TurnoCreateWithoutSerieInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1591,6 +1625,7 @@ export type TurnoUncheckedCreateWithoutSerieInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1635,6 +1670,7 @@ export type TurnoCreateWithoutEvolucionesInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1667,6 +1703,7 @@ export type TurnoUncheckedCreateWithoutEvolucionesInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1700,6 +1737,7 @@ export type TurnoUpdateWithoutEvolucionesInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -1732,6 +1770,7 @@ export type TurnoUncheckedUpdateWithoutEvolucionesInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -1749,6 +1788,7 @@ export type TurnoCreateWithoutGrupoInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1780,6 +1820,7 @@ export type TurnoUncheckedCreateWithoutGrupoInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1831,6 +1872,7 @@ export type TurnoCreateManyConsultorioInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1848,6 +1890,7 @@ export type TurnoUpdateWithoutConsultorioInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -1879,6 +1922,7 @@ export type TurnoUncheckedUpdateWithoutConsultorioInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -1904,6 +1948,7 @@ export type TurnoUncheckedUpdateManyWithoutConsultorioInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -1928,6 +1973,7 @@ export type TurnoCreateManyPacienteInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -1945,6 +1991,7 @@ export type TurnoUpdateWithoutPacienteInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -1976,6 +2023,7 @@ export type TurnoUncheckedUpdateWithoutPacienteInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2001,6 +2049,7 @@ export type TurnoUncheckedUpdateManyWithoutPacienteInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2025,6 +2074,7 @@ export type TurnoCreateManyProfesionalInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -2042,6 +2092,7 @@ export type TurnoUpdateWithoutProfesionalInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2073,6 +2124,7 @@ export type TurnoUncheckedUpdateWithoutProfesionalInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2098,6 +2150,7 @@ export type TurnoUncheckedUpdateManyWithoutProfesionalInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2122,6 +2175,7 @@ export type TurnoCreateManyEspecialidadInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -2139,6 +2193,7 @@ export type TurnoUpdateWithoutEspecialidadInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2170,6 +2225,7 @@ export type TurnoUncheckedUpdateWithoutEspecialidadInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2195,6 +2251,7 @@ export type TurnoUncheckedUpdateManyWithoutEspecialidadInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2219,6 +2276,7 @@ export type TurnoCreateManyObraSocialInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -2236,6 +2294,7 @@ export type TurnoUpdateWithoutObraSocialInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2267,6 +2326,7 @@ export type TurnoUncheckedUpdateWithoutObraSocialInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2292,6 +2352,7 @@ export type TurnoUncheckedUpdateManyWithoutObraSocialInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2316,6 +2377,7 @@ export type TurnoCreateManySerieInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -2333,6 +2395,7 @@ export type TurnoUpdateWithoutSerieInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2364,6 +2427,7 @@ export type TurnoUncheckedUpdateWithoutSerieInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2389,6 +2453,7 @@ export type TurnoUncheckedUpdateManyWithoutSerieInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2413,6 +2478,7 @@ export type TurnoCreateManyGrupoInput = {
   duracionMinutos?: number
   numeroSesion?: number | null
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: number | null
   notas?: string | null
   estado?: $Enums.EstadoTurno
@@ -2430,6 +2496,7 @@ export type TurnoUpdateWithoutGrupoInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2461,6 +2528,7 @@ export type TurnoUncheckedUpdateWithoutGrupoInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2486,6 +2554,7 @@ export type TurnoUncheckedUpdateManyWithoutGrupoInput = {
   duracionMinutos?: Prisma.IntFieldUpdateOperationsInput | number
   numeroSesion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   esSesionConsulta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inicioModulo?: Prisma.BoolFieldUpdateOperationsInput | boolean
   monto?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notas?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumEstadoTurnoFieldUpdateOperationsInput | $Enums.EstadoTurno
@@ -2542,6 +2611,7 @@ export type TurnoSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   duracionMinutos?: boolean
   numeroSesion?: boolean
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: boolean
   notas?: boolean
   estado?: boolean
@@ -2578,6 +2648,7 @@ export type TurnoSelectScalar = {
   duracionMinutos?: boolean
   numeroSesion?: boolean
   esSesionConsulta?: boolean
+  inicioModulo?: boolean
   monto?: boolean
   notas?: boolean
   estado?: boolean
@@ -2589,7 +2660,7 @@ export type TurnoSelectScalar = {
   updatedAt?: boolean
 }
 
-export type TurnoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "pacienteId" | "profesionalId" | "especialidadId" | "obraSocialId" | "grupoId" | "serieId" | "ordenEnSerie" | "inicio" | "duracionMinutos" | "numeroSesion" | "esSesionConsulta" | "monto" | "notas" | "estado" | "inicioAtencion" | "finAtencion" | "canceladoAt" | "eliminadoAt" | "createdAt" | "updatedAt", ExtArgs["result"]["turno"]>
+export type TurnoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "consultorioId" | "pacienteId" | "profesionalId" | "especialidadId" | "obraSocialId" | "grupoId" | "serieId" | "ordenEnSerie" | "inicio" | "duracionMinutos" | "numeroSesion" | "esSesionConsulta" | "inicioModulo" | "monto" | "notas" | "estado" | "inicioAtencion" | "finAtencion" | "canceladoAt" | "eliminadoAt" | "createdAt" | "updatedAt", ExtArgs["result"]["turno"]>
 export type TurnoInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   consultorio?: boolean | Prisma.ConsultorioDefaultArgs<ExtArgs>
   paciente?: boolean | Prisma.PacienteDefaultArgs<ExtArgs>
@@ -2628,6 +2699,7 @@ export type $TurnoPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     duracionMinutos: number
     numeroSesion: number | null
     esSesionConsulta: boolean
+    inicioModulo: boolean
     monto: number | null
     notas: string | null
     estado: $Enums.EstadoTurno
@@ -3027,6 +3099,7 @@ export interface TurnoFieldRefs {
   readonly duracionMinutos: Prisma.FieldRef<"Turno", 'Int'>
   readonly numeroSesion: Prisma.FieldRef<"Turno", 'Int'>
   readonly esSesionConsulta: Prisma.FieldRef<"Turno", 'Boolean'>
+  readonly inicioModulo: Prisma.FieldRef<"Turno", 'Boolean'>
   readonly monto: Prisma.FieldRef<"Turno", 'Float'>
   readonly notas: Prisma.FieldRef<"Turno", 'String'>
   readonly estado: Prisma.FieldRef<"Turno", 'EstadoTurno'>

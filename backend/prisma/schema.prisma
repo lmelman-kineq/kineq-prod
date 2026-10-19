@@ -359,6 +359,11 @@ model Turno {
   // infiere de numeroSesion === null, que también puede pasar por otros
   // motivos (turno sin diagnóstico, por ejemplo).
   esSesionConsulta Boolean     @default(false)
+  // "Comienzo de módulo": marca manual de que este turno abre un pack de
+  // sesiones nuevo (numeroSesion vuelve a 1) aunque la regla automática
+  // (cambio de diagnóstico / hueco > diasCortePack) no lo detecte — ej. dos
+  // módulos del mismo diagnóstico seguidos. Ver sesionesPack.ts.
+  inicioModulo     Boolean     @default(false)
   // Monto cobrado por el turno, opcional — dato administrativo simple, sin
   // ningún cálculo/suma agregada pedido todavía (si eso llega a hacer
   // falta más adelante, ahí sí conviene migrar a Decimal para evitar

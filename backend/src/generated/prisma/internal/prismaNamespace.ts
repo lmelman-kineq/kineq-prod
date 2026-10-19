@@ -2211,6 +2211,7 @@ export const TurnoScalarFieldEnum = {
   duracionMinutos: 'duracionMinutos',
   numeroSesion: 'numeroSesion',
   esSesionConsulta: 'esSesionConsulta',
+  inicioModulo: 'inicioModulo',
   monto: 'monto',
   notas: 'notas',
   estado: 'estado',
