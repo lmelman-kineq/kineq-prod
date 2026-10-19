@@ -1617,7 +1617,7 @@ app.get('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) => 
   const where: any = { consultorioId, activo: true }
   if (pacienteId) where.pacienteId = pacienteId
 
-  const evoluciones = await prisma.evolucion.findMany({ where, include: { profesional: true, grupo: true, imagenes: true } })
+  const evoluciones = await prisma.evolucion.findMany({ where, include: { profesional: true, grupo: true, imagenes: true, turno: { select: { esSesionConsulta: true } } } })
   res.json(evoluciones.map(evolucionParaCliente))
 })
 
@@ -1667,7 +1667,7 @@ app.post('/api/evoluciones', requireRole(...CLINICAL_ROLES), async (req, res) =>
 
     const ev = await prisma.evolucion.create({
       data: { consultorioId, pacienteId, profesionalId, turnoId: turnoId || null, contenido, contenidoHtml, grupoId: grupoId || null },
-      include: { profesional: true, grupo: true, imagenes: true },
+      include: { profesional: true, grupo: true, imagenes: true, turno: { select: { esSesionConsulta: true } } },
     })
     res.status(201).json(evolucionParaCliente(ev))
   } catch (err) {
@@ -1734,7 +1734,7 @@ app.patch('/api/evoluciones/:evolucionId', requireRole(...CLINICAL_ROLES), async
       }
     }
 
-    const updated = await prisma.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true, imagenes: true } })
+    const updated = await prisma.evolucion.update({ where: { id: evolucionId }, data: payload, include: { profesional: true, grupo: true, imagenes: true, turno: { select: { esSesionConsulta: true } } } })
     res.json(evolucionParaCliente(updated))
   } catch (err) {
     console.error('failed to update evolucion', err)

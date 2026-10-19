@@ -19,6 +19,12 @@ describe('inicioPackIds', () => {
     expect([...inicioPackIds(evoluciones, 60)].sort()).toEqual([1, 3, 4, 6])
   })
 
+  it('una sesión de consulta no abre pack: la siguiente sesión real sí', () => {
+    const consulta = { ...ev(1, '2026-09-02', 1), turno: { esSesionConsulta: true } }
+    const evoluciones = [consulta, ev(2, '2026-09-23', 1), ev(3, '2026-09-30', 1)]
+    expect([...inicioPackIds(evoluciones, 60)]).toEqual([2])
+  })
+
   it('no depende del orden de entrada (la tabla viene más reciente primero)', () => {
     const evoluciones = [ev(2, '2026-01-17', 1), ev(1, '2026-01-10', 1)]
     expect([...inicioPackIds(evoluciones, 60)]).toEqual([1])

@@ -381,10 +381,15 @@ function WeekView({
       <div key={date} className="week-day-column-wrapper">
         <div className={`week-day-header ${isToday ? 'week-day-header--today' : ''} ${feriados.has(date) ? 'week-day-header--feriado' : ''}`} title={feriados.get(date)}>
           <span className="week-day-header-name">{WEEKDAY_HEADER_LABELS[new Date(`${date}T00:00:00Z`).getUTCDay() === 0 ? 6 : new Date(`${date}T00:00:00Z`).getUTCDay() - 1]}</span>
-          <span className="week-day-header-date">{dayLabel}</span>
-          {feriados.has(date) ? <span className="calendar-feriado-label">{feriados.get(date)}</span> : null}
+          <span className="week-day-header-date">
+            {dayLabel}
+            {/* Solo un punto: el encabezado tiene alto fijo (alineado con
+                la columna de horas) y el nombre no entra sin pisar la
+                grilla — va en el title, y en mobile como banner arriba. */}
+            {feriados.has(date) ? <span className="calendar-feriado-dot" aria-label={`Feriado: ${feriados.get(date)}`} /> : null}
+          </span>
         </div>
-        <div className="calendar-column week-day-column" onClick={handleColumnClick(date)}>
+        <div className={`calendar-column week-day-column ${feriados.has(date) ? 'week-day-column--feriado' : ''}`} onClick={handleColumnClick(date)}>
           <div className="timeline-lines">
             {hourLabels.map((hour) => <div key={hour} className="timeline-row" />)}
           </div>
@@ -464,6 +469,9 @@ function WeekView({
             )
           })}
         </div>
+      ) : null}
+      {isMobile && feriados.has(selectedDate) ? (
+        <p className="calendar-feriado-banner">Feriado · {feriados.get(selectedDate)}</p>
       ) : null}
       <div className={`week-grid ${isMobile ? 'week-grid--single-day' : ''}`}>
         <div className="hours-column week-hours-column">

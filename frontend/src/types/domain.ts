@@ -223,7 +223,8 @@ export interface Evolucion {
   updatedAt: string
   paciente?: Paciente
   profesional?: Profesional
-  turno?: Turno | null
+  /** Solo lo que el backend incluye del turno: si fue una sesión de consulta. */
+  turno?: Pick<Turno, 'esSesionConsulta'> | null
   grupo?: GrupoEvolucion | null
   imagenes?: EvolucionImagen[]
 }

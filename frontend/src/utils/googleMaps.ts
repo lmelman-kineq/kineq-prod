@@ -4,26 +4,36 @@ declare global {
   }
 }
 
-let loadPromise: Promise<typeof google> | null = null
+let loadPromise: Promise<google.maps.PlacesLibrary> | null = null
 
-/** Carga el script de Google Maps JS (Places) una sola vez, sin importar cuántos componentes lo pidan. */
-export function loadGoogleMapsPlaces(apiKey: string): Promise<typeof google> {
-  if (window.google?.maps?.places) return Promise.resolve(window.google)
+/**
+ * Carga Google Maps JS una sola vez y devuelve la librería de Places (API
+ * nueva: `AutocompleteSuggestion`). La versión clásica (`places.Autocomplete`)
+ * no se puede habilitar en proyectos de Google Cloud nuevos — con ella el
+ * campo mostraba los íconos de error de Google en vez de sugerencias.
+ */
+export function loadGoogleMapsPlaces(apiKey: string): Promise<google.maps.PlacesLibrary> {
   if (loadPromise) return loadPromise
 
-  loadPromise = new Promise((resolve, reject) => {
-    const callbackName = '__kineqGoogleMapsCallback'
-    ;(window as unknown as Record<string, () => void>)[callbackName] = () => {
-      if (window.google) resolve(window.google)
-      else reject(new Error('Google Maps no se pudo cargar.'))
+  loadPromise = new Promise<void>((resolve, reject) => {
+    if (typeof window.google?.maps?.importLibrary === 'function') {
+      resolve()
+      return
     }
+    const callbackName = '__kineqGoogleMapsCallback'
+    ;(window as unknown as Record<string, () => void>)[callbackName] = () => resolve()
 
     const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&loading=async&callback=${callbackName}`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&loading=async&callback=${callbackName}`
     script.async = true
     script.onerror = () => reject(new Error('No se pudo cargar Google Maps.'))
     document.head.appendChild(script)
   })
+    .then(() => google.maps.importLibrary('places') as Promise<google.maps.PlacesLibrary>)
+    .catch((error) => {
+      loadPromise = null // reintenta la próxima vez que se pida
+      throw error
+    })
 
   return loadPromise
 }

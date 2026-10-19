@@ -1791,6 +1791,24 @@ body,
   z-index: 20;
 }
 
+/* Dirección con sugerencias de Google (AddressAutocompleteInput.tsx). */
+.address-autocomplete {
+  position: relative;
+}
+
+.address-autocomplete-list {
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-width: none;
+}
+
+.address-autocomplete-list button {
+  width: 100%;
+  font-weight: 400;
+  text-align: left;
+}
+
 .dropdown-list button {
   display: flex;
   align-items: center;
@@ -2470,6 +2488,20 @@ select:disabled {
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.calendar-feriado-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-danger) 75%, var(--color-text-muted));
+  vertical-align: middle;
+}
+
+.calendar-column.week-day-column--feriado {
+  background: color-mix(in srgb, var(--color-danger) 4%, transparent);
 }
 
 .calendar-feriado-banner {
@@ -4273,6 +4305,16 @@ select:disabled {
   color: var(--color-text);
   font-size: 11px;
   font-weight: 600;
+}
+
+/* Sesión de consulta: no cuenta como sesión del tratamiento — color propio
+   (ámbar) en vez del del diagnóstico, en la etiqueta y en el borde. */
+.evolution-table .evolution-row--consulta {
+  --grupo-color: var(--color-warning);
+}
+
+.evolution-consulta-tag {
+  background: color-mix(in srgb, var(--color-warning) 20%, transparent);
 }
 
 .evolution-table th:nth-child(1),
@@ -7815,6 +7857,12 @@ select:disabled {
   .month-view-cell {
     padding: 4px;
     border-radius: 6px;
+  }
+
+  /* Celda de Mes mobile: el nombre del feriado no entra; queda el número
+     en rojo y el title de la celda. */
+  .month-view-cell .calendar-feriado-label {
+    display: none;
   }
 
   .month-view-grid {

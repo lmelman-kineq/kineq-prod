@@ -3,6 +3,7 @@ import type { Evolucion, GrupoEvolucion } from '../types/domain'
 import { formatDateTime } from '../utils/dateFormat'
 import { professionalName, professionalNameCompact } from '../utils/professional'
 import { sanitizeRichTextHtml } from '../utils/richTextSanitize'
+import { esEvolucionDeConsulta } from '../utils/packsEvoluciones'
 import { useIsMobile } from '../hooks/useIsMobile'
 import RichTextEditor from './RichTextEditor'
 import EvolucionContent from './EvolucionContent'
@@ -161,14 +162,15 @@ export default function EvolutionTable({
             const wasEdited = new Date(evolucion.updatedAt).getTime() !== new Date(evolucion.createdAt).getTime()
             const showExpandedRow = isExpanded
             const isPackStart = inicioPackIds?.has(evolucion.id) ?? false
+            const isConsulta = esEvolucionDeConsulta(evolucion)
 
             return (
               <Fragment key={evolucion.id}>
                 <tr
-                  className={`evolution-row ${isPackStart ? 'evolution-row--pack-start' : ''}`}
+                  className={`evolution-row ${isPackStart ? 'evolution-row--pack-start' : ''} ${isConsulta ? 'evolution-row--consulta' : ''}`}
                   // Color del diagnóstico: borde izquierdo de cada fila y
                   // tinte de la fila que abre un pack (ver App.css).
-                  style={evolucion.grupo ? ({ '--grupo-color': evolucion.grupo.color } as CSSProperties) : undefined}
+                  style={evolucion.grupo && !isConsulta ? ({ '--grupo-color': evolucion.grupo.color } as CSSProperties) : undefined}
                   tabIndex={0}
                   onClick={() => handleRowClick(evolucion)}
                   onKeyDown={(event) => {
@@ -186,6 +188,7 @@ export default function EvolutionTable({
                     {formatDateTime(evolucion.createdAt)}
                     {wasEdited ? <span className="evolution-edited-tag"> · editada</span> : null}
                     {isPackStart ? <span className="evolution-pack-start-tag">Inicio de tratamiento</span> : null}
+                    {isConsulta ? <span className="evolution-pack-start-tag evolution-consulta-tag">Sesión de consulta</span> : null}
                   </td>
                   <td data-label="Profesional" title={professionalName(evolucion.profesional)}>{professionalNameCompact(evolucion.profesional)}</td>
                   <td data-label="Diagnóstico"><GrupoChip grupo={evolucion.grupo} /></td>
